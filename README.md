@@ -15,6 +15,8 @@
 
 ## How to Use
 
+Download from here https://github.com/foamify/shakepin/releases
+
 1. Run the app.
 2. Drag files and shake the cursor to show the app.
 3. Put the files in the app.
