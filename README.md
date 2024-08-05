@@ -1,2 +1,3 @@
-# shakepin
- Simple fun project inspired by Dropover
+# ShakePin
+
+Simple fun project inspired by Dropover
