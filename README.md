@@ -17,6 +17,8 @@
 
 Download from here https://github.com/foamify/shakepin/releases
 
+Or TestFlight Link: https://testflight.apple.com/join/afqRhd8c
+
 1. Run the app.
 2. Drag files and shake the cursor to show the app.
 3. Put the files in the app.
