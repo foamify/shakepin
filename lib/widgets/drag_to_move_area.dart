@@ -20,7 +20,6 @@ class DragToMoveArea extends StatelessWidget {
           }),
           (PanGestureRecognizer instance) {
             instance.onStart = (details) {
-              print('onPanStart');
               dropChannel.performDragWindow();
             };
           },

@@ -1,5 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:shakepin/state.dart';
+import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_hover.dart';
 import 'package:shakepin/widgets/drop_target.dart';
 
@@ -35,8 +38,17 @@ class _DropPinState extends State<DropPin> {
           _isHovered = false;
         });
       },
-      onDragPerform: (paths) {
-        print(paths);
+      onDragPerform: (paths) async {
+        items.value = paths.toSet();
+
+        dropChannel.setFrame(
+          Rect.fromCenter(
+            center: await dropChannel.center(),
+            width: AppSizes.pin.width,
+            height: AppSizes.pin.height,
+          ),
+          animate: true,
+        );
       },
       child: DropHover(
         isHovered: _isHovered,

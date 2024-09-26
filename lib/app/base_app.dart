@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shakepin/app/archive_app.dart';
 import 'package:shakepin/app/minify_app.dart';
 import 'package:shakepin/app/panel_app.dart';
+import 'package:shakepin/app/pin_app.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
@@ -110,6 +111,9 @@ class _BaseAppState extends State<BaseApp> with DropListener {
                 }
                 if (archiveProgress() >= 0) {
                   return const ArchiveApp();
+                }
+                if (items().isNotEmpty) {
+                  return const PinApp();
                 }
                 return const PanelApp();
               }),
