@@ -172,7 +172,7 @@ class MinificationManager {
           minifiedPath: outputPath,
           originalSize: originalSize,
           minifiedSize: minifiedSize,
-          duration: Duration(),
+          duration: const Duration(),
         );
       }
     } catch (e) {
@@ -251,7 +251,7 @@ class MinificationManager {
           minifiedPath: outputPath,
           originalSize: originalSize,
           minifiedSize: minifiedSize,
-          duration: Duration(),
+          duration: const Duration(),
         );
       }
     } catch (e) {

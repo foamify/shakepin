@@ -17,6 +17,7 @@ dependencies:
   macos_haptic_feedback: ^1.0.0
   cupertino_icons: ^1.0.8
 
+  path: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

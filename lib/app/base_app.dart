@@ -16,7 +16,7 @@ class BaseApp extends StatefulWidget {
   State<BaseApp> createState() => _BaseAppState();
 }
 
-class _BaseAppState extends State<BaseApp> with DropListener {
+class _BaseAppState extends State<BaseApp> with DragDropListener {
   var isShakeDetected = false;
 
   @override
@@ -56,18 +56,24 @@ class _BaseAppState extends State<BaseApp> with DropListener {
 
   @override
   void shakeDetected(Offset position) async {
-    print('shakeDetected');
     if (!isShakeDetected) {
-      print('shakeDetected');
-      print('isShakeDetected: $isShakeDetected');
-      print('isVisible: ${await dropChannel.isVisible()}');
       isShakeDetected = true;
-      print('position: $position');
+      Size appSize;
+      if (isMinifyApp.value) {
+        appSize = AppSizes.minify;
+      } else if (archiveProgress.value >= 0) {
+        appSize = AppSizes.archive;
+      } else if (items().isNotEmpty) {
+        appSize = AppSizes.pin;
+      } else {
+        appSize = AppSizes.panel;
+      }
+
       await dropChannel.setFrame(
           Rect.fromCenter(
-            center: position + const Offset(0, 90),
-            width: AppSizes.panel.width,
-            height: AppSizes.panel.height,
+            center: position + Offset(0, appSize.height / 2),
+            width: appSize.width,
+            height: appSize.height,
           ),
           animate: false);
       await dropChannel.setVisible(true);

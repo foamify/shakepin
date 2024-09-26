@@ -13,6 +13,7 @@ class DropTarget extends StatefulWidget {
     this.onDragConclude,
     this.onDraggingUpdated,
     this.shakeDetected,
+    this.onDragSessionEnded,
   });
 
   final String label;
@@ -23,12 +24,13 @@ class DropTarget extends StatefulWidget {
   final Function()? onDragConclude;
   final Function(Offset position)? onDraggingUpdated;
   final Function(Offset position)? shakeDetected;
+  final Function(DropOperation operation)? onDragSessionEnded;
 
   @override
   State<DropTarget> createState() => _DropTargetState();
 }
 
-class _DropTargetState extends State<DropTarget> implements DropListener {
+class _DropTargetState extends State<DropTarget> implements DragDropListener {
   @override
   void initState() {
     dropChannel.addListener(this);
@@ -89,6 +91,11 @@ class _DropTargetState extends State<DropTarget> implements DropListener {
   @override
   void shakeDetected(Offset position) {
     widget.shakeDetected?.call(position);
+  }
+
+  @override
+  void onDragSessionEnded(DropOperation operation) {
+    widget.onDragSessionEnded?.call(operation);
   }
 
   @override

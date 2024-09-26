@@ -23,7 +23,7 @@ class DropChannel {
         case 'draggingSessionEnded':
           final int operation = call.arguments;
           for (final listener in listeners) {
-            listener.onDragConclude();
+            listener.onDragSessionEnded(DropOperation.values[operation]);
           }
 
         case 'menuItemClicked':
@@ -71,7 +71,7 @@ class DropChannel {
       }
     });
   }
-  final listeners = <DropListener>[];
+  final listeners = <DragDropListener>[];
 
   Future<void> cleanup() async {
     await _channel.invokeMethod('cleanup');
@@ -144,11 +144,11 @@ class DropChannel {
     return await _channel.invokeMethod('convertToPng', [inputPath, outputPath]);
   }
 
-  void addListener(DropListener listener) {
+  void addListener(DragDropListener listener) {
     listeners.add(listener);
   }
 
-  void removeListener(DropListener listener) {
+  void removeListener(DragDropListener listener) {
     listeners.remove(listener);
   }
 }
@@ -159,7 +159,7 @@ enum DropOperation {
   link,
 }
 
-mixin class DropListener {
+mixin class DragDropListener {
   String label = '';
 
   void onDragEnter(Offset position) {}
@@ -168,4 +168,5 @@ mixin class DropListener {
   void onDraggingUpdated(Offset position) {}
   void onDragPerform(List<String> paths) {}
   void shakeDetected(Offset position) {}
+  void onDragSessionEnded(DropOperation operation) {}
 }

@@ -18,7 +18,7 @@ class PinApp extends StatefulWidget {
   State<PinApp> createState() => _PinAppState();
 }
 
-class _PinAppState extends State<PinApp> {
+class _PinAppState extends State<PinApp> with DragDropListener {
   final _scrollController = ScrollController();
   Set<String> selectedItems = {};
 
@@ -36,6 +36,12 @@ class _PinAppState extends State<PinApp> {
         selectedItems.clear();
       }
     });
+  }
+
+  @override
+  void onDragSessionEnded(DropOperation operation) {
+    print(operation);
+    super.onDragSessionEnded(operation);
   }
 
   @override
@@ -61,13 +67,17 @@ class _PinAppState extends State<PinApp> {
             final paths = items().toList();
             const itemHeight = 64;
             final maxVisibleItems = (height / itemHeight).floor();
+            var itemCount = (paths.length / maxVisibleItems).ceil();
+            if (itemCount.isNaN) {
+              itemCount = 0;
+            }
             return SizedBox(
               width: MediaQuery.sizeOf(context).width,
               child: MacosScrollbar(
                 controller: _scrollController,
                 child: ListView.builder(
                   controller: _scrollController,
-                  itemCount: (paths.length / maxVisibleItems).ceil(),
+                  itemCount: itemCount,
                   itemBuilder: (context, row) {
                     final colItems = paths.sublist(row * maxVisibleItems,
                         min((row + 1) * maxVisibleItems, paths.length));
@@ -176,7 +186,6 @@ class _PinAppState extends State<PinApp> {
                 padding: const EdgeInsets.all(4),
                 onPressed: () async {
                   items.value = {};
-                  isMinifyApp.value = false;
                 },
                 backgroundColor:
                     CupertinoColors.label.resolveFrom(context).withOpacity(.5),
@@ -193,8 +202,16 @@ class _PinAppState extends State<PinApp> {
               MacosIconButton(
                 padding: const EdgeInsets.all(4),
                 onPressed: () async {
-                  items.value = {};
-                  isMinifyApp.value = false;
+                  dropChannel.setFrame(
+                      Rect.fromCenter(
+                        center: await dropChannel.center() +
+                            Offset(0, AppSizes.pin.height / 2),
+                        width: AppSizes.pin.width,
+                        height: 1,
+                      ),
+                      animate: true);
+                  await Future.delayed(Durations.short4);
+                  dropChannel.setVisible(false);
                 },
                 backgroundColor:
                     CupertinoColors.label.resolveFrom(context).withOpacity(.5),

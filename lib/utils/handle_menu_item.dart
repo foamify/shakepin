@@ -46,7 +46,7 @@ Future<void> _hideApp() async {
   Size appSize;
 
   if (isMinifyApp()) {
-    appSize = AppSizes.minify;  
+    appSize = AppSizes.minify;
   } else if (archiveProgress() >= 0) {
     appSize = AppSizes.archive;
   } else if (items().isNotEmpty) {
