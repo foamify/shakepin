@@ -1,0 +1,24 @@
+name: shakepin
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.5.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  file_selector: ^1.0.3
+  macos_ui: ^2.0.9
+  shared_preferences: ^2.3.2
+  fluentui_system_icons: ^1.1.257
+  super_context_menu: ^0.8.22
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
