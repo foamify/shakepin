@@ -4,7 +4,7 @@ import Foundation
 
 class DropTarget: NSView {
 
-    private let label: String
+    let label: String
     private let channel: FlutterMethodChannel
 
     init(frame: NSRect, label: String, channel: FlutterMethodChannel) {
@@ -17,29 +17,29 @@ class DropTarget: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         let position = sender.draggingLocation
         channel.invokeMethod("dragEnter", arguments: [label, position.x, position.y])
         return .copy
     }
 
-    func draggingExited(_ sender: NSDraggingInfo?) {
+    override func draggingExited(_ sender: NSDraggingInfo?) {
         channel.invokeMethod("dragExited", arguments: label)
     }
 
-    func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
         let position = sender.draggingLocation
         channel.invokeMethod("dragUpdated", arguments: [label, position.x, position.y])
         return .copy
     }
 
-    func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         channel.invokeMethod("dragPerform", arguments: label)
         return true
     }
 
-    func concludeDragOperation(_ sender: NSDraggingInfo?) {
-        channel.invokeMethod("dragConclude")
+    override func concludeDragOperation(_ sender: NSDraggingInfo?) {
+        channel.invokeMethod("dragConclude", arguments: nil)
     }
 
 }

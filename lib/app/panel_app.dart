@@ -19,7 +19,7 @@ class _PanelAppState extends State<PanelApp> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         DropPin(),

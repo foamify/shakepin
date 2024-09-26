@@ -225,8 +225,9 @@ class MainFlutterWindow: NSWindow {
         // NSLog("adding new target")
         let newTarget = DropTarget(
           frame: targetRect,
-          channel: channel,
-          label: label)
+          label: label,
+          channel: channel
+        )
         // newTarget.autoresizingMask = [.width, .height]
         newTarget.registerForDraggedTypes([
           NSPasteboard.PasteboardType.fileURL,

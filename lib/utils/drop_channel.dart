@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:shakepin/utils/handle_menu_item.dart';
 
 typedef ShakeDetectedCallback = void Function(double x, double y);
 typedef DraggingSessionEndedCallback = void Function(int operation);
@@ -15,18 +16,24 @@ class DropChannel {
       switch (call.method) {
         case 'shakeDetected':
           final List<double> args = call.arguments.cast<double>();
-          _onShakeDetected?.call(args[0], args[1]);
+          for (final listener in listeners) {
+            listener.shakeDetected(Offset(args[0], args[1]));
+          }
           break;
         case 'draggingSessionEnded':
           final int operation = call.arguments;
-          _onDraggingSessionEnded?.call(operation);
+          for (final listener in listeners) {
+            listener.onDragConclude();
+          }
           break;
         case 'menuItemClicked':
           final int tag = call.arguments;
-          _onMenuItemClicked?.call(tag);
+          handleMenuItemClicked(tag);
           break;
         case 'conclude':
-          _onConclude?.call();
+          for (final listener in listeners) {
+            listener.onDragConclude();
+          }
           break;
         case 'dragEnter':
           final List<dynamic> args = call.arguments;
@@ -63,11 +70,6 @@ class DropChannel {
   }
   final listeners = <DropListener>[];
 
-  ShakeDetectedCallback? _onShakeDetected;
-  DraggingSessionEndedCallback? _onDraggingSessionEnded;
-  MenuItemClickedCallback? _onMenuItemClicked;
-  ConcludeCallback? _onConclude;
-
   Future<void> cleanup() async {
     await _channel.invokeMethod('cleanup');
   }
@@ -93,7 +95,7 @@ class DropChannel {
   }
 
   Future<void> setFrame(Rect rect,
-      {bool? animate, bool? usePosition, bool? useSize}) async {
+      {required bool animate, bool? usePosition, bool? useSize}) async {
     await _channel.invokeMethod('setFrame', [
       usePosition != null ? rect.left : null,
       usePosition != null ? rect.top : null,
@@ -128,12 +130,21 @@ class DropChannel {
     return await _channel.invokeMethod('isVisible');
   }
 
-  Future<List<double>> center() async {
-    return await _channel.invokeMethod('center');
+  Future<Offset> center() async {
+    final List<dynamic> args = await _channel.invokeMethod('center');
+    return Offset(args[0] as double, args[1] as double);
   }
 
   Future<bool> convertToPng(String inputPath, String outputPath) async {
     return await _channel.invokeMethod('convertToPng', [inputPath, outputPath]);
+  }
+
+  void addListener(DropListener listener) {
+    listeners.add(listener);
+  }
+
+  void removeListener(DropListener listener) {
+    listeners.remove(listener);
   }
 }
 
@@ -151,4 +162,5 @@ mixin class DropListener {
   void onDragConclude() {}
   void onDraggingUpdated(Offset position) {}
   void onDragPerform(List<String> paths) {}
+  void shakeDetected(Offset position) {}
 }

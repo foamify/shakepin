@@ -26,6 +26,7 @@ class DropTarget extends StatefulWidget {
 class _DropTargetState extends State<DropTarget> with DropListener {
   @override
   void initState() {
+    dropChannel.addListener(this);
     super.label = widget.label;
     WidgetsBinding.instance.addPersistentFrameCallback((_) {
       if (!context.mounted) return;
@@ -35,13 +36,14 @@ class _DropTargetState extends State<DropTarget> with DropListener {
       final size = renderObject.size;
       dropChannel.setDropTarget(offset & size, widget.label);
     });
-    
+
     super.initState();
   }
 
   @override
   void dispose() {
     dropChannel.removeDropTarget(widget.label);
+    dropChannel.removeListener(this);
     super.dispose();
   }
 
