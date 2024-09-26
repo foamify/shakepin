@@ -23,7 +23,11 @@ class DropChannel {
         case 'draggingSessionEnded':
           final int operation = call.arguments;
           for (final listener in listeners) {
-            listener.onDragSessionEnded(DropOperation.values[operation]);
+            listener.onDragSessionEnded(switch (operation) {
+              1 => DropOperation.copy,
+              16 => DropOperation.move,
+              _ => throw Exception('Invalid operation'),
+            });
           }
 
         case 'menuItemClicked':
@@ -36,13 +40,10 @@ class DropChannel {
           }
 
         case 'dragEnter':
-          print('dragEnter');
           final args = call.arguments;
-          print(args);
           listeners
               .firstWhere((element) => element.label == args[0])
               .onDragEnter(Offset(args[1] as double, args[2] as double));
-          print('dragEnter done');
 
         case 'dragExited':
           listeners

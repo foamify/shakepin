@@ -25,6 +25,7 @@ class PinApp extends StatefulWidget {
 class _PinAppState extends State<PinApp> with DragDropListener {
   final _scrollController = ScrollController();
   Set<String> selectedItems = {};
+  String? draggedItem;
 
   @override
   void initState() {
@@ -45,7 +46,21 @@ class _PinAppState extends State<PinApp> with DragDropListener {
 
   @override
   void onDragSessionEnded(DropOperation operation) {
-    print(operation);
+    print('onDragSessionEnded $operation');
+    switch (operation) {
+      case DropOperation.move:
+        setState(() {
+          if (draggedItem != null) {
+            items.remove(draggedItem!);
+            draggedItem = null;
+          } else {
+            items.value = items().union(selectedItems.toSet());
+            selectedItems.clear();
+          }
+        });
+      default:
+        break;
+    }
     super.onDragSessionEnded(operation);
   }
 
@@ -130,10 +145,14 @@ class _PinAppState extends State<PinApp> with DragDropListener {
                                         }),
                                     (VerticalDragGestureRecognizer instance) {
                                       instance.onStart = (details) {
-                                        dropChannel.performDragSession(
-                                            !selectedItems.contains(path)
-                                                ? [path]
-                                                : selectedItems.toList());
+                                        if (!selectedItems.contains(path)) {
+                                          draggedItem = path;
+                                          dropChannel
+                                              .performDragSession([path]);
+                                        } else {
+                                          dropChannel.performDragSession(
+                                              selectedItems.toList());
+                                        }
                                       };
                                     },
                                   ),
@@ -147,10 +166,14 @@ class _PinAppState extends State<PinApp> with DragDropListener {
                                         }),
                                     (HorizontalDragGestureRecognizer instance) {
                                       instance.onStart = (details) {
-                                        dropChannel.performDragSession(
-                                            !selectedItems.contains(path)
-                                                ? [path]
-                                                : selectedItems.toList());
+                                        if (!selectedItems.contains(path)) {
+                                          draggedItem = path;
+                                          dropChannel
+                                              .performDragSession([path]);
+                                        } else {
+                                          dropChannel.performDragSession(
+                                              selectedItems.toList());
+                                        }
                                       };
                                     },
                                   ),

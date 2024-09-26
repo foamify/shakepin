@@ -23,29 +23,33 @@ class _PanelAppState extends State<PanelApp> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       physics: const NeverScrollableScrollPhysics(),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          DropPin(
-            icon: Icon(
-              FluentIcons.pin_24_regular,
-              color: CupertinoColors.label.resolveFrom(context),
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            DropPin(
+              icon: Icon(
+                FluentIcons.pin_24_regular,
+                color: CupertinoColors.label.resolveFrom(context),
+              ),
             ),
-          ),
-          DropMinify(
-            icon: Icon(
-              FluentIcons.arrow_minimize_vertical_24_regular,
-              color: CupertinoColors.label.resolveFrom(context),
+            DropMinify(
+              icon: Icon(
+                FluentIcons.arrow_minimize_vertical_24_regular,
+                color: CupertinoColors.label.resolveFrom(context),
+              ),
             ),
-          ),
-          DropArchive(
-            icon: Icon(
-              FluentIcons.archive_24_regular,
-              color: CupertinoColors.label.resolveFrom(context),
+            DropArchive(
+              icon: Icon(
+                FluentIcons.archive_24_regular,
+                color: CupertinoColors.label.resolveFrom(context),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
