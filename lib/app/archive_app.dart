@@ -37,7 +37,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
   var currentlyProcessingFile = '';
 
   Future<void> compressToZip(List<String> paths) async {
-    outputArchive = '$outputFolder/archive.zip';
+    outputArchive = await getUniqueArchiveName(outputFolder);
     final tempDir = await Directory(outputFolder).createTemp('archived');
 
     try {
@@ -93,6 +93,19 @@ class _ArchiveAppState extends State<ArchiveApp> {
     setState(() {
       files = {};
     });
+  }
+
+  Future<String> getUniqueArchiveName(String folder) async {
+    String baseName = 'archive';
+    String extension = '.zip';
+    String fullPath = '$folder/$baseName$extension';
+    int counter = 1;
+
+    while (await File(fullPath).exists()) {
+      fullPath = '$folder/$baseName (${counter++})$extension';
+    }
+
+    return fullPath;
   }
 
   @override
