@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:macos_ui/macos_ui.dart';
+import 'package:shakepin/app/base_app.dart';
+import 'package:shakepin/utils/drop_channel.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  DropChannel.cleanup();
   runApp(const MainApp());
 }
 
@@ -9,12 +14,8 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+    return const MacosApp(
+      home: BaseApp(),
     );
   }
 }

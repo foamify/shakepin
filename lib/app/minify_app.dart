@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:macos_haptic_feedback/macos_haptic_feedback.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -381,7 +382,7 @@ class _MinifyAppState extends State<MinifyApp> {
     ffmpegController = TextEditingController(text: ffmpegPath);
     imageMagickController = TextEditingController(text: imageMagickPath);
 
-    dropChannel.setMinimumSize(AppSizes.minify);
+    DropChannel.setMinimumSize(AppSizes.minify);
     files = items().where(isSupportedFile).toSet();
   }
 
