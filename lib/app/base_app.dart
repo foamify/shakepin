@@ -36,6 +36,15 @@ class _BaseAppState extends State<BaseApp> with DropListener {
       Rect.fromCenter(
         center: await dropChannel.center(),
         width: AppSizes.panel.width,
+        height: AppSizes.panel.height,
+      ),
+      animate: true,
+    );
+    await Future.delayed(Durations.short4);
+    await dropChannel.setFrame(
+      Rect.fromCenter(
+        center: await dropChannel.center(),
+        width: AppSizes.panel.width,
         height: 1,
       ),
       animate: true,
