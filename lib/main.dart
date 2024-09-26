@@ -5,7 +5,7 @@ import 'package:shakepin/utils/drop_channel.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  DropChannel.cleanup();
+  dropChannel.cleanup();
   runApp(const MainApp());
 }
 

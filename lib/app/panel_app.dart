@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shakepin/app/drop_widgets/drop_pin.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
 
@@ -12,17 +13,18 @@ class PanelApp extends StatefulWidget {
 class _PanelAppState extends State<PanelApp> {
   @override
   void initState() {
-    DropChannel.setMinimumSize(AppSizes.panel);
+    dropChannel.setMinimumSize(AppSizes.panel);
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         DropPin(),
-        DropMinify(),
-        DropArchive(),
+        // DropMinify(),
+        // DropArchive(),
       ],
     );
   }

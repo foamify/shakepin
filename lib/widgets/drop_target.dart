@@ -33,7 +33,7 @@ class _DropTargetState extends State<DropTarget> with DropListener {
       if (renderObject == null) return;
       final offset = renderObject.localToGlobal(Offset.zero);
       final size = renderObject.size;
-      DropChannel.setDropTarget(offset & size, widget.label);
+      dropChannel.setDropTarget(offset & size, widget.label);
     });
     
     super.initState();
@@ -41,7 +41,7 @@ class _DropTargetState extends State<DropTarget> with DropListener {
 
   @override
   void dispose() {
-    DropChannel.removeDropTarget(widget.label);
+    dropChannel.removeDropTarget(widget.label);
     super.dispose();
   }
 

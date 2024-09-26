@@ -382,7 +382,7 @@ class _MinifyAppState extends State<MinifyApp> {
     ffmpegController = TextEditingController(text: ffmpegPath);
     imageMagickController = TextEditingController(text: imageMagickPath);
 
-    DropChannel.setMinimumSize(AppSizes.minify);
+    dropChannel.setMinimumSize(AppSizes.minify);
     files = items().where(isSupportedFile).toSet();
   }
 

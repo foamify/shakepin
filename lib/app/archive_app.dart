@@ -20,7 +20,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
   @override
   void initState() {
     files = items();
-    DropChannel.setMinimumSize(AppSizes.archive);
+    dropChannel.setMinimumSize(AppSizes.archive);
     if (files.isNotEmpty) {
       final firstFilePath = files.first;
       final firstFileDir = Directory(File(firstFilePath).parent.path);
