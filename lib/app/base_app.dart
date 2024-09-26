@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shakepin/app/archive_app.dart';
+import 'package:shakepin/app/minify_app.dart';
 import 'package:shakepin/app/panel_app.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
@@ -95,6 +96,9 @@ class _BaseAppState extends State<BaseApp> with DropListener {
                 isMinifyApp,
               ]),
               builder: (context, child) {
+                if (isMinifyApp()) {
+                  return const MinifyApp();
+                }
                 if (archiveProgress() >= 0) {
                   return const ArchiveApp();
                 }

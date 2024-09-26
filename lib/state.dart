@@ -21,7 +21,7 @@ extension ListenableEx<T> on ValueListenable<T> {
 }
 
 extension ListenableSetEx<T> on ValueNotifier<Set<T>> {
-  void add(T item) => value.add(item);
-  void remove(T item) => value.remove(item);
-  void clear() => value.clear();
+  void add(T item) => value = {...value, item};
+  void remove(T item) => value = {...value}..remove(item);
+  void clear() => value = {};
 }
