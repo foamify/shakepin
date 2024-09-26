@@ -96,6 +96,12 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
   }
 
   @override
+  void dispose() {
+    dropChannel.removeListener(this);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MultiHitStack(
       children: [

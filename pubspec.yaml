@@ -18,6 +18,8 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   path: any
+  extended_text: ^14.1.0
+  super_sliver_list: ^0.4.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

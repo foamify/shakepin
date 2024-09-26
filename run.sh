@@ -1,1 +1,1 @@
-flutter run -d macos --enable-impeller
+flutter run -d macos

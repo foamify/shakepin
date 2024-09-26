@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:extended_text/extended_text.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
@@ -10,6 +12,8 @@ import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_hover_widget.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:flutter/material.dart' show Colors, Durations;
+import 'package:super_context_menu/super_context_menu.dart';
+import 'package:super_sliver_list/super_sliver_list.dart';
 
 class PinApp extends StatefulWidget {
   const PinApp({super.key});
@@ -25,6 +29,7 @@ class _PinAppState extends State<PinApp> with DragDropListener {
   @override
   void initState() {
     dropChannel.setMinimumSize(AppSizes.pin);
+    dropChannel.addListener(this);
     super.initState();
   }
 
@@ -42,6 +47,12 @@ class _PinAppState extends State<PinApp> with DragDropListener {
   void onDragSessionEnded(DropOperation operation) {
     print(operation);
     super.onDragSessionEnded(operation);
+  }
+
+  @override
+  void dispose() {
+    dropChannel.removeListener(this);
+    super.dispose();
   }
 
   @override
@@ -65,17 +76,17 @@ class _PinAppState extends State<PinApp> with DragDropListener {
           child: LayoutBuilder(builder: (context, constraints) {
             final height = constraints.maxHeight;
             final paths = items().toList();
-            const itemHeight = 64;
+            const itemHeight = 86.0;
             final maxVisibleItems = (height / itemHeight).floor();
             var itemCount = (paths.length / maxVisibleItems).ceil();
-            if (itemCount.isNaN) {
+            if (itemCount.isNaN || itemCount.isInfinite) {
               itemCount = 0;
             }
             return SizedBox(
               width: MediaQuery.sizeOf(context).width,
               child: MacosScrollbar(
                 controller: _scrollController,
-                child: ListView.builder(
+                child: SuperListView.builder(
                   controller: _scrollController,
                   itemCount: itemCount,
                   itemBuilder: (context, row) {
@@ -86,48 +97,123 @@ class _PinAppState extends State<PinApp> with DragDropListener {
                         final path = colItems[col];
                         final isSelected = selectedItems.contains(path);
                         return SizedBox(
-                          width: 64,
-                          height: 64,
+                          width: 86,
+                          height: itemHeight,
                           child: Padding(
                             padding: const EdgeInsets.all(2.0),
-                            child: RawGestureDetector(
-                              gestures: {
-                                TapAndPanGestureRecognizer:
-                                    GestureRecognizerFactoryWithHandlers<
-                                        TapAndPanGestureRecognizer>(
-                                  () => TapAndPanGestureRecognizer(),
-                                  (instance) {
-                                    instance.onDragStart = (_) {
-                                      dropChannel.performDragSession(
-                                          !selectedItems.contains(path)
-                                              ? [path]
-                                              : selectedItems.toList());
-                                    };
+                            child: ContextMenuWidget(
+                              menuProvider: (request) => Menu(children: [
+                                MenuAction(
+                                  title: 'Show in Finder',
+                                  callback: () {
+                                    Process.run('open', ['-R', path]);
                                   },
                                 ),
-                              },
-                              child: MacosIconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    if (isSelected) {
-                                      selectedItems.remove(path);
-                                    } else {
-                                      selectedItems.add(path);
-                                    }
-                                  });
+                                MenuAction(
+                                  title: 'Remove',
+                                  callback: () {
+                                    setState(() {
+                                      items.remove(path);
+                                    });
+                                  },
+                                ),
+                              ]),
+                              child: RawGestureDetector(
+                                gestures: {
+                                  VerticalDragGestureRecognizer:
+                                      GestureRecognizerFactoryWithHandlers<
+                                          VerticalDragGestureRecognizer>(
+                                    () => VerticalDragGestureRecognizer(
+                                        supportedDevices: {
+                                          PointerDeviceKind.touch,
+                                          PointerDeviceKind.mouse,
+                                        }),
+                                    (VerticalDragGestureRecognizer instance) {
+                                      instance.onStart = (details) {
+                                        dropChannel.performDragSession(
+                                            !selectedItems.contains(path)
+                                                ? [path]
+                                                : selectedItems.toList());
+                                      };
+                                    },
+                                  ),
+                                  HorizontalDragGestureRecognizer:
+                                      GestureRecognizerFactoryWithHandlers<
+                                          HorizontalDragGestureRecognizer>(
+                                    () => HorizontalDragGestureRecognizer(
+                                        supportedDevices: {
+                                          PointerDeviceKind.touch,
+                                          PointerDeviceKind.mouse,
+                                        }),
+                                    (HorizontalDragGestureRecognizer instance) {
+                                      instance.onStart = (details) {
+                                        dropChannel.performDragSession(
+                                            !selectedItems.contains(path)
+                                                ? [path]
+                                                : selectedItems.toList());
+                                      };
+                                    },
+                                  ),
                                 },
-                                icon: FileImageWidget(path: path),
-                                backgroundColor: isSelected
-                                    ? CupertinoColors.systemBlue
-                                        .resolveFrom(context)
-                                    : Colors.transparent,
-                                hoverColor: isSelected
-                                    ? CupertinoColors.systemBlue
-                                        .resolveFrom(context)
-                                        .withOpacity(0.7)
-                                    : CupertinoColors.systemGrey
-                                        .resolveFrom(context)
-                                        .withOpacity(0.3),
+                                child: MacosIconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        selectedItems.remove(path);
+                                      } else {
+                                        selectedItems.add(path);
+                                      }
+                                    });
+                                  },
+                                  icon: SizedBox(
+                                    height: itemHeight,
+                                    child: Column(
+                                      children: [
+                                        Expanded(
+                                          child: FileImageWidget(
+                                            key: Key(path),
+                                            path: path,
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          height: 14,
+                                          width: 86,
+                                          child: ExtendedText(
+                                            path.split('/').last,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: CupertinoColors.label
+                                                  .resolveFrom(context),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                            overflowWidget: TextOverflowWidget(
+                                              position:
+                                                  TextOverflowPosition.middle,
+                                              align: TextOverflowAlign.center,
+                                              child: Transform.translate(
+                                                offset: const Offset(0, -1.5),
+                                                child: const Text('\u2026'),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  backgroundColor: isSelected
+                                      ? CupertinoColors.systemBlue
+                                          .resolveFrom(context)
+                                      : Colors.transparent,
+                                  hoverColor: isSelected
+                                      ? CupertinoColors.systemBlue
+                                          .resolveFrom(context)
+                                          .withOpacity(0.7)
+                                      : CupertinoColors.systemGrey
+                                          .resolveFrom(context)
+                                          .withOpacity(0.3),
+                                ),
                               ),
                             ),
                           ),
