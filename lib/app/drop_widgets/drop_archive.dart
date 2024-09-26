@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shakepin/state.dart';
+import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_hover.dart';
 import 'package:shakepin/widgets/drop_target.dart';
 
@@ -36,10 +38,17 @@ class _DropArchiveState extends State<DropArchive> {
           _isHovered = false;
         });
       },
-      onDragPerform: (paths) {
+      onDragPerform: (paths) async {
         items.value = items().union(paths.toSet());
-        print('items: ${items()}');
         archiveProgress.value = 0;
+        dropChannel.setFrame(
+          Rect.fromCenter(
+            center: await dropChannel.center(),
+            width: AppSizes.archive.width,
+            height: AppSizes.archive.height,
+          ),
+          animate: true,
+        );
       },
       child: DropHover(
         isHovered: _isHovered,

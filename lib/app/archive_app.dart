@@ -32,11 +32,12 @@ class _ArchiveAppState extends State<ArchiveApp> {
   }
 
   var outputFolder = '';
+  var outputArchive = '';
   var files = <String>{};
   var currentlyProcessingFile = '';
 
   Future<void> compressToZip(List<String> paths) async {
-    final outputFile = '$outputFolder/archive.zip';
+    outputArchive = '$outputFolder/archive.zip';
     final tempDir = await Directory(outputFolder).createTemp('archived');
 
     try {
@@ -72,7 +73,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
         '--sequesterRsrc',
         '--zlibCompressionLevel=9',
         tempDir.path,
-        outputFile
+        outputArchive
       ]);
 
       if (result.exitCode != 0) {
@@ -81,7 +82,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
       } else {
         archiveProgress.value = 100;
         if (archiveProgress() == 100) {
-          Process.run('open', [outputFolder]);
+          Process.run('open', ['-R', outputArchive]);
         }
       }
     } finally {
@@ -89,7 +90,9 @@ class _ArchiveAppState extends State<ArchiveApp> {
       await tempDir.delete(recursive: true);
     }
 
-    items.value = {};
+    setState(() {
+      files = {};
+    });
   }
 
   @override
@@ -154,9 +157,9 @@ class _ArchiveAppState extends State<ArchiveApp> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                  text: 'Archived ${files.length} files to '),
+                                  text: 'Archived ${items().length} files to '),
                               TextSpan(
-                                text: outputFolder,
+                                text: outputArchive,
                                 style: const TextStyle(
                                   fontSize: 12,
                                   decoration: TextDecoration.underline,

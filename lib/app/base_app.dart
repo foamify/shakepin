@@ -4,6 +4,8 @@ import 'package:shakepin/app/panel_app.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
+import 'package:shakepin/widgets/drag_to_move_area.dart';
+import 'package:shakepin/widgets/multi_hit_stack.dart';
 
 class BaseApp extends StatefulWidget {
   const BaseApp({super.key});
@@ -18,7 +20,27 @@ class _BaseAppState extends State<BaseApp> with DropListener {
   @override
   void initState() {
     dropChannel.addListener(this);
+
+    items.addListener(() {
+      if (items().isEmpty) {
+        resetFrameAndHide();
+      }
+    });
+
     super.initState();
+  }
+
+  void resetFrameAndHide() async {
+    await dropChannel.setFrame(
+      Rect.fromCenter(
+        center: await dropChannel.center(),
+        width: AppSizes.panel.width,
+        height: 1,
+      ),
+      animate: true,
+    );
+    await Future.delayed(Durations.short4);
+    await dropChannel.setVisible(false);
   }
 
   @override
@@ -32,7 +54,7 @@ class _BaseAppState extends State<BaseApp> with DropListener {
       print('position: $position');
       await dropChannel.setFrame(
           Rect.fromCenter(
-            center: position,
+            center: position + const Offset(0, 90),
             width: AppSizes.panel.width,
             height: AppSizes.panel.height,
           ),
@@ -50,16 +72,7 @@ class _BaseAppState extends State<BaseApp> with DropListener {
     print('onDragConclude');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (items().isEmpty) {
-        dropChannel.setFrame(
-          Rect.fromCenter(
-            center: await dropChannel.center(),
-            width: AppSizes.panel.width,
-            height: 1,
-          ),
-          animate: true,
-        );
-        await Future.delayed(Durations.short4);
-        await dropChannel.setVisible(false);
+        resetFrameAndHide();
       }
     });
     super.onDragConclude();
@@ -67,17 +80,28 @@ class _BaseAppState extends State<BaseApp> with DropListener {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-        listenable: Listenable.merge([
-          archiveProgress,
-          items,
-          isMinifyApp,
-        ]),
-        builder: (context, child) {
-          if (archiveProgress() > 0) {
-            return const ArchiveApp();
-          }
-          return const PanelApp();
-        });
+    return MultiHitStack(
+      children: [
+        const Positioned.fill(
+          child: DragToMoveArea(
+            child: SizedBox.shrink(),
+          ),
+        ),
+        Positioned.fill(
+          child: ListenableBuilder(
+              listenable: Listenable.merge([
+                archiveProgress,
+                items,
+                isMinifyApp,
+              ]),
+              builder: (context, child) {
+                if (archiveProgress() >= 0) {
+                  return const ArchiveApp();
+                }
+                return const PanelApp();
+              }),
+        ),
+      ],
+    );
   }
 }

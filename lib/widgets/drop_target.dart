@@ -33,7 +33,7 @@ class _DropTargetState extends State<DropTarget> implements DropListener {
   void initState() {
     dropChannel.addListener(this);
     WidgetsBinding.instance.addPersistentFrameCallback((_) {
-      if (!context.mounted) return;
+      if (!mounted) dispose();
       final renderObject = context.findRenderObject() as RenderBox?;
       if (renderObject == null) return;
       final offset = renderObject.localToGlobal(Offset.zero);
