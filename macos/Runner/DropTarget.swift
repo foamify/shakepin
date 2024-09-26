@@ -34,7 +34,12 @@ class DropTarget: NSView {
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        channel.invokeMethod("dragPerform", arguments: label)
+        let pasteboard = sender.draggingPasteboard
+        guard let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] else {
+            return false
+        }
+        let paths = fileURLs.map { $0.standardized.path }
+        channel.invokeMethod("dragPerform", arguments: [label, paths])
         return true
     }
 

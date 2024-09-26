@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/utils.dart';
 
 class DropTarget extends StatefulWidget {
   const DropTarget({
@@ -10,6 +11,8 @@ class DropTarget extends StatefulWidget {
     this.onDragEnter,
     this.onDragExited,
     this.onDragConclude,
+    this.onDraggingUpdated,
+    this.shakeDetected,
   });
 
   final String label;
@@ -18,16 +21,17 @@ class DropTarget extends StatefulWidget {
   final Function(Offset position)? onDragEnter;
   final Function()? onDragExited;
   final Function()? onDragConclude;
+  final Function(Offset position)? onDraggingUpdated;
+  final Function(Offset position)? shakeDetected;
 
   @override
   State<DropTarget> createState() => _DropTargetState();
 }
 
-class _DropTargetState extends State<DropTarget> with DropListener {
+class _DropTargetState extends State<DropTarget> implements DropListener {
   @override
   void initState() {
     dropChannel.addListener(this);
-    super.label = widget.label;
     WidgetsBinding.instance.addPersistentFrameCallback((_) {
       if (!context.mounted) return;
       final renderObject = context.findRenderObject() as RenderBox?;
@@ -51,4 +55,41 @@ class _DropTargetState extends State<DropTarget> with DropListener {
   Widget build(BuildContext context) {
     return widget.child;
   }
+
+  @override
+  String get label => widget.label;
+
+  @override
+  void onDragConclude() {
+    widget.onDragConclude?.call();
+  }
+
+  @override
+  void onDragEnter(Offset position) {
+    haptic.levelChange();
+    widget.onDragEnter?.call(position);
+  }
+
+  @override
+  void onDragExited() {
+    widget.onDragExited?.call();
+  }
+
+  @override
+  void onDragPerform(List<String> paths) {
+    widget.onDragPerform?.call(paths);
+  }
+
+  @override
+  void onDraggingUpdated(Offset position) {
+    widget.onDraggingUpdated?.call(position);
+  }
+
+  @override
+  void shakeDetected(Offset position) {
+    widget.shakeDetected?.call(position);
+  }
+
+  @override
+  set label(String label) {}
 }

@@ -1,24 +1,25 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:shakepin/state.dart';
 import 'package:shakepin/widgets/drop_hover.dart';
 import 'package:shakepin/widgets/drop_target.dart';
 
-class DropPin extends StatefulWidget {
-  const DropPin({super.key, required this.icon});
+class DropArchive extends StatefulWidget {
+  const DropArchive({super.key, required this.icon});
 
   final Widget icon;
 
   @override
-  State<DropPin> createState() => _DropPinState();
+  State<DropArchive> createState() => _DropArchiveState();
 }
 
-class _DropPinState extends State<DropPin> {
+class _DropArchiveState extends State<DropArchive> {
   var _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
     return DropTarget(
-      label: 'drop-pin-btn',
+      label: 'drop-archive-btn',
       onDragEnter: (details) {
         print('onDragEnter');
         setState(() {
@@ -36,7 +37,9 @@ class _DropPinState extends State<DropPin> {
         });
       },
       onDragPerform: (paths) {
-        print(paths);
+        items.value = items().union(paths.toSet());
+        print('items: ${items()}');
+        archiveProgress.value = 0;
       },
       child: DropHover(
         isHovered: _isHovered,

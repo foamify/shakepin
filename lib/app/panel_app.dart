@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:shakepin/app/drop_widgets/drop_archive.dart';
 import 'package:shakepin/app/drop_widgets/drop_pin.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
@@ -14,18 +16,31 @@ class _PanelAppState extends State<PanelApp> {
   @override
   void initState() {
     dropChannel.setMinimumSize(AppSizes.panel);
+    print('panel app init');
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        DropPin(),
-        // DropMinify(),
-        // DropArchive(),
-      ],
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          DropPin(
+            icon: Icon(
+              FluentIcons.pin_24_regular,
+              color: CupertinoColors.label.resolveFrom(context),
+            ),
+          ),
+          DropArchive(
+            icon: Icon(
+              FluentIcons.archive_24_regular,
+              color: CupertinoColors.label.resolveFrom(context),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

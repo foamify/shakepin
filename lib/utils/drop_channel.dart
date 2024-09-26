@@ -19,50 +19,53 @@ class DropChannel {
           for (final listener in listeners) {
             listener.shakeDetected(Offset(args[0], args[1]));
           }
-          break;
+
         case 'draggingSessionEnded':
           final int operation = call.arguments;
           for (final listener in listeners) {
             listener.onDragConclude();
           }
-          break;
+
         case 'menuItemClicked':
           final int tag = call.arguments;
           handleMenuItemClicked(tag);
-          break;
+
         case 'conclude':
           for (final listener in listeners) {
             listener.onDragConclude();
           }
-          break;
+
         case 'dragEnter':
-          final List<dynamic> args = call.arguments;
+          print('dragEnter');
+          final args = call.arguments;
+          print(args);
           listeners
               .firstWhere((element) => element.label == args[0])
               .onDragEnter(Offset(args[1] as double, args[2] as double));
-          break;
+          print('dragEnter done');
+
         case 'dragExited':
           listeners
               .firstWhere((element) => element.label == call.arguments)
               .onDragExited();
-          break;
+
         case 'dragConclude':
           for (var element in listeners) {
             element.onDragConclude();
           }
-          break;
+
         case 'dragPerform':
-          final List<dynamic> args = call.arguments;
+          final args = call.arguments;
           listeners
               .firstWhere((element) => element.label == args[0])
               .onDragPerform(List<String>.from(args[1]));
-          break;
+
         case 'dragUpdated':
-          final List<dynamic> args = call.arguments;
+          final args = call.arguments;
           listeners
               .firstWhere((element) => element.label == args[0])
               .onDraggingUpdated(Offset(args[1] as double, args[2] as double));
-          break;
+
         default:
           print('DropChannel: unknown method ${call.method}');
       }
@@ -95,12 +98,14 @@ class DropChannel {
   }
 
   Future<void> setFrame(Rect rect,
-      {required bool animate, bool? usePosition, bool? useSize}) async {
+      {required bool animate,
+      bool usePosition = true,
+      bool useSize = true}) async {
     await _channel.invokeMethod('setFrame', [
-      usePosition != null ? rect.left : null,
-      usePosition != null ? rect.top : null,
-      useSize != null ? rect.width : null,
-      useSize != null ? rect.height : null,
+      usePosition ? rect.left : null,
+      usePosition ? rect.top : null,
+      useSize ? rect.width : null,
+      useSize ? rect.height : null,
       animate,
     ]);
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 final items = ValueNotifier<Set<String>>({});
-final archiveProgress = ValueNotifier<double>(0);
+final archiveProgress = ValueNotifier<double>(-1);
 final isMinifyApp = ValueNotifier<bool>(false);
 
 String formatFileSize(int size) {
