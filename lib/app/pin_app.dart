@@ -3,11 +3,13 @@ import 'dart:typed_data';
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/gestures.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_hover_widget.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:flutter/material.dart' show Colors, Durations;
 
 class PinApp extends StatefulWidget {
   const PinApp({super.key});
@@ -18,6 +20,7 @@ class PinApp extends StatefulWidget {
 
 class _PinAppState extends State<PinApp> {
   final _scrollController = ScrollController();
+  Set<String> selectedItems = {};
 
   @override
   void initState() {
@@ -25,8 +28,20 @@ class _PinAppState extends State<PinApp> {
     super.initState();
   }
 
+  void _toggleAllSelection(bool? value) {
+    setState(() {
+      if (value == true) {
+        selectedItems = Set.from(items());
+      } else {
+        selectedItems.clear();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final paths = items().toList();
+
     return Stack(
       children: [
         Positioned.fill(
@@ -51,13 +66,62 @@ class _PinAppState extends State<PinApp> {
               child: MacosScrollbar(
                 controller: _scrollController,
                 child: ListView.builder(
+                  controller: _scrollController,
                   itemCount: (paths.length / maxVisibleItems).ceil(),
                   itemBuilder: (context, row) {
-                    final colItems = paths.sublist(
-                        row * maxVisibleItems, min((row + 1) * maxVisibleItems, paths.length));
+                    final colItems = paths.sublist(row * maxVisibleItems,
+                        min((row + 1) * maxVisibleItems, paths.length));
                     return Column(
                       children: List.generate(colItems.length, (col) {
-                        return FileImageWidget(path: colItems[col]);
+                        final path = colItems[col];
+                        final isSelected = selectedItems.contains(path);
+                        return SizedBox(
+                          width: 64,
+                          height: 64,
+                          child: Padding(
+                            padding: const EdgeInsets.all(2.0),
+                            child: RawGestureDetector(
+                              gestures: {
+                                TapAndPanGestureRecognizer:
+                                    GestureRecognizerFactoryWithHandlers<
+                                        TapAndPanGestureRecognizer>(
+                                  () => TapAndPanGestureRecognizer(),
+                                  (instance) {
+                                    instance.onDragStart = (_) {
+                                      dropChannel.performDragSession(
+                                          !selectedItems.contains(path)
+                                              ? [path]
+                                              : selectedItems.toList());
+                                    };
+                                  },
+                                ),
+                              },
+                              child: MacosIconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    if (isSelected) {
+                                      selectedItems.remove(path);
+                                    } else {
+                                      selectedItems.add(path);
+                                    }
+                                  });
+                                },
+                                icon: FileImageWidget(path: path),
+                                backgroundColor: isSelected
+                                    ? CupertinoColors.systemBlue
+                                        .resolveFrom(context)
+                                    : Colors.transparent,
+                                hoverColor: isSelected
+                                    ? CupertinoColors.systemBlue
+                                        .resolveFrom(context)
+                                        .withOpacity(0.7)
+                                    : CupertinoColors.systemGrey
+                                        .resolveFrom(context)
+                                        .withOpacity(0.3),
+                              ),
+                            ),
+                          ),
+                        );
                       }),
                     );
                   },
@@ -66,6 +130,42 @@ class _PinAppState extends State<PinApp> {
               ),
             );
           }),
+        ),
+        Positioned(
+          bottom: 8,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: SizedBox(
+              width: 150,
+              child: Row(
+                children: [
+                  MacosCheckbox(
+                    value: selectedItems.length == paths.length
+                        ? true
+                        : selectedItems.isEmpty
+                            ? false
+                            : null,
+                    onChanged: _toggleAllSelection,
+                  ),
+                  const Spacer(),
+                  AnimatedSize(
+                    duration: Durations.medium2,
+                    curve: Curves.easeOutBack,
+                    child: Text(
+                      selectedItems.isEmpty
+                          ? '${paths.length} items'
+                          : '${selectedItems.length} / ${paths.length}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: CupertinoColors.label.resolveFrom(context),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ),
         ),
         Positioned(
           top: 10,

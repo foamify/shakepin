@@ -15,6 +15,7 @@ dependencies:
   fluentui_system_icons: ^1.1.257
   super_context_menu: ^0.8.22
   macos_haptic_feedback: ^1.0.0
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
