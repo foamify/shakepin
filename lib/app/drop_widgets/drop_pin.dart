@@ -23,7 +23,7 @@ class _DropPinState extends State<DropPin> {
     return DropTarget(
       label: 'drop-pin-btn',
       onDragEnter: (details) {
-        print('onDragEnter');
+        // print('onDragEnter');
         setState(() {
           _isHovered = true;
         });

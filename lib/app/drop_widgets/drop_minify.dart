@@ -23,7 +23,7 @@ class _DropMinifyState extends State<DropMinify> {
     return DropTarget(
       label: 'drop-minify-btn',
       onDragEnter: (details) {
-        print('onDragEnter');
+        // print('onDragEnter');
         setState(() {
           _isHovered = true;
         });

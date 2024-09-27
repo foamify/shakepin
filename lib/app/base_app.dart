@@ -78,7 +78,7 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
           animate: false);
       await dropChannel.setVisible(true);
       final center = await dropChannel.center();
-      print('center: $center');
+      // print('center: $center');
     }
     super.shakeDetected(position);
   }
@@ -86,7 +86,7 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
   @override
   void onDragConclude() async {
     isShakeDetected = false;
-    print('onDragConclude');
+    // print('onDragConclude');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (items().isEmpty) {
         resetFrameAndHide();

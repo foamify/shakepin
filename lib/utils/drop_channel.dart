@@ -68,7 +68,7 @@ class DropChannel {
               .onDraggingUpdated(Offset(args[1] as double, args[2] as double));
 
         default:
-          print('DropChannel: unknown method ${call.method}');
+          // print('DropChannel: unknown method ${call.method}');
       }
     });
   }

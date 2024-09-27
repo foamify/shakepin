@@ -46,7 +46,7 @@ class _PinAppState extends State<PinApp> with DragDropListener {
 
   @override
   void onDragSessionEnded(DropOperation operation) {
-    print('onDragSessionEnded $operation');
+    // print('onDragSessionEnded $operation');
     switch (operation) {
       case DropOperation.move:
         setState(() {
