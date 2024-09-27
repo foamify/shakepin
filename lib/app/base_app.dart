@@ -77,8 +77,6 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
           ),
           animate: false);
       await dropChannel.setVisible(true);
-      final center = await dropChannel.center();
-      // print('center: $center');
     }
     super.shakeDetected(position);
   }
