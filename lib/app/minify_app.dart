@@ -323,6 +323,7 @@ class _MinifyAppState extends State<MinifyApp> {
   int processedFiles = 0;
   int totalFiles = 0;
   List<MinifiedFile> minifiedFiles = [];
+  List<MinifiedFile> allProcessedFiles = []; // New list to store all processed files
 
   var files = <String>{};
   var isDragging = false;
@@ -370,6 +371,21 @@ class _MinifyAppState extends State<MinifyApp> {
         oxipngPath = prefs.getString('oxipng_path') ?? '';
         ffmpegPath = prefs.getString('ffmpeg_path') ?? '';
         imageMagickPath = prefs.getString('imagemagick_path') ?? '';
+
+        // Check if the paths are valid
+        if (!File(oxipngPath).existsSync()) {
+          oxipngPath = '';
+          prefs.remove('oxipng_path');
+        }
+        if (!File(ffmpegPath).existsSync()) {
+          ffmpegPath = '';
+          prefs.remove('ffmpeg_path');
+        }
+        if (!File(imageMagickPath).existsSync()) {
+          imageMagickPath = '';
+          prefs.remove('imagemagick_path');
+        }
+
         oxipngController.text = oxipngPath;
         ffmpegController.text = ffmpegPath;
         imageMagickController.text = imageMagickPath;
@@ -419,6 +435,7 @@ class _MinifyAppState extends State<MinifyApp> {
       if (minifiedFile != null) {
         setState(() {
           minifiedFiles.add(minifiedFile);
+          allProcessedFiles.add(minifiedFile); // Add to all processed files
           processedFiles++;
         });
       } else {
@@ -458,13 +475,13 @@ class _MinifyAppState extends State<MinifyApp> {
             child: ListView.separated(
               controller: _minifileScrollController,
               padding: const EdgeInsets.all(8),
-              itemCount: minifiedFiles.length,
+              itemCount: allProcessedFiles.length, // Use allProcessedFiles instead of minifiedFiles
               separatorBuilder: (context, index) => Divider(
                 height: 1,
                 color: CupertinoColors.systemGrey.withOpacity(.2),
               ),
               itemBuilder: (context, index) {
-                final file = minifiedFiles[index];
+                final file = allProcessedFiles[index]; // Use allProcessedFiles
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
@@ -602,7 +619,7 @@ class _MinifyAppState extends State<MinifyApp> {
                       _buildFileList(),
                       const SizedBox(height: 16),
                       _buildSettingsSection(),
-                      if (minifiedFiles.isNotEmpty) ...[
+                      if (allProcessedFiles.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         _buildMinifiedFilesList(),
                       ],

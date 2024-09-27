@@ -1,0 +1,1 @@
+flutter run -d macos --release
