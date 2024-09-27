@@ -209,9 +209,9 @@ class MinificationManager {
     }
 
     final qualityArg = switch (videoQuality) {
-      'Low' => '28',
+      'Low' => '17',
       'Medium' => '23',
-      'High' => '18',
+      'High' => '28',
       _ => '23', // Default to Medium
     };
 
