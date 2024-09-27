@@ -323,7 +323,8 @@ class _MinifyAppState extends State<MinifyApp> {
   int processedFiles = 0;
   int totalFiles = 0;
   List<MinifiedFile> minifiedFiles = [];
-  List<MinifiedFile> allProcessedFiles = []; // New list to store all processed files
+  List<MinifiedFile> allProcessedFiles =
+      []; // New list to store all processed files
 
   var files = <String>{};
   var isDragging = false;
@@ -475,7 +476,8 @@ class _MinifyAppState extends State<MinifyApp> {
             child: ListView.separated(
               controller: _minifileScrollController,
               padding: const EdgeInsets.all(8),
-              itemCount: allProcessedFiles.length, // Use allProcessedFiles instead of minifiedFiles
+              itemCount: allProcessedFiles
+                  .length, // Use allProcessedFiles instead of minifiedFiles
               separatorBuilder: (context, index) => Divider(
                 height: 1,
                 color: CupertinoColors.systemGrey.withOpacity(.2),
