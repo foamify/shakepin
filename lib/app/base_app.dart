@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:shakepin/app/archive_app.dart';
 import 'package:shakepin/app/minify_app.dart';
@@ -101,34 +103,37 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
 
   @override
   Widget build(BuildContext context) {
-    return MultiHitStack(
-      children: [
-        const Positioned.fill(
-          child: DragToMoveArea(
-            child: SizedBox.shrink(),
+    return PlatformMenuBar(
+      menus: const [],
+      child: MultiHitStack(
+        children: [
+          const Positioned.fill(
+            child: DragToMoveArea(
+              child: SizedBox.shrink(),
+            ),
           ),
-        ),
-        Positioned.fill(
-          child: ListenableBuilder(
-              listenable: Listenable.merge([
-                archiveProgress,
-                items,
-                isMinifyApp,
-              ]),
-              builder: (context, child) {
-                if (isMinifyApp()) {
-                  return const MinifyApp();
-                }
-                if (archiveProgress() >= 0) {
-                  return const ArchiveApp();
-                }
-                if (items().isNotEmpty) {
-                  return const PinApp();
-                }
-                return const PanelApp();
-              }),
-        ),
-      ],
+          Positioned.fill(
+            child: ListenableBuilder(
+                listenable: Listenable.merge([
+                  archiveProgress,
+                  items,
+                  isMinifyApp,
+                ]),
+                builder: (context, child) {
+                  if (isMinifyApp()) {
+                    return const MinifyApp();
+                  }
+                  if (archiveProgress() >= 0) {
+                    return const ArchiveApp();
+                  }
+                  if (items().isNotEmpty) {
+                    return const PinApp();
+                  }
+                  return const PanelApp();
+                }),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -215,21 +215,40 @@ class MinificationManager {
       _ => '23', // Default to Medium
     };
 
-    final command = [
-      '-i',
-      filePath,
-      '-c:v',
-      'libx264',
-      '-crf',
-      qualityArg,
-      '-preset',
-      'medium',
-      '-c:a',
-      'aac',
-      '-b:a',
-      '128k',
-      outputPath,
-    ];
+    List<String> command;
+    if (videoFormat == 'WebM') {
+      command = [
+        '-i',
+        filePath,
+        '-c:v',
+        'libvpx',
+        '-crf',
+        qualityArg,
+        '-b:v',
+        '1M',
+        '-c:a',
+        'libvorbis',
+        '-b:a',
+        '128k',
+        outputPath,
+      ];
+    } else {
+      command = [
+        '-i',
+        filePath,
+        '-c:v',
+        'libx264',
+        '-crf',
+        qualityArg,
+        '-preset',
+        'medium',
+        '-c:a',
+        'aac',
+        '-b:a',
+        '128k',
+        outputPath,
+      ];
+    }
 
     try {
       _currentProcess = await Process.start(ffmpegPath, command);
@@ -303,6 +322,8 @@ class _MinifyAppState extends State<MinifyApp> {
 
   MinificationManager? _minificationManager;
 
+  List<String> errorMessages = []; // Add this line to store error messages
+
   bool isSupportedFile(String filePath) {
     return isVideoFile(filePath) || isImageFile(filePath);
   }
@@ -360,6 +381,7 @@ class _MinifyAppState extends State<MinifyApp> {
       processedFiles = 0;
       totalFiles = files.length;
       minifiedFiles.clear();
+      errorMessages.clear(); // Clear previous error messages
     });
 
     _minificationManager = MinificationManager(
@@ -380,12 +402,13 @@ class _MinifyAppState extends State<MinifyApp> {
       if (minifiedFile != null) {
         setState(() {
           minifiedFiles.add(minifiedFile);
-          allProcessedFiles.add(minifiedFile); // Add to all processed files
+          allProcessedFiles.add(minifiedFile);
           processedFiles++;
         });
       } else {
         setState(() {
           processedFiles++;
+          errorMessages.add('Failed to minify: ${path.basename(filePath)}'); // Add error message
         });
       }
     }
@@ -908,7 +931,37 @@ class _MinifyAppState extends State<MinifyApp> {
                           style: TextStyle(fontSize: 14),
                         ),
                       ),
-              )
+              ),
+              if (errorMessages.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemRed.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Errors:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: CupertinoColors.systemRed,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ...errorMessages.map((error) => Text(
+                            error,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: CupertinoColors.systemRed,
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
