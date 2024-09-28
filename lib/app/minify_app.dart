@@ -263,34 +263,6 @@ class MinificationManager {
   void cancelMinification() {
     _currentProcess?.kill();
   }
-
-  bool isVideoFile(String filePath) {
-    final videoExtensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm'];
-    return videoExtensions.any((ext) => filePath.toLowerCase().endsWith(ext));
-  }
-
-  bool isImageFile(String filePath) {
-    final imageExtensions = [
-      '.jpg',
-      '.jpeg',
-      '.png',
-      '.gif',
-      '.bmp',
-      '.webp',
-      '.heic',
-      '.heif',
-      '.avif',
-      '.tiff',
-      '.jxl',
-      '.ico',
-      '.cur',
-      '.xcf',
-      '.psd',
-      '.ai',
-      '.eps'
-    ];
-    return imageExtensions.any((ext) => filePath.toLowerCase().endsWith(ext));
-  }
 }
 
 class MinifyApp extends StatefulWidget {
@@ -330,34 +302,6 @@ class _MinifyAppState extends State<MinifyApp> {
   var isDragging = false;
 
   MinificationManager? _minificationManager;
-
-  bool isVideoFile(String filePath) {
-    final videoExtensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm'];
-    return videoExtensions.any((ext) => filePath.toLowerCase().endsWith(ext));
-  }
-
-  bool isImageFile(String filePath) {
-    final imageExtensions = [
-      '.jpg',
-      '.jpeg',
-      '.png',
-      '.gif',
-      '.bmp',
-      '.webp',
-      '.heic',
-      '.heif',
-      '.avif',
-      '.tiff',
-      '.jxl',
-      '.ico',
-      '.cur',
-      '.xcf',
-      '.psd',
-      '.ai',
-      '.eps'
-    ];
-    return imageExtensions.any((ext) => filePath.toLowerCase().endsWith(ext));
-  }
 
   bool isSupportedFile(String filePath) {
     return isVideoFile(filePath) || isImageFile(filePath);

@@ -332,41 +332,45 @@ class MainFlutterWindow: NSWindow {
   }
 
   func performDragSession(fileURLs: [String]) {
-    // Create pasteboard items and dragging items for each file URL
+    // Optimize icon loading
+    let icons = fileURLs.map { fileURL -> NSImage in
+      if let cachedIcon = self.iconCache.object(forKey: fileURL as NSString) {
+        return cachedIcon
+      } else {
+        let icon = NSWorkspace.shared.icon(forFile: fileURL)
+        self.iconCache.setObject(icon, forKey: fileURL as NSString)
+        return icon
+      }
+    }
+
+    // Set drag data in DragSource
+    dragSource.setDragData([
+      "fileURLs": fileURLs,
+      "currentIndex": 0
+    ])
+
+    // Create dragging items
     let draggingItems = fileURLs.enumerated().map { (index, fileURL) -> NSDraggingItem in
       let pasteboardItem = NSPasteboardItem()
       pasteboardItem.setString(fileURL, forType: .string)
       pasteboardItem.setDataProvider(dragSource, forTypes: [.fileURL])
-
-      // TODO: add identifier to the pasteboard item to identify that it is from this app
 
       let draggingItem = NSDraggingItem(pasteboardWriter: pasteboardItem)
       let dragFrame = NSRect(
         x: self.mouseLocationOutsideOfEventStream.x - 25,
         y: self.mouseLocationOutsideOfEventStream.y - 25, width: 50, height: 50)
 
-      let icon = NSWorkspace.shared.icon(forFile: fileURL)
+      let icon = icons[index]
 
-      switch index {
-      case 0:
-        draggingItem.setDraggingFrame(dragFrame, contents: icon)
-      case 1...6:
-        let rotationAngle = index == 1 ? 0 : CGFloat(index - 1) * 10 * (index % 2 == 0 ? 1 : -1)
-        let rotatedImage = NSImage(size: icon.size, flipped: false) { rect in
-          let context = NSGraphicsContext.current
-          context?.saveGraphicsState()
-          let transform = NSAffineTransform()
-          transform.translateX(by: rect.width / 2, yBy: rect.height / 2)
-          transform.rotate(byDegrees: rotationAngle)
-          transform.translateX(by: -rect.width / 2, yBy: -rect.height / 2)
-          transform.concat()
-          icon.draw(
-            in: rect, from: .zero, operation: .sourceOver, fraction: 1.0 - (CGFloat(index) * 0.05))
-          context?.restoreGraphicsState()
-          return true
+      if index <= 6 {
+        if index > 0 {
+          let rotationAngle = CGFloat(index - 1) * 10 * (index % 2 == 0 ? 1 : -1)
+          let rotatedImage = icon.rotated(by: rotationAngle, opacity: 1.0 - (CGFloat(index) * 0.05))
+          draggingItem.setDraggingFrame(dragFrame, contents: rotatedImage)
+        } else {
+          draggingItem.setDraggingFrame(dragFrame, contents: icon)
         }
-        draggingItem.setDraggingFrame(dragFrame, contents: rotatedImage)
-      default:
+      } else {
         draggingItem.setDraggingFrame(
           NSRect(origin: dragFrame.origin, size: CGSize(width: 1, height: 1)), contents: nil)
       }
@@ -375,9 +379,8 @@ class MainFlutterWindow: NSWindow {
     }
 
     // Begin dragging session
-    let draggingSession = dragSource.beginDraggingSession(
+    dragSource.beginDraggingSession(
       with: draggingItems, event: NSApp.currentEvent!, source: dragSource)
-    draggingSession.animatesToStartingPositionsOnCancelOrFail = true
   }
 
   func getCurrentScreen() -> NSScreen? {
@@ -570,6 +573,7 @@ class MainFlutterWindow: NSWindow {
 class DragSource: NSView, NSDraggingSource {
   private let channel: FlutterMethodChannel
   var session: NSDraggingSession?
+  var dragData: [String: Any] = [:]
 
   init(channel: FlutterMethodChannel) {
     self.channel = channel
@@ -595,40 +599,47 @@ class DragSource: NSView, NSDraggingSource {
     self.session = nil
   }
 
+  func setDragData(_ data: [String: Any]) {
+    self.dragData = data
+  }
 }
 
-// https://github.com/onmyway133/blog/issues/951
+// Update the NSPasteboardItemDataProvider extension
 extension DragSource: NSPasteboardItemDataProvider {
-
-  func getFileUrl(_ string: String?) -> NSURL? {
-    if let string = string {
-      // NSLog("string: \(string)")
-      let url = NSURL(fileURLWithPath: string)
-      if url.isFileURL {
-        return url
-      }
-    }
-    return nil
-  }
-
   func pasteboard(
     _ pasteboard: NSPasteboard?, item: NSPasteboardItem,
     provideDataForType type: NSPasteboard.PasteboardType
   ) {
-    // NSLog("provideDataForType: \(type)")
-    switch type {
-
-    case .fileURL:
-      if let url = getFileUrl(item.string(forType: .string)) {
-        // NSLog("url: \((url as URL))")
-        // NSLog("url.dataRepresentation: \((url as URL).dataRepresentation)")
-        // NSLog("url.path: \((url as URL).path)")
-        // NSLog("url.standardized: \((url as URL).standardized.path)")
-        // NSLog("url.standardized.path: \((url as URL).standardized.path.removingPercentEncoding!)")
-        item.setData(url.dataRepresentation, forType: type)
-      }
-
-    default: break
+    if type == .fileURL,
+      let fileURLs = dragData["fileURLs"] as? [String],
+      let index = dragData["currentIndex"] as? Int,
+      index < fileURLs.count
+    {
+      let fileURL = fileURLs[index]
+      let url = NSURL(fileURLWithPath: fileURL)
+      item.setData(url.dataRepresentation, forType: type)
+      
+      // Increment the index for the next item
+      dragData["currentIndex"] = index + 1
     }
+  }
+}
+
+// Add this extension to NSImage for efficient rotation
+extension NSImage {
+  func rotated(by angle: CGFloat, opacity: CGFloat) -> NSImage {
+    let rotatedImage = NSImage(size: self.size, flipped: false) { rect in
+      let context = NSGraphicsContext.current
+      context?.saveGraphicsState()
+      let transform = NSAffineTransform()
+      transform.translateX(by: rect.width / 2, yBy: rect.height / 2)
+      transform.rotate(byDegrees: angle)
+      transform.translateX(by: -rect.width / 2, yBy: -rect.height / 2)
+      transform.concat()
+      self.draw(in: rect, from: .zero, operation: .sourceOver, fraction: opacity)
+      context?.restoreGraphicsState()
+      return true
+    }
+    return rotatedImage
   }
 }
