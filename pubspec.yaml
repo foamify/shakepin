@@ -1,7 +1,7 @@
 name: shakepin
 description: "Pin, minify, and archive your files with unparalleled ease"
 publish_to: 'none'
-version: 0.2.0
+version: 0.2.1
 
 environment:
   sdk: ^3.5.3
@@ -16,10 +16,14 @@ dependencies:
   super_context_menu: ^0.8.22
   macos_haptic_feedback: ^1.0.0
   cupertino_icons: ^1.0.8
+  libcaesium_dart:
+    path: ../libcaesium_dart
 
   path: any
   extended_text: ^14.1.0
   super_sliver_list: ^0.4.1
+  ffmpeg_kit_flutter_video: ^6.0.3
+  path_provider: ^2.1.4
 dev_dependencies:
   flutter_test:
     sdk: flutter

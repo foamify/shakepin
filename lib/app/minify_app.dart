@@ -1,16 +1,18 @@
-import 'dart:convert';
-
-import 'package:file_selector/file_selector.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:super_context_menu/super_context_menu.dart';
 import 'dart:async';
+import 'package:libcaesium_dart/libcaesium_dart.dart';
+import 'package:ffmpeg_kit_flutter_video/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_video/return_code.dart';
+import 'package:ffmpeg_kit_flutter_video/ffmpeg_session.dart';
 
 import '../state.dart';
 import '../utils/utils.dart';
@@ -39,37 +41,26 @@ class MinifiedFile {
 }
 
 class MinificationManager {
-  final String oxipngPath;
-  final String ffmpegPath;
-  final String imageMagickPath;
-  final String outputFolder;
   final String imageQuality;
-  final String imageFormat;
   final String videoQuality;
   final String videoFormat;
-  final bool removeInputFiles;
-  Process? _currentProcess;
+  FFmpegSession? currentSession;
 
   MinificationManager({
-    required this.oxipngPath,
-    required this.ffmpegPath,
-    required this.imageMagickPath,
-    required this.outputFolder,
     required this.imageQuality,
-    required this.imageFormat,
     required this.videoQuality,
     required this.videoFormat,
-    required this.removeInputFiles,
   });
 
-  Future<MinifiedFile?> minifyFile(String filePath) async {
+  Future<MinifiedFile?> minifyFile(
+      String filePath, Directory downloadsDir) async {
     final stopwatch = Stopwatch()..start();
     MinifiedFile? result;
 
     if (isImageFile(filePath)) {
-      result = await minifyImage(filePath);
+      result = await minifyImage(filePath, downloadsDir);
     } else if (isVideoFile(filePath)) {
-      result = await minifyVideo(filePath);
+      result = await minifyVideo(filePath, downloadsDir);
     }
 
     stopwatch.stop();
@@ -87,101 +78,63 @@ class MinificationManager {
     return null;
   }
 
-  Future<MinifiedFile?> minifyImage(String filePath) async {
+  Future<MinifiedFile?> minifyImage(
+      String filePath, Directory downloadsDir) async {
     final file = File(filePath);
     final fileName = path.basename(filePath);
     final fileExtension = path.extension(fileName).toLowerCase();
     final fileNameWithoutExtension = path.basenameWithoutExtension(fileName);
 
-    String outputExtension = fileExtension;
-    if (imageFormat != 'Same as input') {
-      outputExtension = '.${imageFormat.toLowerCase()}';
-    }
-
-    var newFileName = '${fileNameWithoutExtension}_minified$outputExtension';
-    var outputPath = outputFolder == 'Same as input'
-        ? path.join(path.dirname(filePath), newFileName)
-        : path.join(outputFolder, newFileName);
+    var newFileName = '${fileNameWithoutExtension}_minified$fileExtension';
+    var outputPath = path.join(downloadsDir.path, newFileName);
 
     // Check if the file already exists and generate a unique name if it does
     var counter = 1;
     while (File(outputPath).existsSync()) {
       newFileName =
-          '${fileNameWithoutExtension}_minified_$counter$outputExtension';
-      outputPath = outputFolder == 'Same as input'
-          ? path.join(path.dirname(filePath), newFileName)
-          : path.join(outputFolder, newFileName);
+          '${fileNameWithoutExtension}_minified_$counter$fileExtension';
+      outputPath = path.join(downloadsDir.path, newFileName);
       counter++;
     }
 
-    List<String> command;
-    if (fileExtension == '.png' && imageFormat == 'Same as input') {
-      final qualityArg = switch (imageQuality) {
-        'Lowest' => ['-o', '6'],
-        'Low' => ['-o', '4'],
-        'Medium' => ['-o', '2'],
-        'High' => ['-o', '0'],
-        _ => ['-o', '2'], // Default to Medium
-      };
-
-      command = [
-        oxipngPath,
-        ...qualityArg,
-        '-p', // preserve metadata
-        '--force',
-        filePath,
-        '--out',
-        outputPath,
-      ];
-    } else {
-      final qualityArg = switch (imageQuality) {
-        'Lowest' => '85',
-        'Low' => '90',
-        'Medium' => '95',
-        'High' => '100',
-        _ => '95', // Default to Medium
-      };
-
-      command = [
-        imageMagickPath,
-        'convert',
-        filePath,
-        '-quality',
-        qualityArg,
-        outputPath,
-      ];
-    }
-
     try {
-      _currentProcess = await Process.start(command[0], command.sublist(1));
-      final exitCode = await _currentProcess!.exitCode;
-      if (exitCode != 0) {
-        print(
-            'Error minifying image: ${await _currentProcess!.stderr.transform(utf8.decoder).join()}');
-        return null;
-      } else {
-        final originalSize = file.lengthSync();
-        final minifiedSize = File(outputPath).lengthSync();
+      await compress(
+        inputPath: filePath,
+        outputPath: outputPath,
+        quality: switch (imageQuality) {
+          'Lowest' => 30,
+          'Low' => 50,
+          'Normal' => 80,
+          'High' => 90,
+          'Highest' => 95,
+          _ => 80,
+        },
+        pngOptimizationLevel: 3,
+        keepMetadata: true,
+        optimize: false,
+      );
+      final originalSize = file.lengthSync();
+      final minifiedSize = File(outputPath).lengthSync();
 
-        if (removeInputFiles) {
-          await file.delete();
-        }
+      // if (removeInputFiles) {
+      //   await file.delete();
+      // }
 
-        return MinifiedFile(
-          originalPath: filePath,
-          minifiedPath: outputPath,
-          originalSize: originalSize,
-          minifiedSize: minifiedSize,
-          duration: const Duration(),
-        );
-      }
+      return MinifiedFile(
+        originalPath: filePath,
+        minifiedPath: outputPath,
+        originalSize: originalSize,
+        minifiedSize: minifiedSize,
+        duration: const Duration(),
+      );
     } catch (e) {
       print('Error minifying image: $e');
       return null;
     }
   }
 
-  Future<MinifiedFile?> minifyVideo(String filePath) async {
+  Future<MinifiedFile?> minifyVideo(
+      String filePath, Directory downloadsDir) async {
     final file = File(filePath);
     final fileName = path.basename(filePath);
     final fileNameWithoutExtension = path.basenameWithoutExtension(fileName);
@@ -193,77 +146,40 @@ class MinificationManager {
     }
 
     var newFileName = '${fileNameWithoutExtension}_minified$outputExtension';
-    var outputPath = outputFolder == 'Same as input'
-        ? path.join(path.dirname(filePath), newFileName)
-        : path.join(outputFolder, newFileName);
+    var outputPath = path.join(downloadsDir.path, newFileName);
 
     // Check if the file already exists and generate a unique name if it does
     var counter = 1;
     while (File(outputPath).existsSync()) {
       newFileName =
           '${fileNameWithoutExtension}_minified_$counter$outputExtension';
-      outputPath = outputFolder == 'Same as input'
-          ? path.join(path.dirname(filePath), newFileName)
-          : path.join(outputFolder, newFileName);
+      outputPath = path.join(path.dirname(filePath), newFileName);
       counter++;
     }
 
     final qualityArg = switch (videoQuality) {
       'Low' => '17',
-      'Medium' => '23',
+      'Normal' => '23',
       'High' => '28',
-      _ => '23', // Default to Medium
+      _ => '23', // Default to Normal
     };
 
-    List<String> command;
+    String command;
     if (videoFormat == 'WebM') {
-      command = [
-        '-i',
-        filePath,
-        '-c:v',
-        'libvpx',
-        '-crf',
-        qualityArg,
-        '-b:v',
-        '1M',
-        '-c:a',
-        'libvorbis',
-        '-b:a',
-        '128k',
-        outputPath,
-      ];
+      command =
+          '-i "$filePath" -c:v vp9 -crf $qualityArg -b:v 1M -c:a opus -b:a 128k -strict -2 "$outputPath"';
     } else {
-      command = [
-        '-i',
-        filePath,
-        '-c:v',
-        'libx264',
-        '-crf',
-        qualityArg,
-        '-preset',
-        'medium',
-        '-c:a',
-        'aac',
-        '-b:a',
-        '128k',
-        outputPath,
-      ];
+      command =
+          '-i "$filePath" -c:v h264_videotoolbox -crf $qualityArg -preset medium -c:a aac -b:a 128k "$outputPath"';
     }
 
     try {
-      _currentProcess = await Process.start(ffmpegPath, command);
-      final exitCode = await _currentProcess!.exitCode;
-      if (exitCode != 0) {
-        print(
-            'Error minifying video: ${await _currentProcess!.stderr.transform(utf8.decoder).join()}');
-        return null;
-      } else {
+      currentSession = await FFmpegKit.execute(command);
+      final returnCode = await currentSession!.getReturnCode();
+
+      if (ReturnCode.isSuccess(returnCode)) {
         final originalSize = file.lengthSync();
         final minifiedSize = File(outputPath).lengthSync();
-
-        if (removeInputFiles) {
-          await file.delete();
-        }
 
         return MinifiedFile(
           originalPath: filePath,
@@ -272,6 +188,11 @@ class MinificationManager {
           minifiedSize: minifiedSize,
           duration: const Duration(),
         );
+      } else {
+        final logs = await currentSession!.getLogs();
+        print(
+            'Error minifying video: ${logs.map((e) => e.getMessage()).join('\n')}');
+        return null;
       }
     } catch (e) {
       print('Error minifying video: $e');
@@ -280,7 +201,9 @@ class MinificationManager {
   }
 
   void cancelMinification() {
-    _currentProcess?.kill();
+    FFmpegKit.execute("-t 0");
+    currentSession
+        ?.cancel(); // this does not work https://github.com/arthenica/ffmpeg-kit/issues/1024
   }
 }
 
@@ -293,36 +216,25 @@ class MinifyApp extends StatefulWidget {
 
 class _MinifyAppState extends State<MinifyApp> {
   late final SharedPreferences prefs;
-  late final TextEditingController oxipngController;
-  late final TextEditingController ffmpegController;
-  late final TextEditingController imageMagickController;
   final _minifileScrollController = ScrollController();
   final _fileScrollController = ScrollController();
 
-  var oxipngPath = '';
-  var ffmpegPath = '';
-  var imageMagickPath = '';
-
-  String outputFolder = 'Same as input';
-  String videoQuality = 'Medium';
+  String videoQuality = 'Normal';
   String videoFormat = 'Same as input';
-  String imageQuality = 'Medium';
-  String imageFormat = 'PNG';
-  bool removeInputFiles = false;
+  String imageQuality = 'Normal';
   bool minifyInProgress = false;
   bool minifyFinished = false;
   int processedFiles = 0;
   int totalFiles = 0;
   List<MinifiedFile> minifiedFiles = [];
-  List<MinifiedFile> allProcessedFiles =
-      []; // New list to store all processed files
+  List<MinifiedFile> allProcessedFiles = [];
 
   var files = <String>{};
   var isDragging = false;
 
   MinificationManager? _minificationManager;
 
-  List<String> errorMessages = []; // Add this line to store error messages
+  List<String> errorMessages = [];
 
   bool isSupportedFile(String filePath) {
     return isVideoFile(filePath) || isImageFile(filePath);
@@ -333,45 +245,10 @@ class _MinifyAppState extends State<MinifyApp> {
     super.initState();
     SharedPreferences.getInstance().then((prefs) {
       this.prefs = prefs;
-      setState(() {
-        oxipngPath = prefs.getString('oxipng_path') ?? '';
-        ffmpegPath = prefs.getString('ffmpeg_path') ?? '';
-        imageMagickPath = prefs.getString('imagemagick_path') ?? '';
-
-        // Check if the paths are valid
-        if (!File(oxipngPath).existsSync()) {
-          oxipngPath = '';
-          prefs.remove('oxipng_path');
-        }
-        if (!File(ffmpegPath).existsSync()) {
-          ffmpegPath = '';
-          prefs.remove('ffmpeg_path');
-        }
-        if (!File(imageMagickPath).existsSync()) {
-          imageMagickPath = '';
-          prefs.remove('imagemagick_path');
-        }
-
-        oxipngController.text = oxipngPath;
-        ffmpegController.text = ffmpegPath;
-        imageMagickController.text = imageMagickPath;
-      });
     });
-
-    oxipngController = TextEditingController(text: oxipngPath);
-    ffmpegController = TextEditingController(text: ffmpegPath);
-    imageMagickController = TextEditingController(text: imageMagickPath);
 
     dropChannel.setMinimumSize(AppSizes.minify);
     files = items().where(isSupportedFile).toSet();
-  }
-
-  @override
-  void dispose() {
-    oxipngController.dispose();
-    ffmpegController.dispose();
-    imageMagickController.dispose();
-    super.dispose();
   }
 
   Future<void> minifyFiles() async {
@@ -381,24 +258,28 @@ class _MinifyAppState extends State<MinifyApp> {
       processedFiles = 0;
       totalFiles = files.length;
       minifiedFiles.clear();
-      errorMessages.clear(); // Clear previous error messages
+      errorMessages.clear();
     });
 
     _minificationManager = MinificationManager(
-      oxipngPath: oxipngPath,
-      ffmpegPath: ffmpegPath,
-      imageMagickPath: imageMagickPath,
-      outputFolder: outputFolder,
       imageQuality: imageQuality,
-      imageFormat: imageFormat,
       videoQuality: videoQuality,
       videoFormat: videoFormat,
-      removeInputFiles: removeInputFiles,
     );
+
+    final downloadsDir = await getDownloadsDirectory();
+    if (downloadsDir == null) {
+      setState(() {
+        errorMessages.add(
+            'Failed to get downloads directory.\nPlease make sure you have a Downloads folder in your home directory.');
+      });
+      return;
+    }
 
     for (final filePath in files) {
       if (!minifyInProgress) break; // Check if cancellation was requested
-      final minifiedFile = await _minificationManager!.minifyFile(filePath);
+      final minifiedFile =
+          await _minificationManager!.minifyFile(filePath, downloadsDir);
       if (minifiedFile != null) {
         setState(() {
           minifiedFiles.add(minifiedFile);
@@ -408,7 +289,8 @@ class _MinifyAppState extends State<MinifyApp> {
       } else {
         setState(() {
           processedFiles++;
-          errorMessages.add('Failed to minify: ${path.basename(filePath)}'); // Add error message
+          errorMessages.add(
+              'Failed to minify: ${path.basename(filePath)}'); // Add error message
         });
       }
     }
@@ -543,57 +425,17 @@ class _MinifyAppState extends State<MinifyApp> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                if (oxipngPath.isEmpty ||
-                    ffmpegPath.isEmpty ||
-                    imageMagickPath.isEmpty)
-                  Column(
-                    children: [
-                      _buildPathSelector(
-                        'Select Oxipng path',
-                        oxipngController,
-                        (String path) {
-                          setState(() {
-                            oxipngPath = path;
-                            prefs.setString('oxipng_path', path);
-                          });
-                        },
-                      ),
+                Column(
+                  children: [
+                    _buildFileList(),
+                    const SizedBox(height: 16),
+                    _buildSettingsSection(),
+                    if (allProcessedFiles.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      _buildPathSelector(
-                        'Select FFMPEG path',
-                        ffmpegController,
-                        (String path) {
-                          setState(() {
-                            ffmpegPath = path;
-                            prefs.setString('ffmpeg_path', path);
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPathSelector(
-                        'Select ImageMagick path',
-                        imageMagickController,
-                        (String path) {
-                          setState(() {
-                            imageMagickPath = path;
-                            prefs.setString('imagemagick_path', path);
-                          });
-                        },
-                      ),
+                      _buildMinifiedFilesList(),
                     ],
-                  )
-                else
-                  Column(
-                    children: [
-                      _buildFileList(),
-                      const SizedBox(height: 16),
-                      _buildSettingsSection(),
-                      if (allProcessedFiles.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        _buildMinifiedFilesList(),
-                      ],
-                    ],
-                  ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -805,56 +647,6 @@ class _MinifyAppState extends State<MinifyApp> {
     );
   }
 
-  Widget _buildPathSelector(String label, TextEditingController controller,
-      Function(String) onSelect) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12)),
-        const SizedBox(height: 4),
-        Text(
-          label.contains('Oxipng')
-              ? 'Used for minifying images.'
-              : label.contains('FFMPEG')
-                  ? 'Used for minifying videos.'
-                  : 'Used for minifying images (non-PNG).',
-          style:
-              const TextStyle(fontSize: 12, color: CupertinoColors.systemGrey),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: MacosTextField(
-                controller: controller,
-                placeholder: 'Path not set',
-                readOnly: true,
-              ),
-            ),
-            const SizedBox(width: 8),
-            PushButton(
-              controlSize: ControlSize.regular,
-              onPressed: () async {
-                final result = await openFile(acceptedTypeGroups: [
-                  const XTypeGroup(
-                    label: 'Executable',
-                    uniformTypeIdentifiers: ['public.executable'],
-                  )
-                ]);
-                if (result != null) {
-                  onSelect(result.path);
-                  controller.text = result.path;
-                }
-              },
-              child: const Text('Select'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
   Widget _buildSettingsSection() {
     bool hasVideos = files.any((file) => isVideoFile(file));
     bool hasImages = files.any((file) => isImageFile(file));
@@ -871,20 +663,21 @@ class _MinifyAppState extends State<MinifyApp> {
           padding: const EdgeInsets.all(8),
           child: Column(
             children: [
+
               if (hasVideos) ...[
                 _buildDropdownSetting('Video quality', videoQuality,
-                    ['Low', 'Medium', 'High'], minifyInProgress),
+                    ['Low', 'Normal', 'High'], minifyInProgress),
                 const SizedBox(height: 4),
                 _buildDropdownSetting('Video format', videoFormat,
                     ['Same as input', 'MP4', 'WebM'], minifyInProgress),
                 const SizedBox(height: 8),
               ],
               if (hasImages) ...[
-                _buildDropdownSetting('Image quality', imageQuality,
-                    ['Lowest', 'Low', 'Medium', 'High'], minifyInProgress),
-                const SizedBox(height: 4),
-                _buildDropdownSetting('Image format', imageFormat,
-                    ['Same as input', 'PNG', 'JPG', 'WebP'], minifyInProgress),
+                _buildDropdownSetting(
+                    'Image quality',
+                    imageQuality,
+                    ['Lowest', 'Low', 'Normal', 'High', 'Highest'],
+                    minifyInProgress),
               ],
               const SizedBox(height: 8),
               SizedBox(
@@ -918,10 +711,7 @@ class _MinifyAppState extends State<MinifyApp> {
                       )
                     : PushButton(
                         controlSize: ControlSize.large,
-                        onPressed: (oxipngPath.isEmpty ||
-                                ffmpegPath.isEmpty ||
-                                imageMagickPath.isEmpty ||
-                                files.isEmpty)
+                        onPressed: (files.isEmpty)
                             ? null
                             : () async {
                                 await minifyFiles();
@@ -983,9 +773,6 @@ class _MinifyAppState extends State<MinifyApp> {
                   if (newValue != null) {
                     setState(() {
                       switch (label) {
-                        case 'Output folder':
-                          outputFolder = newValue;
-                          break;
                         case 'Video quality':
                           videoQuality = newValue;
                           break;
@@ -994,9 +781,6 @@ class _MinifyAppState extends State<MinifyApp> {
                           break;
                         case 'Image quality':
                           imageQuality = newValue;
-                          break;
-                        case 'Image format':
-                          imageFormat = newValue;
                           break;
                       }
                     });

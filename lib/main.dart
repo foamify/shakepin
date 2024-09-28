@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:libcaesium_dart/libcaesium_dart.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/app/base_app.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
 
 void main() async {
+  await RustLib.init();
   WidgetsFlutterBinding.ensureInitialized();
   dropChannel.setTrayIcon(
     Uint8List.view(

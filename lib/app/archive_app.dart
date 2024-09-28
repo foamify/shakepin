@@ -1,9 +1,9 @@
 import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 
 import '../state.dart';
@@ -21,13 +21,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
   void initState() {
     files = items();
     dropChannel.setMinimumSize(AppSizes.archive);
-    if (files.isNotEmpty) {
-      final firstFilePath = files.first;
-      final firstFileDir = Directory(File(firstFilePath).parent.path);
-      outputFolder = firstFileDir.path;
-      final paths = items();
-      compressToZip(paths.toList());
-    }
+    _initializeOutputFolder();
     super.initState();
   }
 
@@ -35,6 +29,15 @@ class _ArchiveAppState extends State<ArchiveApp> {
   var outputArchive = '';
   var files = <String>{};
   var currentlyProcessingFile = '';
+
+  Future<void> _initializeOutputFolder() async {
+    final downloadsDir = await getDownloadsDirectory();
+    outputFolder = downloadsDir?.path ?? '';
+    if (files.isNotEmpty) {
+      final paths = items();
+      compressToZip(paths.toList());
+    }
+  }
 
   Future<void> compressToZip(List<String> paths) async {
     outputArchive = await getUniqueArchiveName(outputFolder);
