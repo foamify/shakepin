@@ -180,7 +180,7 @@ class MinificationManager {
       VideoFormat.mp4 => (
           '-b:v ${_getHEVCBitrate(videoQuality)}k',
           'hevc_videotoolbox',
-          'aac'
+          'aac -vf scale=in_range=full:out_range=full,format=yuv420p10le'
         ),
     };
 
