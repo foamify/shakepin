@@ -32,6 +32,12 @@ enum VideoQuality {
 
 enum ImageQuality { lowest, low, normal, high, highest }
 
+// Add this enum for video formats
+enum VideoFormat {
+  webm,
+  mp4
+}
+
 class MinifiedFile {
   final String originalPath;
   final String minifiedPath;
@@ -57,11 +63,13 @@ class MinifiedFile {
 class MinificationManager {
   final ImageQuality imageQuality;
   final VideoQuality videoQuality;
+  final VideoFormat videoFormat;
   FFmpegSession? currentSession;
 
   MinificationManager({
     required this.imageQuality,
     required this.videoQuality,
+    required this.videoFormat,
   });
 
   Future<MinifiedFile?> minifyFile(
@@ -150,30 +158,36 @@ class MinificationManager {
     final fileName = path.basename(filePath);
     final fileNameWithoutExtension = path.basenameWithoutExtension(fileName);
 
-    var newFileName = '${fileNameWithoutExtension}_minified.webm';
+    final extension = switch (videoFormat) {
+      VideoFormat.webm => '.webm',
+      VideoFormat.mp4 => '.mp4',
+    };
+
+    var newFileName = '${fileNameWithoutExtension}_minified$extension';
     var outputPath = path.join(downloadsDir.path, newFileName);
 
     // Check if the file already exists and generate a unique name if it does
     var counter = 1;
     while (File(outputPath).existsSync()) {
-      newFileName = '${fileNameWithoutExtension}_minified_$counter.webm';
+      newFileName = '${fileNameWithoutExtension}_minified_$counter$extension';
       outputPath = path.join(downloadsDir.path, newFileName);
       counter++;
     }
 
-    final qualityArg = switch (videoQuality) {
-      VideoQuality.lowestQuality => '40',
-      VideoQuality.lowQuality => '36',
-      VideoQuality.mediumQuality => '34',
-      VideoQuality.goodQuality => '33',
-      VideoQuality.highQuality => '32',
-      VideoQuality.veryHighQuality => '31',
-      VideoQuality.highestQuality => '24',
-      VideoQuality.lossless => '0',
+    final (qualityArg, codec, audioCodec) = switch (videoFormat) {
+      VideoFormat.webm => (
+        '-crf ${_getVP9QualityArg(videoQuality)}',
+        'libvpx-vp9',
+        'libopus'
+      ),
+      VideoFormat.mp4 => (
+        '-b:v ${_getHEVCBitrate(videoQuality)}k',
+        'hevc_videotoolbox',
+        'aac'
+      ),
     };
 
-    String command =
-        '-i "$filePath" -c:v libvpx-vp9 -crf $qualityArg -b:v 0 -b:a 128k -c:a libopus "$outputPath"';
+    String command = '-i "$filePath" -c:v $codec $qualityArg -b:a 128k -c:a $audioCodec "$outputPath"';
 
     try {
       currentSession = await FFmpegKit.execute(command);
@@ -202,6 +216,32 @@ class MinificationManager {
     }
   }
 
+  String _getVP9QualityArg(VideoQuality quality) {
+    return switch (quality) {
+      VideoQuality.lowestQuality => '40',
+      VideoQuality.lowQuality => '36',
+      VideoQuality.mediumQuality => '34',
+      VideoQuality.goodQuality => '33',
+      VideoQuality.highQuality => '32',
+      VideoQuality.veryHighQuality => '31',
+      VideoQuality.highestQuality => '24',
+      VideoQuality.lossless => '0',
+    };
+  }
+
+  String _getHEVCBitrate(VideoQuality quality) {
+    return switch (quality) {
+      VideoQuality.lowestQuality => '28',
+      VideoQuality.lowQuality => '26',
+      VideoQuality.mediumQuality => '23',
+      VideoQuality.goodQuality => '20',
+      VideoQuality.highQuality => '18',
+      VideoQuality.veryHighQuality => '16',
+      VideoQuality.highestQuality => '14',
+      VideoQuality.lossless => '0',
+    };
+  }
+
   void cancelMinification() {
     FFmpegKit.cancel();
     FFmpegKit.cancel(currentSession?.getSessionId());
@@ -222,7 +262,8 @@ class _MinifyAppState extends State<MinifyApp> {
   final _minifileScrollController = ScrollController();
   final _fileScrollController = ScrollController();
 
-  VideoQuality videoQuality = VideoQuality.highestQuality;
+  VideoQuality videoQuality = VideoQuality.goodQuality;
+  VideoFormat videoFormat = VideoFormat.webm;
   ImageQuality imageQuality = ImageQuality.normal;
   bool minifyInProgress = false;
   bool minifyFinished = false;
@@ -266,6 +307,7 @@ class _MinifyAppState extends State<MinifyApp> {
     _minificationManager = MinificationManager(
       imageQuality: imageQuality,
       videoQuality: videoQuality,
+      videoFormat: videoFormat,
     );
 
     final downloadsDir = await getDownloadsDirectory();
@@ -675,6 +717,13 @@ class _MinifyAppState extends State<MinifyApp> {
                   minifyInProgress,
                 ),
                 const SizedBox(height: 8),
+                _buildDropdownSetting(
+                  'Video format',
+                  videoFormat,
+                  VideoFormat.values,
+                  minifyInProgress,
+                ),
+                const SizedBox(height: 8),
               ],
               if (hasImages) ...[
                 _buildDropdownSetting(
@@ -784,6 +833,9 @@ class _MinifyAppState extends State<MinifyApp> {
                         case 'Image quality':
                           imageQuality = newValue as ImageQuality;
                           break;
+                        case 'Video format':
+                          videoFormat = newValue as VideoFormat;
+                          break;
                       }
                     });
                   }
@@ -802,6 +854,8 @@ class _MinifyAppState extends State<MinifyApp> {
   String _formatEnumName(String name) {
     return name
         .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(1)}')
+        .replaceAll('Webm', ' (WebM)')
+        .replaceAll('Mp4', ' (MP4)')
         .capitalize();
   }
 }
