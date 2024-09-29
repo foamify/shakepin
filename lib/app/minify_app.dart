@@ -33,10 +33,7 @@ enum VideoQuality {
 enum ImageQuality { lowest, low, normal, high, highest }
 
 // Add this enum for video formats
-enum VideoFormat {
-  webm,
-  mp4
-}
+enum VideoFormat { webm, mp4 }
 
 class MinifiedFile {
   final String originalPath;
@@ -176,18 +173,19 @@ class MinificationManager {
 
     final (qualityArg, codec, audioCodec) = switch (videoFormat) {
       VideoFormat.webm => (
-        '-crf ${_getVP9QualityArg(videoQuality)}',
-        'libvpx-vp9',
-        'libopus'
-      ),
+          '-crf ${_getVP9QualityArg(videoQuality)}',
+          'libvpx-vp9',
+          'libopus'
+        ),
       VideoFormat.mp4 => (
-        '-b:v ${_getHEVCBitrate(videoQuality)}k',
-        'hevc_videotoolbox',
-        'aac'
-      ),
+          '-b:v ${_getHEVCBitrate(videoQuality)}k',
+          'hevc_videotoolbox',
+          'aac'
+        ),
     };
 
-    String command = '-i "$filePath" -c:v $codec $qualityArg -b:a 128k -c:a $audioCodec "$outputPath"';
+    String command =
+        '-i "$filePath" -c:v $codec $qualityArg -b:a 128k -c:a $audioCodec "$outputPath"';
 
     try {
       currentSession = await FFmpegKit.execute(command);
@@ -231,14 +229,14 @@ class MinificationManager {
 
   String _getHEVCBitrate(VideoQuality quality) {
     return switch (quality) {
-      VideoQuality.lowestQuality => '28',
-      VideoQuality.lowQuality => '26',
-      VideoQuality.mediumQuality => '23',
-      VideoQuality.goodQuality => '20',
-      VideoQuality.highQuality => '18',
-      VideoQuality.veryHighQuality => '16',
-      VideoQuality.highestQuality => '14',
-      VideoQuality.lossless => '0',
+      VideoQuality.lowestQuality => '500',
+      VideoQuality.lowQuality => '1000',
+      VideoQuality.mediumQuality => '2000',
+      VideoQuality.goodQuality => '3500',
+      VideoQuality.highQuality => '5000',
+      VideoQuality.veryHighQuality => '8000',
+      VideoQuality.highestQuality => '12000',
+      VideoQuality.lossless => '20000',
     };
   }
 
