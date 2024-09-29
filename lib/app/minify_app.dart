@@ -1,3 +1,4 @@
+import 'package:ffmpeg_kit_flutter_video/ffprobe_kit.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -180,9 +181,27 @@ class MinificationManager {
       VideoFormat.mp4 => (
           '-b:v ${_getHEVCBitrate(videoQuality)}k',
           'hevc_videotoolbox',
-          'aac -vf scale=in_range=full:out_range=full,format=yuv420p10le'
+          'aac'
         ),
     };
+
+    // at first I thought there's something wrong with the command, but it works just fine in losslesscut but not in IINA
+
+    // final mediaInformation =
+    //     (await FFprobeKit.getMediaInformation(filePath)).getMediaInformation();
+    // if (mediaInformation == null) {
+    //   print('Error getting media information');
+    //   return null;
+    // }
+
+    // final streams = mediaInformation.getStreams();
+    // final videoStream = streams.firstWhere(
+    //     (stream) => stream.getStringProperty('codec_type') == 'video');
+    // final colorTransfer =
+    //     videoStream.getStringProperty('color_transfer') ?? 'bt709';
+    // final colorSpace = videoStream.getStringProperty('color_space') ?? 'bt709';
+    // final colorPrimaries =
+    //     videoStream.getStringProperty('color_primaries') ?? 'bt709';
 
     String command =
         '-i "$filePath" -c:v $codec $qualityArg -b:a 128k -c:a $audioCodec "$outputPath"';
@@ -261,7 +280,7 @@ class _MinifyAppState extends State<MinifyApp> {
   final _fileScrollController = ScrollController();
 
   VideoQuality videoQuality = VideoQuality.goodQuality;
-  VideoFormat videoFormat = VideoFormat.webm;
+  VideoFormat videoFormat = VideoFormat.mp4;
   ImageQuality imageQuality = ImageQuality.normal;
   bool minifyInProgress = false;
   bool minifyFinished = false;
