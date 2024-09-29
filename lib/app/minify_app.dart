@@ -18,6 +18,20 @@ import '../state.dart';
 import '../utils/utils.dart';
 import '../widgets/drop_target.dart';
 
+// Add these enum definitions at the top of the file, outside of any class
+enum VideoQuality {
+  lowestQuality,
+  lowQuality,
+  mediumQuality,
+  goodQuality,
+  highQuality,
+  veryHighQuality,
+  highestQuality,
+  lossless
+}
+
+enum ImageQuality { lowest, low, normal, high, highest }
+
 class MinifiedFile {
   final String originalPath;
   final String minifiedPath;
@@ -41,15 +55,13 @@ class MinifiedFile {
 }
 
 class MinificationManager {
-  final String imageQuality;
-  final String videoQuality;
-  final String videoFormat;
+  final ImageQuality imageQuality;
+  final VideoQuality videoQuality;
   FFmpegSession? currentSession;
 
   MinificationManager({
     required this.imageQuality,
     required this.videoQuality,
-    required this.videoFormat,
   });
 
   Future<MinifiedFile?> minifyFile(
@@ -102,12 +114,11 @@ class MinificationManager {
         inputPath: filePath,
         outputPath: outputPath,
         quality: switch (imageQuality) {
-          'Lowest' => 30,
-          'Low' => 50,
-          'Normal' => 80,
-          'High' => 90,
-          'Highest' => 95,
-          _ => 80,
+          ImageQuality.lowest => 30,
+          ImageQuality.low => 50,
+          ImageQuality.normal => 80,
+          ImageQuality.high => 90,
+          ImageQuality.highest => 95,
         },
         pngOptimizationLevel: 3,
         keepMetadata: true,
@@ -138,40 +149,31 @@ class MinificationManager {
     final file = File(filePath);
     final fileName = path.basename(filePath);
     final fileNameWithoutExtension = path.basenameWithoutExtension(fileName);
-    final fileExtension = path.extension(fileName).toLowerCase();
 
-    var outputExtension = fileExtension;
-    if (videoFormat != 'Same as input') {
-      outputExtension = '.${videoFormat.toLowerCase()}';
-    }
-
-    var newFileName = '${fileNameWithoutExtension}_minified$outputExtension';
+    var newFileName = '${fileNameWithoutExtension}_minified.webm';
     var outputPath = path.join(downloadsDir.path, newFileName);
 
     // Check if the file already exists and generate a unique name if it does
     var counter = 1;
     while (File(outputPath).existsSync()) {
-      newFileName =
-          '${fileNameWithoutExtension}_minified_$counter$outputExtension';
-      outputPath = path.join(path.dirname(filePath), newFileName);
+      newFileName = '${fileNameWithoutExtension}_minified_$counter.webm';
+      outputPath = path.join(downloadsDir.path, newFileName);
       counter++;
     }
 
     final qualityArg = switch (videoQuality) {
-      'Low' => '17',
-      'Normal' => '23',
-      'High' => '28',
-      _ => '23', // Default to Normal
+      VideoQuality.lowestQuality => '40',
+      VideoQuality.lowQuality => '36',
+      VideoQuality.mediumQuality => '34',
+      VideoQuality.goodQuality => '33',
+      VideoQuality.highQuality => '32',
+      VideoQuality.veryHighQuality => '31',
+      VideoQuality.highestQuality => '24',
+      VideoQuality.lossless => '0',
     };
 
-    String command;
-    if (videoFormat == 'WebM') {
-      command =
-          '-i "$filePath" -c:v vp9 -crf $qualityArg -b:v 1M -c:a opus -b:a 128k -strict -2 "$outputPath"';
-    } else {
-      command =
-          '-i "$filePath" -c:v h264_videotoolbox -crf $qualityArg -preset medium -c:a aac -b:a 128k "$outputPath"';
-    }
+    String command =
+        '-i "$filePath" -c:v libvpx-vp9 -crf $qualityArg -b:v 0 -b:a 128k -c:a libopus "$outputPath"';
 
     try {
       currentSession = await FFmpegKit.execute(command);
@@ -201,7 +203,8 @@ class MinificationManager {
   }
 
   void cancelMinification() {
-    FFmpegKit.execute("-t 0");
+    FFmpegKit.cancel();
+    FFmpegKit.cancel(currentSession?.getSessionId());
     currentSession
         ?.cancel(); // this does not work https://github.com/arthenica/ffmpeg-kit/issues/1024
   }
@@ -219,9 +222,8 @@ class _MinifyAppState extends State<MinifyApp> {
   final _minifileScrollController = ScrollController();
   final _fileScrollController = ScrollController();
 
-  String videoQuality = 'Normal';
-  String videoFormat = 'Same as input';
-  String imageQuality = 'Normal';
+  VideoQuality videoQuality = VideoQuality.highestQuality;
+  ImageQuality imageQuality = ImageQuality.normal;
   bool minifyInProgress = false;
   bool minifyFinished = false;
   int processedFiles = 0;
@@ -264,7 +266,6 @@ class _MinifyAppState extends State<MinifyApp> {
     _minificationManager = MinificationManager(
       imageQuality: imageQuality,
       videoQuality: videoQuality,
-      videoFormat: videoFormat,
     );
 
     final downloadsDir = await getDownloadsDirectory();
@@ -277,7 +278,10 @@ class _MinifyAppState extends State<MinifyApp> {
     }
 
     for (final filePath in files) {
-      if (!minifyInProgress) break; // Check if cancellation was requested
+      if (!minifyInProgress) {
+        FFmpegKit.execute("-t 0");
+        break;
+      } // Check if cancellation was requested
       final minifiedFile =
           await _minificationManager!.minifyFile(filePath, downloadsDir);
       if (minifiedFile != null) {
@@ -663,21 +667,22 @@ class _MinifyAppState extends State<MinifyApp> {
           padding: const EdgeInsets.all(8),
           child: Column(
             children: [
-
               if (hasVideos) ...[
-                _buildDropdownSetting('Video quality', videoQuality,
-                    ['Low', 'Normal', 'High'], minifyInProgress),
-                const SizedBox(height: 4),
-                _buildDropdownSetting('Video format', videoFormat,
-                    ['Same as input', 'MP4', 'WebM'], minifyInProgress),
+                _buildDropdownSetting(
+                  'Video quality',
+                  videoQuality,
+                  VideoQuality.values,
+                  minifyInProgress,
+                ),
                 const SizedBox(height: 8),
               ],
               if (hasImages) ...[
                 _buildDropdownSetting(
-                    'Image quality',
-                    imageQuality,
-                    ['Lowest', 'Low', 'Normal', 'High', 'Highest'],
-                    minifyInProgress),
+                  'Image quality',
+                  imageQuality,
+                  ImageQuality.values,
+                  minifyInProgress,
+                ),
               ],
               const SizedBox(height: 8),
               SizedBox(
@@ -759,13 +764,13 @@ class _MinifyAppState extends State<MinifyApp> {
     );
   }
 
-  Widget _buildDropdownSetting(
-      String label, String value, List<String> options, bool disabled) {
+  Widget _buildDropdownSetting<T extends Enum>(
+      String label, T value, List<T> options, bool disabled) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: const TextStyle(fontSize: 12)),
-        MacosPopupButton<String>(
+        MacosPopupButton<T>(
           value: value,
           onChanged: disabled
               ? null
@@ -774,27 +779,30 @@ class _MinifyAppState extends State<MinifyApp> {
                     setState(() {
                       switch (label) {
                         case 'Video quality':
-                          videoQuality = newValue;
-                          break;
-                        case 'Video format':
-                          videoFormat = newValue;
+                          videoQuality = newValue as VideoQuality;
                           break;
                         case 'Image quality':
-                          imageQuality = newValue;
+                          imageQuality = newValue as ImageQuality;
                           break;
                       }
                     });
                   }
                 },
           items: options.map((option) {
-            return MacosPopupMenuItem<String>(
+            return MacosPopupMenuItem<T>(
               value: option,
-              child: Text(option),
+              child: Text(_formatEnumName(option.name)),
             );
           }).toList(),
         ),
       ],
     );
+  }
+
+  String _formatEnumName(String name) {
+    return name
+        .replaceAllMapped(RegExp(r'([A-Z])'), (match) => ' ${match.group(1)}')
+        .capitalize();
   }
 }
 
@@ -850,5 +858,12 @@ class _FileHoverWidgetState extends State<FileHoverWidget> {
         ),
       ),
     );
+  }
+}
+
+// Add this extension at the bottom of the file
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }
