@@ -161,22 +161,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.3"
-  ffmpeg_kit_flutter_platform_interface:
-    dependency: transitive
-    description:
-      name: ffmpeg_kit_flutter_platform_interface
-      sha256: addf046ae44e190ad0101b2fde2ad909a3cd08a2a109f6106d2f7048b7abedee
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.1"
-  ffmpeg_kit_flutter_video:
-    dependency: "direct main"
-    description:
-      name: ffmpeg_kit_flutter_video
-      sha256: "86d2e56f0c9ad23350001dbe91a87f0a23ec5016353dd776cc087ecdb734539d"
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.0.3"
   file:
     dependency: transitive
     description:
@@ -415,6 +399,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
+  lukehog:
+    dependency: "direct main"
+    description:
+      name: lukehog
+      sha256: "06c973238f053784ef22ff574e8ce131a500f2c5d1312454b9010dee1d0786d6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.1+2"
+  lukehog_client:
+    dependency: transitive
+    description:
+      name: lukehog_client
+      sha256: a44578a2b14db61318a4021f7a7ccdd82db8ee94dcc8f598916b58deb2ea9feb
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.2+1"
   macos_haptic_feedback:
     dependency: "direct main"
     description:
@@ -463,6 +463,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.15.0"
+  nanoid2:
+    dependency: transitive
+    description:
+      name: nanoid2
+      sha256: "35b5048f836652a1d711db0d716bdee59fcaaa4c37792db8b3568da4f7feb2f9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
   package_info_plus:
     dependency: "direct main"
     description:
