@@ -3,6 +3,13 @@ PODS:
     - FlutterMacOS
   - device_info_plus (0.0.1):
     - FlutterMacOS
+  - ffmpeg-kit-macos-video (6.0)
+  - ffmpeg_kit_flutter_video (6.0.3):
+    - ffmpeg_kit_flutter_video/video (= 6.0.3)
+    - FlutterMacOS
+  - ffmpeg_kit_flutter_video/video (6.0.3):
+    - ffmpeg-kit-macos-video (= 6.0)
+    - FlutterMacOS
   - file_selector_macos (0.0.1):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
@@ -32,6 +39,7 @@ PODS:
 DEPENDENCIES:
   - appkit_ui_element_colors (from `Flutter/ephemeral/.symlinks/plugins/appkit_ui_element_colors/macos`)
   - device_info_plus (from `Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos`)
+  - ffmpeg_kit_flutter_video (from `Flutter/ephemeral/.symlinks/plugins/ffmpeg_kit_flutter_video/macos`)
   - file_selector_macos (from `Flutter/ephemeral/.symlinks/plugins/file_selector_macos/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - irondash_engine_context (from `Flutter/ephemeral/.symlinks/plugins/irondash_engine_context/macos`)
@@ -45,11 +53,17 @@ DEPENDENCIES:
   - super_native_extensions (from `Flutter/ephemeral/.symlinks/plugins/super_native_extensions/macos`)
   - url_launcher_macos (from `Flutter/ephemeral/.symlinks/plugins/url_launcher_macos/macos`)
 
+SPEC REPOS:
+  trunk:
+    - ffmpeg-kit-macos-video
+
 EXTERNAL SOURCES:
   appkit_ui_element_colors:
     :path: Flutter/ephemeral/.symlinks/plugins/appkit_ui_element_colors/macos
   device_info_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos
+  ffmpeg_kit_flutter_video:
+    :path: Flutter/ephemeral/.symlinks/plugins/ffmpeg_kit_flutter_video/macos
   file_selector_macos:
     :path: Flutter/ephemeral/.symlinks/plugins/file_selector_macos/macos
   FlutterMacOS:
@@ -78,6 +92,8 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   appkit_ui_element_colors: 39bb2d80be3f19b152ccf4c70d5bbe6cba43d74a
   device_info_plus: ce1b7762849d3ec103d0e0517299f2db7ad60720
+  ffmpeg-kit-macos-video: 333d10bbf13a48e78bbf8fb377b32c0804438545
+  ffmpeg_kit_flutter_video: a43d68dd26f974b8837edd5b748647643c4f752b
   file_selector_macos: cc3858c981fe6889f364731200d6232dac1d812d
   FlutterMacOS: 8f6f14fa908a6fb3fba0cd85dbd81ec4b251fb24
   irondash_engine_context: da62996ee25616d2f01bbeb85dc115d813359478
@@ -91,6 +107,6 @@ SPEC CHECKSUMS:
   super_native_extensions: 85efee3a7495b46b04befcfc86ed12069264ebf3
   url_launcher_macos: c82c93949963e55b228a30115bd219499a6fe404
 
-PODFILE CHECKSUM: 0236e70ae55f34156608144e446f1a33ef913c41
+PODFILE CHECKSUM: 9ebaf0ce3d369aaa26a9ea0e159195ed94724cf3
 
 COCOAPODS: 1.15.2
