@@ -601,7 +601,7 @@ class _MinifyAppState extends State<MinifyApp> {
                       ),
                       const SizedBox(height: 16),
                       _buildPathSelector(
-                        'Select FFMPEG path',
+                        'Select FFmpeg path',
                         ffmpegController,
                         (String path) {
                           setState(() {
@@ -856,7 +856,7 @@ class _MinifyAppState extends State<MinifyApp> {
         Text(
           label.contains('Oxipng')
               ? 'Used for minifying images.'
-              : label.contains('FFMPEG')
+              : label.contains('FFmpeg')
                   ? 'Used for minifying videos.'
                   : 'Used for minifying images (non-PNG).',
           style:
