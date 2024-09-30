@@ -7,7 +7,6 @@ import Foundation
 
 import appkit_ui_element_colors
 import device_info_plus
-import ffmpeg_kit_flutter_video
 import file_selector_macos
 import irondash_engine_context
 import macos_haptic_feedback
@@ -22,7 +21,6 @@ import url_launcher_macos
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   AppkitUiElementColorsPlugin.register(with: registry.registrar(forPlugin: "AppkitUiElementColorsPlugin"))
   DeviceInfoPlusMacosPlugin.register(with: registry.registrar(forPlugin: "DeviceInfoPlusMacosPlugin"))
-  FFmpegKitFlutterPlugin.register(with: registry.registrar(forPlugin: "FFmpegKitFlutterPlugin"))
   FileSelectorPlugin.register(with: registry.registrar(forPlugin: "FileSelectorPlugin"))
   IrondashEngineContextPlugin.register(with: registry.registrar(forPlugin: "IrondashEngineContextPlugin"))
   MacosHapticFeedbackPlugin.register(with: registry.registrar(forPlugin: "MacosHapticFeedbackPlugin"))
