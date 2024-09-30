@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:shakepin/app/about_app.dart';
 import 'package:shakepin/app/archive_app.dart';
 import 'package:shakepin/app/minify_app.dart';
 import 'package:shakepin/app/panel_app.dart';
@@ -27,6 +28,12 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
 
     items.addListener(() {
       if (items().isEmpty) {
+        resetFrameAndHide();
+      }
+    });
+
+    isAboutApp.addListener(() {
+      if (!isAboutApp()) {
         resetFrameAndHide();
       }
     });
@@ -58,6 +65,9 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
 
   @override
   void shakeDetected(Offset position) async {
+    if (isAboutApp()) {
+      return;
+    }
     if (!isShakeDetected) {
       isShakeDetected = true;
       Size appSize;
@@ -118,8 +128,12 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
                   archiveProgress,
                   items,
                   isMinifyApp,
+                  isAboutApp,
                 ]),
                 builder: (context, child) {
+                  if (isAboutApp()) {
+                    return const AboutApp();
+                  }
                   if (isMinifyApp()) {
                     return const MinifyApp();
                   }

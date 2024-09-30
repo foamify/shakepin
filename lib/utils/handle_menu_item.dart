@@ -11,6 +11,10 @@ void handleMenuItemClicked(int tag) async {
     case 2: // hide
       await _hideApp();
       break;
+    case 3: // about
+      isAboutApp.value = true;
+      _showApp();
+      break;
     default:
       break;
   }
@@ -20,7 +24,9 @@ Future<void> _showApp() async {
   final center = await dropChannel.center();
   Size appSize;
 
-  if (isMinifyApp()) {
+  if (isAboutApp()) {
+    appSize = AppSizes.about;
+  } else if (isMinifyApp()) {
     appSize = AppSizes.minify;
   } else if (archiveProgress() >= 0) {
     appSize = AppSizes.archive;
@@ -45,7 +51,9 @@ Future<void> _hideApp() async {
   final center = await dropChannel.center();
   Size appSize;
 
-  if (isMinifyApp()) {
+  if (isAboutApp()) {
+    appSize = AppSizes.about;
+  } else if (isMinifyApp()) {
     appSize = AppSizes.minify;
   } else if (archiveProgress() >= 0) {
     appSize = AppSizes.archive;
@@ -74,4 +82,5 @@ Future<void> _hideApp() async {
   );
   await Future.delayed(Durations.short4);
   await dropChannel.setVisible(false);
+  isAboutApp.value = false;
 }

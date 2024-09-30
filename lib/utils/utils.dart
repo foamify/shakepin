@@ -7,6 +7,7 @@ sealed class AppSizes {
   static const panel = Size(64 * 3, 64);
   static const pin = Size(180, 180);
   static const minify = Size(360, 600);
+  static const about = Size(360, 360);
 }
 
 final haptic = MacosHapticFeedback();

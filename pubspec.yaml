@@ -24,11 +24,15 @@ dependencies:
   super_sliver_list: ^0.4.1
   ffmpeg_kit_flutter_video: ^6.0.3
   path_provider: ^2.1.4
+  url_launcher: ^6.1.10
+  package_info_plus: ^8.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
   icons_launcher: ^3.0.0
+  flutter_oss_licenses: ^3.0.2
 
 flutter:
   uses-material-design: true

@@ -548,6 +548,7 @@ class MainFlutterWindow: NSWindow {
     let menuItems = [
       ("Show", 1),
       ("Hide", 2),
+      ("About Shakepin", 3),
       ("Quit", -1),
     ]
 
