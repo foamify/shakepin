@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 final items = ValueNotifier<Set<String>>({});
 final archiveProgress = ValueNotifier<double>(-1);
 final isMinifyApp = ValueNotifier<bool>(false);
 final isAboutApp = ValueNotifier<bool>(false);
+const isAppStore = appFlavor != 'oss';
 
 String formatFileSize(int size) {
   if (size < 1000) {

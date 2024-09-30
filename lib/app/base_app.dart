@@ -1,12 +1,10 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:shakepin/app/about_app.dart';
 import 'package:shakepin/app/archive_app.dart';
 import 'package:shakepin/app/minify_app.dart';
+import 'package:shakepin/state.dart';
 import 'package:shakepin/app/panel_app.dart';
 import 'package:shakepin/app/pin_app.dart';
-import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drag_to_move_area.dart';

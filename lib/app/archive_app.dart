@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shakepin/utils/drop_channel.dart';
@@ -19,6 +20,7 @@ class ArchiveApp extends StatefulWidget {
 class _ArchiveAppState extends State<ArchiveApp> {
   @override
   void initState() {
+    print('appFlavor: $appFlavor');
     files = items();
     dropChannel.setMinimumSize(AppSizes.archive);
     _initializeOutputFolder();
@@ -31,11 +33,20 @@ class _ArchiveAppState extends State<ArchiveApp> {
   var currentlyProcessingFile = '';
 
   Future<void> _initializeOutputFolder() async {
-    final downloadsDir = await getDownloadsDirectory();
-    outputFolder = downloadsDir?.path ?? '';
-    if (files.isNotEmpty) {
-      final paths = items();
-      compressToZip(paths.toList());
+    if (isAppStore) {
+      final downloadsDir = await getDownloadsDirectory();
+      outputFolder = downloadsDir?.path ?? '';
+      if (files.isNotEmpty) {
+        final paths = items();
+        compressToZip(paths.toList());
+      }
+    } else {
+      if (files.isNotEmpty) {
+        final paths = items();
+        final firstFilePath = paths.first;
+        outputFolder = Directory(firstFilePath).parent.path;
+        compressToZip(paths.toList());
+      }
     }
   }
 
