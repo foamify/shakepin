@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shakepin/utils/analytics.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 
 import '../state.dart';
@@ -23,6 +24,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
     print('appFlavor: $appFlavor');
     files = items();
     dropChannel.setMinimumSize(AppSizes.archive);
+    Analytics.archiveFiles();
     _initializeOutputFolder();
     super.initState();
   }

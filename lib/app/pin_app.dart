@@ -8,6 +8,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
+import 'package:shakepin/utils/analytics.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_hover_widget.dart';
 import 'package:shakepin/utils/drop_channel.dart';
@@ -29,6 +30,7 @@ class _PinAppState extends State<PinApp> with DragDropListener {
 
   @override
   void initState() {
+    Analytics.pinFiles();
     dropChannel.setMinimumSize(AppSizes.pin);
     dropChannel.addListener(this);
     super.initState();

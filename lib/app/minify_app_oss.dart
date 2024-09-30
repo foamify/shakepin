@@ -5,6 +5,7 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:shakepin/utils/analytics.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
@@ -105,8 +106,10 @@ class MinificationManager {
     MinifiedFile? result;
 
     if (isImageFile(filePath)) {
+      Analytics.minifyImage(imageQuality.name);
       result = await minifyImage(filePath);
     } else if (isVideoFile(filePath)) {
+      Analytics.minifyVideo(videoQuality.name, videoFormat.name);
       result = await minifyVideo(filePath);
     }
 
@@ -366,6 +369,7 @@ class _MinifyAppState extends State<MinifyApp> {
   @override
   void initState() {
     super.initState();
+    Analytics.openMinifyApp();
     SharedPreferences.getInstance().then((prefs) {
       this.prefs = prefs;
       setState(() {
@@ -456,6 +460,7 @@ class _MinifyAppState extends State<MinifyApp> {
   }
 
   void cancelMinification() {
+    Analytics.cancelMinification();
     _minificationManager?.cancelMinification();
     setState(() {
       minifyInProgress = false;

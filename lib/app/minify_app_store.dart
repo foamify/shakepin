@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shakepin/utils/analytics.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
@@ -74,8 +75,10 @@ class MinificationManager {
     MinifiedFile? result;
 
     if (isImageFile(filePath)) {
+      Analytics.minifyImage(imageQuality.name);
       result = await minifyImage(filePath, outputDir);
     } else if (isVideoFile(filePath)) {
+      Analytics.minifyVideo(videoQuality.name, videoFormat.name);
       result = await minifyVideo(filePath, outputDir);
     }
 
@@ -258,6 +261,7 @@ class MinificationManager {
   }
 
   void cancelMinification() {
+    Analytics.cancelMinification();
     FFmpegKit.cancel();
     FFmpegKit.cancel(currentSession?.getSessionId());
     currentSession
@@ -301,6 +305,7 @@ class _MinifyAppState extends State<MinifyApp> {
   @override
   void initState() {
     super.initState();
+    Analytics.openMinifyApp();
     SharedPreferences.getInstance().then((prefs) {
       this.prefs = prefs;
     });
