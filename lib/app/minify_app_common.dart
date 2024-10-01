@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:path/path.dart' as path;
+import 'package:shakepin/state.dart';
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'dart:io';
@@ -49,11 +50,11 @@ class MinifiedFile {
 
 class FileHoverWidget extends StatefulWidget {
   const FileHoverWidget({
-    Key? key,
+    super.key,
     required this.icon,
     required this.fileName,
     required this.fileSize,
-  }) : super(key: key);
+  });
 
   final IconData icon;
   final String fileName;
@@ -108,7 +109,7 @@ Widget buildMinifiedFilesList(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Container(
-        height: 200,
+        height: 180,
         decoration: BoxDecoration(
           border: Border.all(
             color: CupertinoColors.systemGrey.withOpacity(.3),
@@ -193,7 +194,7 @@ Widget buildMinifiedFilesList(
   );
 }
 
-Widget buildFileList(Set<String> files, bool isDragging,
+Widget buildFileList(ValueNotifier<Set<String>> files, ValueNotifier<bool> isDragging,
     ScrollController fileScrollController, Function(String) removeFile) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -201,17 +202,22 @@ Widget buildFileList(Set<String> files, bool isDragging,
       DropTarget(
         label: 'minify-drop',
         onDragEnter: (position) {
-          print('onDragEnter: $position');
-          // haptic.levelChange();
+          haptic.levelChange();
+          isDragging.value = true;
         },
-        onDragExited: () {},
-        onDragPerform: (paths) {},
+        onDragExited: () {
+          isDragging.value = false;
+        },
+        onDragPerform: (paths) {
+          isDragging.value = false;
+          files.addAll(paths.where(isSupportedFile).toSet());
+        },
         onDragConclude: () {},
         child: AnimatedContainer(
           duration: Durations.medium2,
           height: 200,
           foregroundDecoration: BoxDecoration(
-            border: isDragging
+            border: isDragging()
                 ? Border.all(
                     color: CupertinoColors.systemBlue,
                     width: 2,
@@ -221,7 +227,7 @@ Widget buildFileList(Set<String> files, bool isDragging,
                   ),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: files.isEmpty
+          child: files().isEmpty
               ? const Center(
                   child: Text(
                     'Drop files here',
@@ -237,7 +243,7 @@ Widget buildFileList(Set<String> files, bool isDragging,
                       height: 24,
                       child: Center(
                         child: Text(
-                          '${files.length} Files',
+                          '${files().length} Files',
                           style: const TextStyle(fontSize: 12),
                         ),
                       ),
@@ -251,7 +257,7 @@ Widget buildFileList(Set<String> files, bool isDragging,
                         controller: fileScrollController,
                         child: ListView.separated(
                           controller: fileScrollController,
-                          itemCount: files.length,
+                          itemCount: files().length,
                           separatorBuilder: (context, index) => Divider(
                             indent: 12,
                             endIndent: 12,
@@ -259,7 +265,7 @@ Widget buildFileList(Set<String> files, bool isDragging,
                             color: CupertinoColors.systemGrey.withOpacity(.2),
                           ),
                           itemBuilder: (context, index) {
-                            final filePath = files.elementAt(index);
+                            final filePath = files().elementAt(index);
                             final file = File(filePath);
                             final fileName = path.basename(filePath);
                             final fileSize = formatFileSize(file.lengthSync());

@@ -38,6 +38,32 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
       }
     });
 
+    isMinifyApp.addListener(() async {
+      if (isMinifyApp()) {
+        dropChannel.setFrame(
+          Rect.fromCenter(
+            center: await dropChannel.center(),
+            width: AppSizes.minify.width,
+            height: AppSizes.minify.height,
+          ),
+          animate: true,
+        );
+      }
+    });
+
+    minifiedFiles.addListener(() async {
+      if (minifiedFiles().isNotEmpty && isMinifyApp()) {
+        dropChannel.setFrame(
+          Rect.fromCenter(
+            center: await dropChannel.center(),
+            width: AppSizes.minify.width,
+            height: AppSizes.minify.height + 200,
+          ),
+          animate: true,
+        );
+      }
+    });
+
     super.initState();
   }
 
@@ -71,9 +97,9 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
     if (!isShakeDetected) {
       isShakeDetected = true;
       Size appSize;
-      if (isMinifyApp.value) {
+      if (isMinifyApp()) {
         appSize = AppSizes.minify;
-      } else if (archiveProgress.value >= 0) {
+      } else if (archiveProgress() >= 0) {
         appSize = AppSizes.archive;
       } else if (items().isNotEmpty) {
         appSize = AppSizes.pin;

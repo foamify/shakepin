@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_target.dart';
 
 class DropHoverWidget extends StatefulWidget {

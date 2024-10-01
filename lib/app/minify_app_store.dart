@@ -8,7 +8,6 @@ import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
-import 'package:super_context_menu/super_context_menu.dart';
 import 'dart:async';
 import 'package:libcaesium_dart/libcaesium_dart.dart';
 import 'package:ffmpeg_kit_flutter_video/ffmpeg_kit.dart';
@@ -17,7 +16,6 @@ import 'package:ffmpeg_kit_flutter_video/ffmpeg_session.dart';
 
 import '../state.dart';
 import '../utils/utils.dart';
-import '../widgets/drop_target.dart';
 import 'minify_app_common.dart';
 
 // Add these enum definitions at the top of the file, outside of any class
@@ -266,11 +264,9 @@ class _MinifyAppState extends State<MinifyApp> {
   bool minifyFinished = false;
   int processedFiles = 0;
   int totalFiles = 0;
-  List<MinifiedFile> minifiedFiles = [];
-  List<MinifiedFile> allProcessedFiles = [];
 
-  var files = <String>{};
-  var isDragging = false;
+  final files = ValueNotifier<Set<String>>({});
+  final isDragging = ValueNotifier<bool>(false);
 
   MinificationManager? _minificationManager;
 
@@ -279,13 +275,20 @@ class _MinifyAppState extends State<MinifyApp> {
   @override
   void initState() {
     super.initState();
+    minifiedFiles.clear();
     Analytics.openMinifyApp();
     SharedPreferences.getInstance().then((prefs) {
       this.prefs = prefs;
     });
 
     dropChannel.setMinimumSize(AppSizes.minify);
-    files = items().where(isSupportedFile).toSet();
+    files.value = items().where(isSupportedFile).toSet();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    minifiedFiles.clear();
   }
 
   Future<void> minifyFiles() async {
@@ -293,7 +296,7 @@ class _MinifyAppState extends State<MinifyApp> {
       minifyInProgress = true;
       minifyFinished = false;
       processedFiles = 0;
-      totalFiles = files.length;
+      totalFiles = files().length;
       minifiedFiles.clear();
       errorMessages.clear();
     });
@@ -316,10 +319,10 @@ class _MinifyAppState extends State<MinifyApp> {
       }
       outputDir = downloadsDir;
     } else {
-      outputDir = Directory(path.dirname(files.first));
+      outputDir = Directory(path.dirname(files().first));
     }
 
-    for (final filePath in files) {
+    for (final filePath in files()) {
       if (!minifyInProgress) {
         FFmpegKit.execute("-t 0");
         break;
@@ -329,7 +332,6 @@ class _MinifyAppState extends State<MinifyApp> {
       if (minifiedFile != null) {
         setState(() {
           minifiedFiles.add(minifiedFile);
-          allProcessedFiles.add(minifiedFile);
           processedFiles++;
         });
       } else {
@@ -354,8 +356,8 @@ class _MinifyAppState extends State<MinifyApp> {
   }
 
   Widget _buildSettingsSection() {
-    bool hasVideos = files.any((file) => isVideoFile(file));
-    bool hasImages = files.any((file) => isImageFile(file));
+    bool hasVideos = files().any((file) => isVideoFile(file));
+    bool hasImages = files().any((file) => isImageFile(file));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,7 +427,7 @@ class _MinifyAppState extends State<MinifyApp> {
                       )
                     : PushButton(
                         controlSize: ControlSize.large,
-                        onPressed: (files.isEmpty)
+                        onPressed: (files().isEmpty)
                             ? null
                             : () async {
                                 await minifyFiles();
@@ -550,10 +552,10 @@ class _MinifyAppState extends State<MinifyApp> {
                     ),
                     const SizedBox(height: 16),
                     _buildSettingsSection(),
-                    if (allProcessedFiles.isNotEmpty) ...[
+                    if (minifiedFiles().isNotEmpty) ...[
                       const SizedBox(height: 16),
                       buildMinifiedFilesList(
-                          allProcessedFiles, _minifileScrollController),
+                          minifiedFiles(), _minifileScrollController),
                     ],
                   ],
                 ),

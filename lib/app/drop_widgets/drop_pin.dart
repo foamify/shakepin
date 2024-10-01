@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
-import 'package:shakepin/widgets/drop_hover.dart';
+import 'package:shakepin/widgets/drop_button_hover.dart';
 import 'package:shakepin/widgets/drop_target.dart';
 
 class DropPin extends StatefulWidget {

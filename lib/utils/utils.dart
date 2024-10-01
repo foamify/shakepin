@@ -6,7 +6,7 @@ sealed class AppSizes {
   static const archive = Size(300, 200);
   static const panel = Size(64 * 3, 72);
   static const pin = Size(180, 180);
-  static const minify = Size(360, 600);
+  static const minify = Size(360, 460);
   static const about = Size(360, 360);
 }
 

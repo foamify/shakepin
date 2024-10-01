@@ -292,11 +292,9 @@ class _MinifyAppState extends State<MinifyApp> {
   bool minifyFinished = false;
   int processedFiles = 0;
   int totalFiles = 0;
-  List<MinifiedFile> minifiedFiles = [];
-  List<MinifiedFile> allProcessedFiles = [];
 
-  var files = <String>{};
-  var isDragging = false;
+  final files = ValueNotifier<Set<String>>({});
+  final isDragging = ValueNotifier<bool>(false);
 
   MinificationManager? _minificationManager;
 
@@ -305,6 +303,7 @@ class _MinifyAppState extends State<MinifyApp> {
   @override
   void initState() {
     super.initState();
+    minifiedFiles.clear();
     Analytics.openMinifyApp();
     SharedPreferences.getInstance().then((prefs) {
       this.prefs = prefs;
@@ -338,7 +337,7 @@ class _MinifyAppState extends State<MinifyApp> {
     imageMagickController = TextEditingController(text: imageMagickPath);
 
     dropChannel.setMinimumSize(AppSizes.minify);
-    files = items().where(isSupportedFile).toSet();
+    files.value = items().where(isSupportedFile).toSet();
   }
 
   @override
@@ -346,6 +345,7 @@ class _MinifyAppState extends State<MinifyApp> {
     oxipngController.dispose();
     ffmpegController.dispose();
     imageMagickController.dispose();
+    minifiedFiles.clear();
     super.dispose();
   }
 
@@ -354,7 +354,7 @@ class _MinifyAppState extends State<MinifyApp> {
       minifyInProgress = true;
       minifyFinished = false;
       processedFiles = 0;
-      totalFiles = files.length;
+      totalFiles = files().length;
       minifiedFiles.clear();
       errorMessages.clear(); // Clear previous error messages
     });
@@ -371,13 +371,12 @@ class _MinifyAppState extends State<MinifyApp> {
       removeInputFiles: removeInputFiles,
     );
 
-    for (final filePath in files) {
+    for (final filePath in files()) {
       if (!minifyInProgress) break; // Check if cancellation was requested
       final minifiedFile = await _minificationManager!.minifyFile(filePath);
       if (minifiedFile != null) {
         setState(() {
           minifiedFiles.add(minifiedFile);
-          allProcessedFiles.add(minifiedFile);
           processedFiles++;
         });
       } else {
@@ -454,8 +453,8 @@ class _MinifyAppState extends State<MinifyApp> {
   }
 
   Widget _buildSettingsSection() {
-    bool hasVideos = files.any((file) => isVideoFile(file));
-    bool hasImages = files.any((file) => isImageFile(file));
+    bool hasVideos = files().any((file) => isVideoFile(file));
+    bool hasImages = files().any((file) => isImageFile(file));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,7 +515,7 @@ class _MinifyAppState extends State<MinifyApp> {
                         onPressed: (oxipngPath.isEmpty ||
                                 ffmpegPath.isEmpty ||
                                 imageMagickPath.isEmpty ||
-                                files.isEmpty)
+                                files().isEmpty)
                             ? null
                             : () async {
                                 await minifyFiles();
@@ -681,10 +680,10 @@ class _MinifyAppState extends State<MinifyApp> {
                       ),
                       const SizedBox(height: 16),
                       _buildSettingsSection(),
-                      if (allProcessedFiles.isNotEmpty) ...[
+                      if (minifiedFiles().isNotEmpty) ...[
                         const SizedBox(height: 16),
                         buildMinifiedFilesList(
-                            allProcessedFiles, _minifileScrollController),
+                            minifiedFiles(), _minifileScrollController),
                       ],
                     ],
                   ),
