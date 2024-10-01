@@ -272,6 +272,7 @@ class MinifyApp extends StatefulWidget {
 
 class _MinifyAppState extends State<MinifyApp> {
   late final SharedPreferences prefs;
+  // TODO: none of these works
   late final TextEditingController oxipngController;
   late final TextEditingController ffmpegController;
   late final TextEditingController imageMagickController;
@@ -305,6 +306,11 @@ class _MinifyAppState extends State<MinifyApp> {
     super.initState();
     minifiedFiles.clear();
     Analytics.openMinifyApp();
+
+    oxipngController = TextEditingController(text: oxipngPath);
+    ffmpegController = TextEditingController(text: ffmpegPath);
+    imageMagickController = TextEditingController(text: imageMagickPath);
+
     SharedPreferences.getInstance().then((prefs) {
       this.prefs = prefs;
       setState(() {
@@ -332,12 +338,11 @@ class _MinifyAppState extends State<MinifyApp> {
       });
     });
 
-    oxipngController = TextEditingController(text: oxipngPath);
-    ffmpegController = TextEditingController(text: ffmpegPath);
-    imageMagickController = TextEditingController(text: imageMagickPath);
-
     dropChannel.setMinimumSize(AppSizes.minify);
     files.value = items().where(isSupportedFile).toSet();
+    files.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
@@ -424,8 +429,8 @@ class _MinifyAppState extends State<MinifyApp> {
             Expanded(
               child: MacosTextField(
                 controller: controller,
-                placeholder: 'Path not set',
-                readOnly: true,
+                placeholder: 'Enter path or select file',
+                // Remove the readOnly property to make it editable
               ),
             ),
             const SizedBox(width: 8),
@@ -439,7 +444,6 @@ class _MinifyAppState extends State<MinifyApp> {
                   )
                 ]);
                 if (result != null) {
-                  onSelect(result.path);
                   controller.text = result.path;
                 }
               },
@@ -450,6 +454,18 @@ class _MinifyAppState extends State<MinifyApp> {
         const SizedBox(height: 8),
       ],
     );
+  }
+
+  void _savePaths() {
+    setState(() {
+      oxipngPath = oxipngController.text;
+      ffmpegPath = ffmpegController.text;
+      imageMagickPath = imageMagickController.text;
+
+      prefs.setString('oxipng_path', oxipngPath);
+      prefs.setString('ffmpeg_path', ffmpegPath);
+      prefs.setString('imagemagick_path', imageMagickPath);
+    });
   }
 
   Widget _buildSettingsSection() {
@@ -635,10 +651,7 @@ class _MinifyAppState extends State<MinifyApp> {
                         'Select Oxipng path',
                         oxipngController,
                         (String path) {
-                          setState(() {
-                            oxipngPath = path;
-                            prefs.setString('oxipng_path', path);
-                          });
+                          oxipngController.text = path;
                         },
                       ),
                       const SizedBox(height: 16),
@@ -646,10 +659,7 @@ class _MinifyAppState extends State<MinifyApp> {
                         'Select FFmpeg path',
                         ffmpegController,
                         (String path) {
-                          setState(() {
-                            ffmpegPath = path;
-                            prefs.setString('ffmpeg_path', path);
-                          });
+                          ffmpegController.text = path;
                         },
                       ),
                       const SizedBox(height: 16),
@@ -657,11 +667,14 @@ class _MinifyAppState extends State<MinifyApp> {
                         'Select ImageMagick path',
                         imageMagickController,
                         (String path) {
-                          setState(() {
-                            imageMagickPath = path;
-                            prefs.setString('imagemagick_path', path);
-                          });
+                          imageMagickController.text = path;
                         },
+                      ),
+                      const SizedBox(height: 16),
+                      PushButton(
+                        controlSize: ControlSize.regular,
+                        onPressed: _savePaths,
+                        child: const Text('Save Paths'),
                       ),
                     ],
                   )

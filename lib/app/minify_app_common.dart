@@ -194,118 +194,128 @@ Widget buildMinifiedFilesList(
   );
 }
 
-Widget buildFileList(ValueNotifier<Set<String>> files, ValueNotifier<bool> isDragging,
-    ScrollController fileScrollController, Function(String) removeFile) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      DropTarget(
-        label: 'minify-drop',
-        onDragEnter: (position) {
-          haptic.levelChange();
-          isDragging.value = true;
-        },
-        onDragExited: () {
-          isDragging.value = false;
-        },
-        onDragPerform: (paths) {
-          isDragging.value = false;
-          files.addAll(paths.where(isSupportedFile).toSet());
-        },
-        onDragConclude: () {},
-        child: AnimatedContainer(
-          duration: Durations.medium2,
-          height: 200,
-          foregroundDecoration: BoxDecoration(
-            border: isDragging()
-                ? Border.all(
-                    color: CupertinoColors.systemBlue,
-                    width: 2,
-                  )
-                : Border.all(
-                    color: CupertinoColors.systemGrey.withOpacity(.3),
-                  ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: files().isEmpty
-              ? const Center(
-                  child: Text(
-                    'Drop files here',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: CupertinoColors.systemGrey,
-                    ),
-                  ),
-                )
-              : Column(
-                  children: [
-                    SizedBox(
-                      height: 24,
-                      child: Center(
-                        child: Text(
-                          '${files().length} Files',
-                          style: const TextStyle(fontSize: 12),
+Widget buildFileList(
+    ValueNotifier<Set<String>> files,
+    ValueNotifier<bool> isDragging,
+    ScrollController fileScrollController,
+    Function(String) removeFile) {
+  return ListenableBuilder(
+      listenable: Listenable.merge([files, isDragging]),
+      builder: (context, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropTarget(
+              label: 'minify-drop',
+              onDragEnter: (position) {
+                haptic.levelChange();
+                isDragging.value = true;
+              },
+              onDragExited: () {
+                isDragging.value = false;
+              },
+              onDragPerform: (paths) {
+                isDragging.value = false;
+                files.addAll(paths.where(isSupportedFile).toSet());
+              },
+              onDragConclude: () {},
+              child: AnimatedContainer(
+                duration: Durations.medium2,
+                height: 200,
+                foregroundDecoration: BoxDecoration(
+                  border: isDragging()
+                      ? Border.all(
+                          color: CupertinoColors.systemBlue,
+                          width: 2,
+                        )
+                      : Border.all(
+                          color: CupertinoColors.systemGrey.withOpacity(.3),
                         ),
-                      ),
-                    ),
-                    Divider(
-                      height: 1,
-                      color: CupertinoColors.systemGrey.withOpacity(.2),
-                    ),
-                    Expanded(
-                      child: MacosScrollbar(
-                        controller: fileScrollController,
-                        child: ListView.separated(
-                          controller: fileScrollController,
-                          itemCount: files().length,
-                          separatorBuilder: (context, index) => Divider(
-                            indent: 12,
-                            endIndent: 12,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: files().isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Drop files here',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: CupertinoColors.systemGrey,
+                          ),
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          SizedBox(
+                            height: 24,
+                            child: Center(
+                              child: Text(
+                                '${files().length} Files',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                          Divider(
                             height: 1,
                             color: CupertinoColors.systemGrey.withOpacity(.2),
                           ),
-                          itemBuilder: (context, index) {
-                            final filePath = files().elementAt(index);
-                            final file = File(filePath);
-                            final fileName = path.basename(filePath);
-                            final fileSize = formatFileSize(file.lengthSync());
-                            final isImage = isImageFile(fileName);
-                            final icon = isImage
-                                ? FluentIcons.image_24_regular
-                                : FluentIcons.video_24_regular;
-                            return ContextMenuWidget(
-                              menuProvider: (request) => Menu(
-                                children: [
-                                  MenuAction(
-                                    callback: () {
-                                      Process.run('open', ['-R', filePath]);
-                                    },
-                                    title: 'Show in Finder',
-                                  ),
-                                  MenuAction(
-                                    callback: () {
-                                      removeFile(filePath);
-                                    },
-                                    title: 'Remove',
-                                  ),
-                                ],
+                          Expanded(
+                            child: MacosScrollbar(
+                              controller: fileScrollController,
+                              child: ListView.separated(
+                                controller: fileScrollController,
+                                itemCount: files().length,
+                                separatorBuilder: (context, index) => Divider(
+                                  indent: 12,
+                                  endIndent: 12,
+                                  height: 1,
+                                  color: CupertinoColors.systemGrey
+                                      .withOpacity(.2),
+                                ),
+                                itemBuilder: (context, index) {
+                                  final filePath = files().elementAt(index);
+                                  final file = File(filePath);
+                                  final fileName = path.basename(filePath);
+                                  final fileSize =
+                                      formatFileSize(file.lengthSync());
+                                  final isImage = isImageFile(fileName);
+                                  final icon = isImage
+                                      ? FluentIcons.image_24_regular
+                                      : FluentIcons.video_24_regular;
+                                  return ContextMenuWidget(
+                                    menuProvider: (request) => Menu(
+                                      children: [
+                                        MenuAction(
+                                          callback: () {
+                                            Process.run(
+                                                'open', ['-R', filePath]);
+                                          },
+                                          title: 'Show in Finder',
+                                        ),
+                                        MenuAction(
+                                          callback: () {
+                                            removeFile(filePath);
+                                          },
+                                          title: 'Remove',
+                                        ),
+                                      ],
+                                    ),
+                                    child: FileHoverWidget(
+                                      icon: icon,
+                                      fileName: fileName,
+                                      fileSize: fileSize,
+                                    ),
+                                  );
+                                },
                               ),
-                              child: FileHoverWidget(
-                                icon: icon,
-                                fileName: fileName,
-                                fileSize: fileSize,
-                              ),
-                            );
-                          },
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-        ),
-      ),
-    ],
-  );
+              ),
+            ),
+          ],
+        );
+      });
 }
 
 String formatEnumName(String name) {

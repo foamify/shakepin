@@ -283,6 +283,9 @@ class _MinifyAppState extends State<MinifyApp> {
 
     dropChannel.setMinimumSize(AppSizes.minify);
     files.value = items().where(isSupportedFile).toSet();
+    files.addListener(() {
+      setState(() {});
+    });
   }
 
   @override
