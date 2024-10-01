@@ -23,7 +23,7 @@ class _DropPinState extends State<DropPin> {
     return DropTarget(
       label: 'drop-pin-btn',
       onDragEnter: (details) {
-        // print('onDragEnter');
+        dropChannel.showPopover('Drop files here to pin them');
         setState(() {
           _isHovered = true;
         });
@@ -34,6 +34,7 @@ class _DropPinState extends State<DropPin> {
         });
       },
       onDragConclude: () {
+        dropChannel.hidePopover();
         setState(() {
           _isHovered = false;
         });

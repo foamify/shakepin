@@ -14,6 +14,7 @@ class MainFlutterWindow: NSWindow {
   var compressing = false
 
   var iconCache = NSCache<NSString, NSImage>()
+  var popover: NSPopover?
 
   override func awakeFromNib() {
     cleanup()
@@ -261,6 +262,18 @@ class MainFlutterWindow: NSWindow {
             details: nil))
       }
 
+    case "showPopover":
+      if let content = call.arguments as? String {
+        showPopover(content: content)
+        result(nil)
+      } else {
+        result(FlutterError(code: "INVALID_ARGUMENT", message: "Invalid argument for showPopover", details: nil))
+      }
+
+    case "hidePopover":
+      hidePopover()
+      result(nil)
+
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -346,7 +359,7 @@ class MainFlutterWindow: NSWindow {
     // Set drag data in DragSource
     dragSource.setDragData([
       "fileURLs": fileURLs,
-      "currentIndex": 0
+      "currentIndex": 0,
     ])
 
     // Create dragging items
@@ -569,6 +582,52 @@ class MainFlutterWindow: NSWindow {
       channel.invokeMethod("menuItemClicked", arguments: sender.tag)
     }
   }
+
+  func showPopover(content: String) {
+    if popover == nil {
+      popover = NSPopover()
+    }
+
+    if popover?.isShown == true {
+      // If popover is already shown, update its content
+      if let existingContentView = popover?.contentViewController?.view.subviews.first as? NSTextField {
+        existingContentView.stringValue = content
+      }
+    } else {
+      // If popover is not shown, create and show it
+      let contentViewController = NSViewController()
+      let contentView = NSTextField(labelWithString: content)
+      contentView.drawsBackground = false
+      contentView.lineBreakMode = .byWordWrapping
+      contentView.preferredMaxLayoutWidth = 200 // Adjust this value as needed
+
+      let paddingView = NSView()
+      paddingView.addSubview(contentView)
+      contentView.translatesAutoresizingMaskIntoConstraints = false
+      NSLayoutConstraint.activate([
+        contentView.topAnchor.constraint(equalTo: paddingView.topAnchor, constant: 10),
+        contentView.leadingAnchor.constraint(equalTo: paddingView.leadingAnchor, constant: 10),
+        contentView.trailingAnchor.constraint(equalTo: paddingView.trailingAnchor, constant: -10),
+        contentView.bottomAnchor.constraint(equalTo: paddingView.bottomAnchor, constant: -10)
+      ])
+
+      contentViewController.view = paddingView
+
+      popover?.contentViewController = contentViewController
+      popover?.behavior = .transient
+      popover?.animates = true
+
+      let mouseLocation = NSEvent.mouseLocation
+      let windowPoint = self.convertPoint(fromScreen: mouseLocation)
+      let viewPoint = self.contentView?.convert(windowPoint, from: nil) ?? windowPoint
+
+      popover?.show(relativeTo: NSRect(origin: viewPoint, size: .zero), of: self.contentView!, preferredEdge: .minY)
+    }
+  }
+
+  func hidePopover() {
+    popover?.close()
+  }
 }
 
 class DragSource: NSView, NSDraggingSource {
@@ -619,7 +678,7 @@ extension DragSource: NSPasteboardItemDataProvider {
       let fileURL = fileURLs[index]
       let url = NSURL(fileURLWithPath: fileURL)
       item.setData(url.dataRepresentation, forType: type)
-      
+
       // Increment the index for the next item
       dragData["currentIndex"] = index + 1
     }

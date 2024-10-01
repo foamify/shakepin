@@ -145,6 +145,14 @@ class DropChannel {
     return await _channel.invokeMethod('convertToPng', [inputPath, outputPath]);
   }
 
+  Future<void> showPopover(String content) async {
+    await _channel.invokeMethod('showPopover', content);
+  }
+
+  Future<void> hidePopover() async {
+    await _channel.invokeMethod('hidePopover');
+  }
+
   void addListener(DragDropListener listener) {
     listeners.add(listener);
   }

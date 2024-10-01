@@ -21,7 +21,6 @@ class ArchiveApp extends StatefulWidget {
 class _ArchiveAppState extends State<ArchiveApp> {
   @override
   void initState() {
-    print('appFlavor: $appFlavor');
     files = items();
     dropChannel.setMinimumSize(AppSizes.archive);
     Analytics.archiveFiles();

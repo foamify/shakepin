@@ -1,81 +1,19 @@
 import 'dart:convert';
-
+import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
-import 'package:shakepin/utils/analytics.dart';
-import 'package:shakepin/utils/drop_channel.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 import 'package:path/path.dart' as path;
-import 'package:super_context_menu/super_context_menu.dart';
-import 'dart:async';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../state.dart';
+import '../utils/analytics.dart';
+import '../utils/drop_channel.dart';
 import '../utils/utils.dart';
-import '../widgets/drop_target.dart';
+import 'minify_app_common.dart';
 
-enum ImageQuality {
-  lowest('Lowest'),
-  low('Low'),
-  medium('Medium'),
-  high('High');
-
-  final String name;
-  const ImageQuality(this.name);
-}
-
-enum ImageFormat {
-  sameAsInput('Same as Input'),
-  png('PNG'),
-  jpg('JPG'),
-  webp('WebP');
-
-  final String name;
-  const ImageFormat(this.name);
-}
-
-enum VideoQuality {
-  low('Low'),
-  medium('Medium'),
-  high('High');
-
-  final String name;
-  const VideoQuality(this.name);
-}
-
-enum VideoFormat {
-  sameAsInput('Same as input'),
-  mp4('MP4'),
-  webm('WebM');
-
-  final String name;
-  const VideoFormat(this.name);
-}
-
-class MinifiedFile {
-  final String originalPath;
-  final String minifiedPath;
-  final int originalSize;
-  final int minifiedSize;
-  final Duration duration;
-
-  MinifiedFile({
-    required this.originalPath,
-    required this.minifiedPath,
-    required this.originalSize,
-    required this.minifiedSize,
-    required this.duration,
-  });
-
-  double get savingsPercentage =>
-      (originalSize - minifiedSize) / originalSize * 100;
-
-  String get originalFileName => path.basename(originalPath);
-  String get minifiedFileName => path.basename(minifiedPath);
-}
+enum ImageFormat { sameAsInput, png, jpg, webp, tiff }
 
 class MinificationManager {
   final String oxipngPath;
@@ -160,8 +98,9 @@ class MinificationManager {
       final qualityArg = switch (imageQuality) {
         ImageQuality.lowest => ['-o', '6'],
         ImageQuality.low => ['-o', '4'],
-        ImageQuality.medium => ['-o', '2'],
+        ImageQuality.normal => ['-o', '2'],
         ImageQuality.high => ['-o', '0'],
+        _ => ['-o', '2'], // Default to Medium
       };
 
       command = [
@@ -177,8 +116,9 @@ class MinificationManager {
       final qualityArg = switch (imageQuality) {
         ImageQuality.lowest => '85',
         ImageQuality.low => '90',
-        ImageQuality.medium => '95',
+        ImageQuality.normal => '95',
         ImageQuality.high => '100',
+        _ => '95', // Default to Medium
       };
 
       command = [
@@ -248,9 +188,10 @@ class MinificationManager {
     }
 
     final qualityArg = switch (videoQuality) {
-      VideoQuality.low => '17',
-      VideoQuality.medium => '23',
-      VideoQuality.high => '28',
+      VideoQuality.lowQuality => '17',
+      VideoQuality.mediumQuality => '23',
+      VideoQuality.highQuality => '28',
+      _ => '23', // Default to Medium
     };
 
     List<String> command;
@@ -342,29 +283,24 @@ class _MinifyAppState extends State<MinifyApp> {
   var imageMagickPath = '';
 
   String outputFolder = 'Same as input';
-  VideoQuality videoQuality = VideoQuality.medium;
-  VideoFormat videoFormat = VideoFormat.sameAsInput;
-  ImageQuality imageQuality = ImageQuality.medium;
+  VideoQuality videoQuality = VideoQuality.mediumQuality;
+  VideoFormat videoFormat = VideoFormat.mp4;
   ImageFormat imageFormat = ImageFormat.png;
+  ImageQuality imageQuality = ImageQuality.normal;
   bool removeInputFiles = false;
   bool minifyInProgress = false;
   bool minifyFinished = false;
   int processedFiles = 0;
   int totalFiles = 0;
   List<MinifiedFile> minifiedFiles = [];
-  List<MinifiedFile> allProcessedFiles =
-      []; // New list to store all processed files
+  List<MinifiedFile> allProcessedFiles = [];
 
   var files = <String>{};
   var isDragging = false;
 
   MinificationManager? _minificationManager;
 
-  List<String> errorMessages = []; // Add this line to store error messages
-
-  bool isSupportedFile(String filePath) {
-    return isVideoFile(filePath) || isImageFile(filePath);
-  }
+  List<String> errorMessages = [];
 
   @override
   void initState() {
@@ -467,385 +403,6 @@ class _MinifyAppState extends State<MinifyApp> {
     });
   }
 
-  Widget _buildMinifiedFilesList() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          height: 200,
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: CupertinoColors.systemGrey.withOpacity(.3),
-            ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: MacosScrollbar(
-            controller: _minifileScrollController,
-            child: ListView.separated(
-              controller: _minifileScrollController,
-              padding: const EdgeInsets.all(8),
-              itemCount: allProcessedFiles
-                  .length, // Use allProcessedFiles instead of minifiedFiles
-              separatorBuilder: (context, index) => Divider(
-                height: 1,
-                color: CupertinoColors.systemGrey.withOpacity(.2),
-              ),
-              itemBuilder: (context, index) {
-                final file = allProcessedFiles[index]; // Use allProcessedFiles
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(file.minifiedFileName,
-                                style: const TextStyle(fontSize: 12)),
-                            Text(
-                              'Original: ${formatFileSize(file.originalSize)}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: CupertinoColors.systemGrey,
-                              ),
-                            ),
-                            Text(
-                              'Processed: ${formatFileSize(file.minifiedSize)}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: CupertinoColors.systemGrey,
-                              ),
-                            ),
-                            Text(
-                              file.savingsPercentage >= 0
-                                  ? '${file.savingsPercentage.toStringAsFixed(1)}% saved'
-                                  : '${(-file.savingsPercentage).toStringAsFixed(1)}% increased',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: file.savingsPercentage > 10
-                                    ? Colors.green
-                                    : file.savingsPercentage > 5
-                                        ? Colors.orange
-                                        : file.savingsPercentage >= 0
-                                            ? Colors.red
-                                            : Colors.purple,
-                              ),
-                            ),
-                            Text(
-                              'Duration: ${file.duration.inSeconds}.${file.duration.inMilliseconds.remainder(1000).toString().padLeft(3, '0')}s',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: CupertinoColors.systemGrey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      PushButton(
-                        controlSize: ControlSize.regular,
-                        onPressed: () {
-                          Process.run('open', ['-R', file.minifiedPath]);
-                        },
-                        child: const Text('Show in Finder'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                const Text(
-                  'Minify',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Minify images and videos to save space.',
-                  style: TextStyle(
-                    fontSize: 14,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                if (oxipngPath.isEmpty ||
-                    ffmpegPath.isEmpty ||
-                    imageMagickPath.isEmpty)
-                  Column(
-                    children: [
-                      _buildPathSelector(
-                        'Select Oxipng path',
-                        oxipngController,
-                        (String path) {
-                          setState(() {
-                            oxipngPath = path;
-                            prefs.setString('oxipng_path', path);
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPathSelector(
-                        'Select FFmpeg path',
-                        ffmpegController,
-                        (String path) {
-                          setState(() {
-                            ffmpegPath = path;
-                            prefs.setString('ffmpeg_path', path);
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPathSelector(
-                        'Select ImageMagick path',
-                        imageMagickController,
-                        (String path) {
-                          setState(() {
-                            imageMagickPath = path;
-                            prefs.setString('imagemagick_path', path);
-                          });
-                        },
-                      ),
-                    ],
-                  )
-                else
-                  Column(
-                    children: [
-                      _buildFileList(),
-                      const SizedBox(height: 16),
-                      _buildSettingsSection(),
-                      if (allProcessedFiles.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        _buildMinifiedFilesList(),
-                      ],
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          top: 10,
-          left: 10,
-          child: MacosIconButton(
-            padding: const EdgeInsets.all(4),
-            onPressed: () async {
-              items.value = {};
-              isMinifyApp.value = false;
-            },
-            backgroundColor:
-                CupertinoColors.label.resolveFrom(context).withOpacity(.5),
-            hoverColor:
-                CupertinoColors.label.resolveFrom(context).withOpacity(.9),
-            pressedOpacity: .6,
-            icon: Icon(
-              FluentIcons.dismiss_24_filled,
-              color: CupertinoColors.systemBackground.resolveFrom(context),
-              size: 14,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFileList() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DropTarget(
-          label: 'minify-drop',
-          onDragEnter: (position) {
-            print('onDragEnter: $position');
-            haptic.levelChange();
-            setState(() {
-              isDragging = true;
-            });
-          },
-          onDragExited: () {
-            setState(() {
-              isDragging = false;
-            });
-          },
-          onDragPerform: (paths) {
-            setState(() {
-              files.addAll(paths.where(isSupportedFile));
-            });
-          },
-          onDragConclude: () {
-            setState(() {
-              isDragging = false;
-            });
-          },
-          child: AnimatedContainer(
-            duration: Durations.medium2,
-            height: 200,
-            foregroundDecoration: BoxDecoration(
-              border: isDragging
-                  ? Border.all(
-                      color: CupertinoColors.systemBlue,
-                      width: 2,
-                    )
-                  : Border.all(
-                      color: CupertinoColors.systemGrey.withOpacity(.3),
-                    ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: files.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Drop files here',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: CupertinoColors.systemGrey,
-                      ),
-                    ),
-                  )
-                : LayoutBuilder(builder: (context, constraints) {
-                    return Column(
-                      children: [
-                        SizedBox(
-                          height: 24,
-                          child: Center(
-                            child: Text(
-                              '${files.length} Files',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ),
-                        Divider(
-                          height: 1,
-                          color: CupertinoColors.systemGrey.withOpacity(.2),
-                        ),
-                        Expanded(
-                          child: MacosScrollbar(
-                            controller: _fileScrollController,
-                            child: ListView.separated(
-                              controller: _fileScrollController,
-                              itemCount: files.length,
-                              separatorBuilder: (context, index) => Divider(
-                                indent: 12,
-                                endIndent: 12,
-                                height: 1,
-                                color:
-                                    CupertinoColors.systemGrey.withOpacity(.2),
-                              ),
-                              itemBuilder: (context, index) {
-                                final filePath = files.elementAt(index);
-                                final file = File(filePath);
-                                final fileName = path.basename(filePath);
-                                final fileSize =
-                                    formatFileSize(file.lengthSync());
-                                final isImage =
-                                    //
-                                    fileName.toLowerCase().endsWith('.png') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.jpg') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.jpeg') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.webp') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.gif') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.svg') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.heic') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.heif') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.avif') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.bmp') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.tiff') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.jxl') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.ico') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.cur') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.xcf') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.psd') ||
-                                        fileName
-                                            .toLowerCase()
-                                            .endsWith('.ai') ||
-                                        fileName.toLowerCase().endsWith('.eps')
-                                    //
-                                    ;
-                                final icon = isImage
-                                    ? FluentIcons.image_24_regular
-                                    : FluentIcons.video_24_regular;
-                                return ContextMenuWidget(
-                                  menuProvider: (request) => Menu(
-                                    children: [
-                                      MenuAction(
-                                        callback: () {
-                                          Process.run('open', ['-R', filePath]);
-                                        },
-                                        title: 'Show in Finder',
-                                      ),
-                                      MenuAction(
-                                        callback: () {
-                                          setState(() {
-                                            files.remove(filePath);
-                                          });
-                                        },
-                                        title: 'Remove',
-                                      ),
-                                    ],
-                                  ),
-                                  child: FileHoverWidget(
-                                    icon: icon,
-                                    fileName: fileName,
-                                    fileSize: fileSize,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  }),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildPathSelector(String label, TextEditingController controller,
       Function(String) onSelect) {
     return Column(
@@ -913,31 +470,16 @@ class _MinifyAppState extends State<MinifyApp> {
           child: Column(
             children: [
               if (hasVideos) ...[
-                _buildDropdownSetting(
-                    'Video quality',
-                    videoQuality,
-                    VideoQuality.values.map((e) => e.name).toList(),
-                    minifyInProgress),
+                _buildDropdownSetting('Video quality', videoQuality,
+                    VideoQuality.values, minifyInProgress),
                 const SizedBox(height: 4),
-                _buildDropdownSetting(
-                    'Video format',
-                    videoFormat,
-                    VideoFormat.values.map((e) => e.name).toList(),
-                    minifyInProgress),
+                _buildDropdownSetting('Video format', videoFormat,
+                    VideoFormat.values, minifyInProgress),
                 const SizedBox(height: 8),
               ],
               if (hasImages) ...[
-                _buildDropdownSetting(
-                    'Image quality',
-                    imageQuality,
-                    ImageQuality.values.map((e) => e.name).toList(),
-                    minifyInProgress),
-                const SizedBox(height: 4),
-                _buildDropdownSetting(
-                    'Image format',
-                    imageFormat,
-                    ImageFormat.values.map((e) => e.name).toList(),
-                    minifyInProgress),
+                _buildDropdownSetting('Image quality', imageQuality,
+                    ImageQuality.values, minifyInProgress),
               ],
               const SizedBox(height: 8),
               SizedBox(
@@ -1022,106 +564,156 @@ class _MinifyAppState extends State<MinifyApp> {
     );
   }
 
-  Widget _buildDropdownSetting(
-      String label, dynamic value, List<String> options, bool disabled) {
+  Widget _buildDropdownSetting<T extends Enum>(
+      String label, T value, List<T> options, bool disabled) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: const TextStyle(fontSize: 12)),
-        MacosPopupButton<String>(
-          value: value.name, // Use the name property
+        MacosPopupButton<T>(
+          value: value,
           onChanged: disabled
               ? null
               : (newValue) {
                   if (newValue != null) {
                     setState(() {
                       switch (label) {
-                        case 'Output folder':
-                          outputFolder = newValue;
-                          break;
                         case 'Video quality':
-                          videoQuality = VideoQuality.values
-                              .firstWhere((e) => e.name == newValue);
+                          videoQuality = newValue as VideoQuality;
                           break;
                         case 'Video format':
-                          videoFormat = VideoFormat.values
-                              .firstWhere((e) => e.name == newValue);
+                          videoFormat = newValue as VideoFormat;
                           break;
                         case 'Image quality':
-                          imageQuality = ImageQuality.values
-                              .firstWhere((e) => e.name == newValue);
-                          break;
-                        case 'Image format':
-                          imageFormat = ImageFormat.values
-                              .firstWhere((e) => e.name == newValue);
+                          imageQuality = newValue as ImageQuality;
                           break;
                       }
                     });
                   }
                 },
           items: options.map((option) {
-            return MacosPopupMenuItem<String>(
+            return MacosPopupMenuItem<T>(
               value: option,
-              child: Text(option),
+              child: Text(formatEnumName(option.name)),
             );
           }).toList(),
         ),
       ],
     );
   }
-}
-
-class FileHoverWidget extends StatefulWidget {
-  const FileHoverWidget({
-    super.key,
-    required this.icon,
-    required this.fileName,
-    required this.fileSize,
-  });
-
-  final IconData icon;
-  final String fileName;
-  final String fileSize;
-
-  @override
-  State<FileHoverWidget> createState() => _FileHoverWidgetState();
-}
-
-class _FileHoverWidgetState extends State<FileHoverWidget> {
-  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: Durations.short2,
-        color: _isHovered
-            ? CupertinoColors.systemGrey6.withOpacity(.2)
-            : Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        child: Row(
-          children: [
-            Icon(widget.icon, size: 16),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                widget.fileName,
-                style: const TextStyle(fontSize: 12),
-              ),
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Text(
+                  'Minify',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Minify images and videos to save space.',
+                  style: TextStyle(
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                if (oxipngPath.isEmpty ||
+                    ffmpegPath.isEmpty ||
+                    imageMagickPath.isEmpty)
+                  Column(
+                    children: [
+                      _buildPathSelector(
+                        'Select Oxipng path',
+                        oxipngController,
+                        (String path) {
+                          setState(() {
+                            oxipngPath = path;
+                            prefs.setString('oxipng_path', path);
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPathSelector(
+                        'Select FFmpeg path',
+                        ffmpegController,
+                        (String path) {
+                          setState(() {
+                            ffmpegPath = path;
+                            prefs.setString('ffmpeg_path', path);
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPathSelector(
+                        'Select ImageMagick path',
+                        imageMagickController,
+                        (String path) {
+                          setState(() {
+                            imageMagickPath = path;
+                            prefs.setString('imagemagick_path', path);
+                          });
+                        },
+                      ),
+                    ],
+                  )
+                else
+                  Column(
+                    children: [
+                      buildFileList(
+                        files,
+                        isDragging,
+                        _fileScrollController,
+                        (String filePath) {
+                          setState(() {
+                            files.remove(filePath);
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildSettingsSection(),
+                      if (allProcessedFiles.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        buildMinifiedFilesList(
+                            allProcessedFiles, _minifileScrollController),
+                      ],
+                    ],
+                  ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Text(
-              widget.fileSize,
-              style: const TextStyle(
-                fontSize: 12,
-                color: CupertinoColors.systemGrey,
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+        Positioned(
+          top: 10,
+          left: 10,
+          child: MacosIconButton(
+            padding: const EdgeInsets.all(4),
+            onPressed: () async {
+              items.value = {};
+              isMinifyApp.value = false;
+            },
+            backgroundColor:
+                CupertinoColors.label.resolveFrom(context).withOpacity(.5),
+            hoverColor:
+                CupertinoColors.label.resolveFrom(context).withOpacity(.9),
+            pressedOpacity: .6,
+            icon: Icon(
+              FluentIcons.dismiss_24_filled,
+              color: CupertinoColors.systemBackground.resolveFrom(context),
+              size: 14,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

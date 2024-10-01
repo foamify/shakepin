@@ -1,3 +1,5 @@
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shakepin/app/about_app.dart';
 import 'package:shakepin/app/archive_app.dart';
@@ -144,6 +146,18 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
                   return const PanelApp();
                 }),
           ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Icon(
+                FluentIcons.re_order_dots_horizontal_24_filled,
+                color: CupertinoColors.label.resolveFrom(context),
+                size: 16,
+              ),
+            ),
+          )
         ],
       ),
     );

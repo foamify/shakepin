@@ -4,7 +4,7 @@ import 'package:macos_haptic_feedback/macos_haptic_feedback.dart';
 
 sealed class AppSizes {
   static const archive = Size(300, 200);
-  static const panel = Size(64 * 3, 64);
+  static const panel = Size(64 * 3, 72);
   static const pin = Size(180, 180);
   static const minify = Size(360, 600);
   static const about = Size(360, 360);
@@ -102,4 +102,20 @@ bool isImageFile(String filePath) {
     '.xv'
   ];
   return imageExtensions.any((ext) => filePath.toLowerCase().endsWith(ext));
+}
+
+bool isSupportedFile(String filePath) {
+  return isVideoFile(filePath) || isImageFile(filePath);
+}
+
+String formatFileSize(int size) {
+  if (size < 1000) {
+    return '$size B';
+  } else if (size < 1000 * 1000) {
+    return '${(size / 1000).toStringAsFixed(2)} KB';
+  } else if (size < 1000 * 1000 * 1000) {
+    return '${(size / (1000 * 1000)).toStringAsFixed(2)} MB';
+  } else {
+    return '${(size / (1000 * 1000 * 1000)).toStringAsFixed(2)} GB';
+  }
 }

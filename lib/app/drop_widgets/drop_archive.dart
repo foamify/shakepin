@@ -23,7 +23,7 @@ class _DropArchiveState extends State<DropArchive> {
     return DropTarget(
       label: 'drop-archive-btn',
       onDragEnter: (details) {
-        // print('onDragEnter');
+        dropChannel.showPopover('Drop files here to archive them into a .zip');
         setState(() {
           _isHovered = true;
         });
@@ -34,6 +34,7 @@ class _DropArchiveState extends State<DropArchive> {
         });
       },
       onDragConclude: () {
+        dropChannel.hidePopover();
         setState(() {
           _isHovered = false;
         });

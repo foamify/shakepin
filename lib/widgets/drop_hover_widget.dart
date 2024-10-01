@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_target.dart';
 
 class DropHoverWidget extends StatefulWidget {
@@ -45,7 +46,10 @@ class _DropHoverWidgetState extends State<DropHoverWidget> {
         imageFilter:
             ImageFilter.blur(sigmaX: 6, sigmaY: 6, tileMode: TileMode.mirror),
         child: Transform.scale(
-          scale: 1.05,
+          scaleX: (MediaQuery.sizeOf(context).width + 12) /
+              MediaQuery.sizeOf(context).width,
+          scaleY: (MediaQuery.sizeOf(context).height + 12) /
+              MediaQuery.sizeOf(context).height,
           child: AnimatedContainer(
             duration: Durations.medium2,
             decoration: BoxDecoration(

@@ -104,7 +104,12 @@ class _PinAppState extends State<PinApp> with DragDropListener {
               child: MacosScrollbar(
                 controller: _scrollController,
                 child: SuperListView.builder(
+                  padding: EdgeInsets.only(
+                      left: max(
+                          MediaQuery.sizeOf(context).width / 2 - 44 * itemCount,
+                          0)),
                   controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
                   itemCount: itemCount,
                   itemBuilder: (context, row) {
                     final colItems = paths.sublist(row * maxVisibleItems,
@@ -246,7 +251,6 @@ class _PinAppState extends State<PinApp> with DragDropListener {
                       }),
                     );
                   },
-                  scrollDirection: Axis.horizontal,
                 ),
               ),
             );

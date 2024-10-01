@@ -7,17 +7,6 @@ final isMinifyApp = ValueNotifier<bool>(false);
 final isAboutApp = ValueNotifier<bool>(false);
 const isAppStore = appFlavor != 'oss';
 
-String formatFileSize(int size) {
-  if (size < 1000) {
-    return '$size B';
-  } else if (size < 1000 * 1000) {
-    return '${(size / 1000).toStringAsFixed(2)} KB';
-  } else if (size < 1000 * 1000 * 1000) {
-    return '${(size / (1000 * 1000)).toStringAsFixed(2)} MB';
-  } else {
-    return '${(size / (1000 * 1000 * 1000)).toStringAsFixed(2)} GB';
-  }
-}
 
 extension ListenableEx<T> on ValueListenable<T> {
   T call() => value;

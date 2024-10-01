@@ -23,7 +23,7 @@ class _DropMinifyState extends State<DropMinify> {
     return DropTarget(
       label: 'drop-minify-btn',
       onDragEnter: (details) {
-        // print('onDragEnter');
+        dropChannel.showPopover('Drop images and videos here to minify their size');
         setState(() {
           _isHovered = true;
         });
@@ -34,6 +34,7 @@ class _DropMinifyState extends State<DropMinify> {
         });
       },
       onDragConclude: () {
+        dropChannel.hidePopover();
         setState(() {
           _isHovered = false;
         });
