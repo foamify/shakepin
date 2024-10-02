@@ -29,6 +29,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
   }
 
   var outputFolder = '';
+  late Directory tempDir;
   var outputArchive = '';
   var files = <String>{};
   var currentlyProcessingFile = '';
@@ -53,7 +54,6 @@ class _ArchiveAppState extends State<ArchiveApp> {
 
   Future<void> compressToZip(List<String> paths) async {
     outputArchive = await getUniqueArchiveName(outputFolder);
-    late Directory tempDir;
 
     try {
       tempDir = await Directory(outputFolder).createTemp('archived');
@@ -243,7 +243,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
                             print('Error deleting output archive: $e');
                           }
                           try {
-                            await Directory(outputFolder).delete(recursive: true);
+                            await tempDir.delete(recursive: true);
                           } catch (e) {
                             print('Error deleting output folder: $e');
                           }
