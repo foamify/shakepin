@@ -95,10 +95,8 @@ class _PinAppState extends State<PinApp> with DragDropListener {
             final paths = items().toList();
             const itemHeight = 86.0;
             final maxVisibleItems = (height / itemHeight).floor();
-            var itemCount = (paths.length / maxVisibleItems).ceil();
-            if (itemCount.isNaN || itemCount.isInfinite) {
-              itemCount = 0;
-            }
+            final rawCount = paths.length / maxVisibleItems;
+            var itemCount = rawCount.isFinite ? rawCount.ceil() : 1;
             return SizedBox(
               width: MediaQuery.sizeOf(context).width,
               child: MacosScrollbar(
