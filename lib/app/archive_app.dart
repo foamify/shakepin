@@ -53,9 +53,11 @@ class _ArchiveAppState extends State<ArchiveApp> {
 
   Future<void> compressToZip(List<String> paths) async {
     outputArchive = await getUniqueArchiveName(outputFolder);
-    final tempDir = await Directory(outputFolder).createTemp('archived');
+    late Directory tempDir;
 
     try {
+      tempDir = await Directory(outputFolder).createTemp('archived');
+
       // Total number of paths
       int totalPaths = paths.length;
 
@@ -100,9 +102,16 @@ class _ArchiveAppState extends State<ArchiveApp> {
           Process.run('open', ['-R', outputArchive]);
         }
       }
+    } catch (e) {
+      print('Error during compression: $e');
+      archiveProgress.value = -1;
     } finally {
       // Clean up: remove the temporary directory
-      await tempDir.delete(recursive: true);
+      try {
+        await tempDir.delete(recursive: true);
+      } catch (e) {
+        print('Error deleting temporary directory: $e');
+      }
     }
 
     setState(() {
@@ -227,9 +236,17 @@ class _ArchiveAppState extends State<ArchiveApp> {
                         archiveProgress.value = -1;
                         items.value = {};
                         if (progress != 100) {
-                          // Delete the archive file if cancel
-
-                          await Directory(outputFolder).delete(recursive: true);
+                          // Delete the archive file and temp dir if cancel
+                          try {
+                            await File(outputArchive).delete();
+                          } catch (e) {
+                            print('Error deleting output archive: $e');
+                          }
+                          try {
+                            await Directory(outputFolder).delete(recursive: true);
+                          } catch (e) {
+                            print('Error deleting output folder: $e');
+                          }
                         }
                       },
                       color: progress != 100
