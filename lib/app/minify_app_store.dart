@@ -39,12 +39,14 @@ class MinificationManager {
   final ImageQuality imageQuality;
   final VideoQuality videoQuality;
   final VideoFormat videoFormat;
+  final ImageFormat imageFormat;
   FFmpegSession? currentSession;
 
   MinificationManager({
     required this.imageQuality,
     required this.videoQuality,
     required this.videoFormat,
+    required this.imageFormat,
   });
 
   Future<MinifiedFile?> minifyFile(String filePath, Directory outputDir) async {
@@ -78,24 +80,43 @@ class MinificationManager {
       String filePath, Directory downloadsDir) async {
     final file = File(filePath);
     final fileName = path.basename(filePath);
-    final fileExtension = path.extension(fileName).toLowerCase();
     final fileNameWithoutExtension = path.basenameWithoutExtension(fileName);
 
-    var newFileName = '${fileNameWithoutExtension}_minified$fileExtension';
+    String inputPath = filePath;
+    bool needsConversion =
+        path.extension(fileName).toLowerCase() != '.${imageFormat.name}';
+
+    if (needsConversion) {
+      try {
+        final convertedPath =
+            await dropChannel.convertImage(filePath, imageFormat);
+        if (convertedPath == null) {
+          print('Failed to convert image to ${imageFormat.name}');
+          return null;
+        }
+        inputPath = convertedPath;
+      } catch (e) {
+        print('Error converting image to ${imageFormat.name}: $e');
+        return null;
+      }
+    }
+
+    var newFileName =
+        '${fileNameWithoutExtension}_minified.${imageFormat.name}';
     var outputPath = path.join(downloadsDir.path, newFileName);
 
     // Check if the file already exists and generate a unique name if it does
     var counter = 1;
     while (File(outputPath).existsSync()) {
       newFileName =
-          '${fileNameWithoutExtension}_minified_$counter$fileExtension';
+          '${fileNameWithoutExtension}_minified_$counter.${imageFormat.name}';
       outputPath = path.join(downloadsDir.path, newFileName);
       counter++;
     }
 
     try {
       await compress(
-        inputPath: filePath,
+        inputPath: inputPath,
         outputPath: outputPath,
         quality: switch (imageQuality) {
           ImageQuality.lowest => 30,
@@ -111,9 +132,10 @@ class MinificationManager {
       final originalSize = file.lengthSync();
       final minifiedSize = File(outputPath).lengthSync();
 
-      // if (removeInputFiles) {
-      //   await file.delete();
-      // }
+      // Clean up the temporary PNG file if we had to convert
+      if (needsConversion) {
+        await File(inputPath).delete();
+      }
 
       return MinifiedFile(
         originalPath: filePath,
@@ -260,6 +282,7 @@ class _MinifyAppState extends State<MinifyApp> {
   VideoQuality videoQuality = VideoQuality.goodQuality;
   VideoFormat videoFormat = VideoFormat.mp4;
   ImageQuality imageQuality = ImageQuality.normal;
+  ImageFormat imageFormat = ImageFormat.png;
   bool minifyInProgress = false;
   bool minifyFinished = false;
   int processedFiles = 0;
@@ -308,6 +331,7 @@ class _MinifyAppState extends State<MinifyApp> {
       imageQuality: imageQuality,
       videoQuality: videoQuality,
       videoFormat: videoFormat,
+      imageFormat: imageFormat,
     );
 
     Directory outputDir;
@@ -395,6 +419,13 @@ class _MinifyAppState extends State<MinifyApp> {
                   'Image quality',
                   imageQuality,
                   ImageQuality.values,
+                  minifyInProgress,
+                ),
+                const SizedBox(height: 8),
+                _buildDropdownSetting(
+                  'Image format',
+                  imageFormat,
+                  ImageFormat.values,
                   minifyInProgress,
                 ),
               ],
@@ -501,6 +532,9 @@ class _MinifyAppState extends State<MinifyApp> {
                         case 'Video format':
                           videoFormat = newValue as VideoFormat;
                           break;
+                        case 'Image format':
+                          imageFormat = newValue as ImageFormat;
+                          break;
                       }
                     });
                   }
@@ -508,7 +542,9 @@ class _MinifyAppState extends State<MinifyApp> {
           items: options.map((option) {
             return MacosPopupMenuItem<T>(
               value: option,
-              child: Text(formatEnumName(option.name)),
+              child: Text(label == 'Image format'
+                  ? option.name.toLowerCase()
+                  : formatEnumName(option.name)),
             );
           }).toList(),
         ),
@@ -644,12 +680,5 @@ class _FileHoverWidgetState extends State<FileHoverWidget> {
         ),
       ),
     );
-  }
-}
-
-// Add this extension at the bottom of the file
-extension StringExtension on String {
-  String capitalize() {
-    return "${this[0].toUpperCase()}${substring(1)}";
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:shakepin/utils/handle_menu_item.dart';
+import 'package:flutter/foundation.dart';
 
 typedef ShakeDetectedCallback = void Function(double x, double y);
 typedef DraggingSessionEndedCallback = void Function(int operation);
@@ -75,7 +76,13 @@ class DropChannel {
   final listeners = <DragDropListener>[];
 
   Future<void> cleanup() async {
-    await _channel.invokeMethod('cleanup');
+    try {
+      await _channel.invokeMethod('cleanup');
+    } on PlatformException catch (e) {
+      throw FlutterError('Error during cleanup: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error during cleanup: $e');
+    }
   }
 
   Future<void> setTrayIcon(Uint8List iconData) async {
@@ -141,8 +148,26 @@ class DropChannel {
     return Offset(args[0] as double, args[1] as double);
   }
 
-  Future<bool> convertToPng(String inputPath, String outputPath) async {
-    return await _channel.invokeMethod('convertToPng', [inputPath, outputPath]);
+  Future<String?> convertToPng(String inputPath) async {
+    try {
+      final result = await _channel.invokeMethod('convertToPng', [inputPath]);
+      return result as String?;
+    } on PlatformException catch (e) {
+      throw FlutterError('Error converting image to PNG: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error converting image to PNG: $e');
+    }
+  }
+
+  Future<String?> convertImage(String inputPath, ImageFormat format) async {
+    try {
+      final result = await _channel.invokeMethod('convertImage', [inputPath, format.index]);
+      return result as String?;
+    } on PlatformException catch (e) {
+      throw FlutterError('Error converting image: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error converting image: $e');
+    }
   }
 
   Future<void> showPopover(String content) async {
@@ -178,4 +203,11 @@ mixin class DragDropListener {
   void onDragPerform(List<String> paths) {}
   void shakeDetected(Offset position) {}
   void onDragSessionEnded(DropOperation operation) {}
+}
+
+enum ImageFormat {
+  png,
+  jpeg,
+  tiff,
+  webp,
 }

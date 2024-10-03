@@ -3,6 +3,10 @@ import Cocoa
 import Compression
 import FlutterMacOS
 
+enum ImageFormat: Int {
+  case png, jpeg, tiff, webp
+}
+
 class MainFlutterWindow: NSWindow {
 
   var statusItem: NSStatusItem!
@@ -249,17 +253,18 @@ class MainFlutterWindow: NSWindow {
     case "center":
       result([self.frame.midX, self.frame.midY])
 
-    case "convertToPng":
-      if let args = call.arguments as? [String], args.count == 2 {
-        let inputPath = args[0]
-        let outputPath = args[1]
-        let success = convertImageToPNG(from: inputPath, to: outputPath)
-        result(success)
+    case "convertImage":
+      if let args = call.arguments as? [Any], args.count == 2,
+         let inputPath = args[0] as? String,
+         let formatIndex = args[1] as? Int,
+         let format = ImageFormat(rawValue: formatIndex) {
+        if let outputPath = convertImage(from: inputPath, to: format) {
+          result(outputPath)
+        } else {
+          result(FlutterError(code: "CONVERSION_FAILED", message: "Failed to convert image", details: nil))
+        }
       } else {
-        result(
-          FlutterError(
-            code: "INVALID_ARGUMENT", message: "Convert to PNG must be an array of 2 strings",
-            details: nil))
+        result(FlutterError(code: "INVALID_ARGUMENT", message: "Invalid arguments for convertImage", details: nil))
       }
 
     case "showPopover":
@@ -267,7 +272,9 @@ class MainFlutterWindow: NSWindow {
         showPopover(content: content)
         result(nil)
       } else {
-        result(FlutterError(code: "INVALID_ARGUMENT", message: "Invalid argument for showPopover", details: nil))
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT", message: "Invalid argument for showPopover", details: nil))
       }
 
     case "hidePopover":
@@ -279,35 +286,64 @@ class MainFlutterWindow: NSWindow {
     }
   }
 
-  func convertImageToPNG(from path: String, to outputPath: String) -> Bool {
-    // Load the image from the specified path
+  func convertImage(from path: String, to format: ImageFormat) -> String? {
     guard let image = NSImage(contentsOfFile: path) else {
       print("Failed to load image from path: \(path)")
-      return false
+      return nil
     }
 
-    // Create a bitmap representation of the image
     guard let tiffData = image.tiffRepresentation,
-      let bitmap = NSBitmapImageRep(data: tiffData)
-    else {
+          let bitmap = NSBitmapImageRep(data: tiffData) else {
       print("Failed to create bitmap representation.")
-      return false
+      return nil
     }
 
-    // Convert the bitmap to PNG data
-    guard let pngData = bitmap.representation(using: .png, properties: [:]) else {
-      print("Failed to convert image to PNG data.")
-      return false
+    let fileType: NSBitmapImageRep.FileType
+    let fileExtension: String
+
+    switch format {
+    case .png:
+      fileType = .png
+      fileExtension = "png"
+    case .jpeg:
+      fileType = .jpeg
+      fileExtension = "jpg"
+    case .tiff:
+      fileType = .tiff
+      fileExtension = "tiff"
+    // case .gif:
+    //   fileType = .gif
+    //   fileExtension = "gif"
+    // case .bmp:
+    //   fileType = .bmp
+    //   fileExtension = "bmp"
+    // case .ico:
+    //   // NSBitmapImageRep doesn't support ICO directly, so we'll use PNG as a fallback
+    //   fileType = .png
+    //   fileExtension = "ico"
+    case .webp:
+      // NSBitmapImageRep doesn't support WebP, so we'll use PNG as a fallback
+      fileType = .png
+      fileExtension = "webp"
     }
 
-    // Write the PNG data to the specified output path
+    guard let imageData = bitmap.representation(using: fileType, properties: [:]) else {
+      print("Failed to convert image data.")
+      return nil
+    }
+
+    let fileName = "temp_file_\(UUID().uuidString).\(fileExtension)"
+    let tempDirectory = FileManager.default.temporaryDirectory
+    let outputURL = tempDirectory.appendingPathComponent(fileName)
+
     do {
-      try pngData.write(to: URL(fileURLWithPath: outputPath))
-      print("Image successfully converted and saved to \(outputPath)")
+      try imageData.write(to: outputURL)
+      print("Image successfully converted and saved to \(outputURL.path)")
+      return outputURL.path
     } catch {
-      print("Error saving PNG file: \(error.localizedDescription)")
+      print("Error saving converted image: \(error.localizedDescription)")
+      return nil
     }
-    return true
   }
 
   func getFileIcon(path: String, result: @escaping FlutterResult) {
@@ -328,14 +364,14 @@ class MainFlutterWindow: NSWindow {
   }
 
   func cleanup() {
-    // clear the the temporary files that has the name dragged_image_*
-    let tempDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+    // Clear the temporary files that have the name temp_file_*
     let fileManager = FileManager.default
+    let tempDirectoryURL = fileManager.temporaryDirectory
     do {
       let files = try fileManager.contentsOfDirectory(
         at: tempDirectoryURL, includingPropertiesForKeys: nil, options: [])
       for file in files {
-        if file.lastPathComponent.starts(with: "dragged_image_") {
+        if file.lastPathComponent.starts(with: "temp_file_") {
           try fileManager.removeItem(at: file)
         }
       }
@@ -590,7 +626,9 @@ class MainFlutterWindow: NSWindow {
 
     if popover?.isShown == true {
       // If popover is already shown, update its content
-      if let existingContentView = popover?.contentViewController?.view.subviews.first as? NSTextField {
+      if let existingContentView = popover?.contentViewController?.view.subviews.first
+        as? NSTextField
+      {
         existingContentView.stringValue = content
       }
     } else {
@@ -599,7 +637,7 @@ class MainFlutterWindow: NSWindow {
       let contentView = NSTextField(labelWithString: content)
       contentView.drawsBackground = false
       contentView.lineBreakMode = .byWordWrapping
-      contentView.preferredMaxLayoutWidth = 200 // Adjust this value as needed
+      contentView.preferredMaxLayoutWidth = 200  // Adjust this value as needed
 
       let paddingView = NSView()
       paddingView.addSubview(contentView)
@@ -608,7 +646,7 @@ class MainFlutterWindow: NSWindow {
         contentView.topAnchor.constraint(equalTo: paddingView.topAnchor, constant: 10),
         contentView.leadingAnchor.constraint(equalTo: paddingView.leadingAnchor, constant: 10),
         contentView.trailingAnchor.constraint(equalTo: paddingView.trailingAnchor, constant: -10),
-        contentView.bottomAnchor.constraint(equalTo: paddingView.bottomAnchor, constant: -10)
+        contentView.bottomAnchor.constraint(equalTo: paddingView.bottomAnchor, constant: -10),
       ])
 
       contentViewController.view = paddingView
@@ -621,7 +659,9 @@ class MainFlutterWindow: NSWindow {
       let windowPoint = self.convertPoint(fromScreen: mouseLocation)
       let viewPoint = self.contentView?.convert(windowPoint, from: nil) ?? windowPoint
 
-      popover?.show(relativeTo: NSRect(origin: viewPoint, size: .zero), of: self.contentView!, preferredEdge: .minY)
+      popover?.show(
+        relativeTo: NSRect(origin: viewPoint, size: .zero), of: self.contentView!,
+        preferredEdge: .minY)
     }
   }
 
