@@ -63,7 +63,21 @@ class MainFlutterWindow: NSWindow {
 
     self.isOpaque = false
     self.backgroundColor = .clear
-    self.styleMask = [.fullSizeContentView, .resizable, .borderless]
+    
+    self.titleVisibility = .hidden
+    self.titlebarAppearsTransparent = true
+    
+    // If you want to hide the traffic light buttons
+    self.standardWindowButton(.closeButton)?.isHidden = true
+    self.standardWindowButton(.miniaturizeButton)?.isHidden = true
+    self.standardWindowButton(.zoomButton)?.isHidden = true
+    
+    // If you want a full-size content view
+    self.styleMask.insert(.fullSizeContentView)
+    
+    // If you want to make the window draggable from any point
+    self.isMovableByWindowBackground = true
+
     self.contentView?.layer?.cornerRadius = 12
     self.contentView?.layer?.masksToBounds = true
 
