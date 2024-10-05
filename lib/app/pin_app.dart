@@ -125,8 +125,16 @@ class _PinAppState extends State<PinApp> with DragDropListener {
                               menuProvider: (request) => Menu(children: [
                                 MenuAction(
                                   title: 'Show in Finder',
-                                  callback: () {
-                                    Process.run('open', ['-R', path]);
+                                  callback: () async {
+                                    try {
+                                      final result = await Process.run(
+                                          'open', ['-R', path]);
+                                      if (result.exitCode != 0) {
+                                        throw Exception(result.stderr);
+                                      }
+                                    } catch (e) {
+                                      print('Error opening file: $e');
+                                    }
                                   },
                                 ),
                                 MenuAction(
@@ -138,50 +146,15 @@ class _PinAppState extends State<PinApp> with DragDropListener {
                                   },
                                 ),
                               ]),
-                              child: RawGestureDetector(
-                                gestures: {
-                                  VerticalDragGestureRecognizer:
-                                      GestureRecognizerFactoryWithHandlers<
-                                          VerticalDragGestureRecognizer>(
-                                    () => VerticalDragGestureRecognizer(
-                                        supportedDevices: {
-                                          PointerDeviceKind.touch,
-                                          PointerDeviceKind.mouse,
-                                        }),
-                                    (VerticalDragGestureRecognizer instance) {
-                                      instance.onStart = (details) {
-                                        if (!selectedItems.contains(path)) {
-                                          draggedItem = path;
-                                          dropChannel
-                                              .performDragSession([path]);
-                                        } else {
-                                          dropChannel.performDragSession(
-                                              selectedItems.toList());
-                                        }
-                                      };
-                                    },
-                                  ),
-                                  HorizontalDragGestureRecognizer:
-                                      GestureRecognizerFactoryWithHandlers<
-                                          HorizontalDragGestureRecognizer>(
-                                    () => HorizontalDragGestureRecognizer(
-                                        supportedDevices: {
-                                          PointerDeviceKind.touch,
-                                          PointerDeviceKind.mouse,
-                                        }),
-                                    (HorizontalDragGestureRecognizer instance) {
-                                      instance.onStart = (details) {
-                                        if (!selectedItems.contains(path)) {
-                                          draggedItem = path;
-                                          dropChannel
-                                              .performDragSession([path]);
-                                        } else {
-                                          dropChannel.performDragSession(
-                                              selectedItems.toList());
-                                        }
-                                      };
-                                    },
-                                  ),
+                              child: CustomDragGesture(
+                                onDragStart: () {
+                                  if (!selectedItems.contains(path)) {
+                                    draggedItem = path;
+                                    dropChannel.performDragSession([path]);
+                                  } else {
+                                    dropChannel.performDragSession(
+                                        selectedItems.toList());
+                                  }
                                 },
                                 child: MacosIconButton(
                                   onPressed: () {
@@ -396,6 +369,35 @@ class _FileImageWidgetState extends State<FileImageWidget> {
         }
         return const ProgressCircle();
       },
+    );
+  }
+}
+
+class CustomDragGesture extends StatefulWidget {
+  const CustomDragGesture(
+      {super.key, required this.child, required this.onDragStart});
+
+  final Widget child;
+  final void Function() onDragStart;
+
+  @override
+  State<CustomDragGesture> createState() => _CustomDragGestureState();
+}
+
+class _CustomDragGestureState extends State<CustomDragGesture> {
+  var isTapped = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onPanStart: (details) {
+        print('onPanStart session ${details.kind}');
+        if (details.kind == PointerDeviceKind.mouse) {
+          // print('onPanStartdragfiles');
+          widget.onDragStart();
+        }
+      },
+      child: widget.child,
     );
   }
 }

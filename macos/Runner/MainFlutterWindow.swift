@@ -61,25 +61,23 @@ class MainFlutterWindow: NSWindow {
     self.contentViewController = flutterViewController
     flutterViewController.backgroundColor = .clear
 
-    self.isOpaque = false
+    // self.isOpaque = false
     self.backgroundColor = .clear
-    
+
     self.titleVisibility = .hidden
     self.titlebarAppearsTransparent = true
-    
-    // If you want to hide the traffic light buttons
+
     self.standardWindowButton(.closeButton)?.isHidden = true
     self.standardWindowButton(.miniaturizeButton)?.isHidden = true
     self.standardWindowButton(.zoomButton)?.isHidden = true
-    
-    // If you want a full-size content view
-    self.styleMask.insert(.fullSizeContentView)
-    
-    // If you want to make the window draggable from any point
-    self.isMovableByWindowBackground = true
 
-    self.contentView?.layer?.cornerRadius = 12
-    self.contentView?.layer?.masksToBounds = true
+    self.styleMask.insert(.fullSizeContentView)
+
+    // If you want to make the window draggable from any point
+    // self.isMovableByWindowBackground = true
+
+    // self.contentView?.layer?.cornerRadius = 12
+    // self.contentView?.layer?.masksToBounds = true
 
     let effectView = NSVisualEffectView()
     effectView.autoresizingMask = [.width, .height]
@@ -90,8 +88,8 @@ class MainFlutterWindow: NSWindow {
     self.contentView?.addSubview(
       effectView, positioned: .below, relativeTo: flutterViewController.view)
 
-    flutterViewController.view.layer?.borderWidth = 1
-    flutterViewController.view.layer?.borderColor = NSColor.systemGray.cgColor.copy(alpha: 0.5)
+    // flutterViewController.view.layer?.borderWidth = 1
+    // flutterViewController.view.layer?.borderColor = NSColor.systemGray.cgColor.copy(alpha: 0.5)
 
     // self.standardWindowButton(.closeButton)?.isHidden = true
     // self.standardWindowButton(.miniaturizeButton)?.isHidden = true
@@ -100,7 +98,7 @@ class MainFlutterWindow: NSWindow {
     // self.titleVisibility = .hidden
     // self.titlebarAppearsTransparent = true
     self.level = .floating
-    self.hasShadow = true
+    // self.hasShadow = true
 
     self.collectionBehavior.insert(.canJoinAllSpaces)
     self.collectionBehavior.insert(.fullScreenPrimary)
@@ -269,16 +267,21 @@ class MainFlutterWindow: NSWindow {
 
     case "convertImage":
       if let args = call.arguments as? [Any], args.count == 2,
-         let inputPath = args[0] as? String,
-         let formatIndex = args[1] as? Int,
-         let format = ImageFormat(rawValue: formatIndex) {
+        let inputPath = args[0] as? String,
+        let formatIndex = args[1] as? Int,
+        let format = ImageFormat(rawValue: formatIndex)
+      {
         if let outputPath = convertImage(from: inputPath, to: format) {
           result(outputPath)
         } else {
-          result(FlutterError(code: "CONVERSION_FAILED", message: "Failed to convert image", details: nil))
+          result(
+            FlutterError(
+              code: "CONVERSION_FAILED", message: "Failed to convert image", details: nil))
         }
       } else {
-        result(FlutterError(code: "INVALID_ARGUMENT", message: "Invalid arguments for convertImage", details: nil))
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT", message: "Invalid arguments for convertImage", details: nil))
       }
 
     case "showPopover":
@@ -295,6 +298,9 @@ class MainFlutterWindow: NSWindow {
       hidePopover()
       result(nil)
 
+    case "getAppVersion":
+      result(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
+
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -307,7 +313,8 @@ class MainFlutterWindow: NSWindow {
     }
 
     guard let tiffData = image.tiffRepresentation,
-          let bitmap = NSBitmapImageRep(data: tiffData) else {
+      let bitmap = NSBitmapImageRep(data: tiffData)
+    else {
       print("Failed to create bitmap representation.")
       return nil
     }

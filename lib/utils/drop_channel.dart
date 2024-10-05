@@ -178,6 +178,17 @@ class DropChannel {
     await _channel.invokeMethod('hidePopover');
   }
 
+  Future<String> getAppVersion() async {
+    try {
+      final String version = await _channel.invokeMethod('getAppVersion');
+      return version;
+    } on PlatformException catch (e) {
+      throw FlutterError('Error getting app version: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error getting app version: $e');
+    }
+  }
+
   void addListener(DragDropListener listener) {
     listeners.add(listener);
   }

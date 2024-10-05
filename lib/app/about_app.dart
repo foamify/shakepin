@@ -7,7 +7,6 @@ import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shakepin/oss_licenses.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 class AboutApp extends StatefulWidget {
   const AboutApp({super.key});
@@ -27,9 +26,9 @@ class _AboutAppState extends State<AboutApp> {
   }
 
   Future<void> _loadVersion() async {
-    final packageInfo = await PackageInfo.fromPlatform();
+    final appVersion = await dropChannel.getAppVersion();
     setState(() {
-      version = packageInfo.version;
+      version = appVersion;
     });
   }
 

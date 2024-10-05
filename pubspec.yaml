@@ -1,7 +1,7 @@
 name: shakepin
 description: "Pin, minify, and archive your files with unparalleled ease"
 publish_to: 'none'
-version: 0.2.14
+version: 0.2.15
 environment:
   sdk: ^3.5.3
 dependencies:
@@ -21,7 +21,6 @@ dependencies:
   super_sliver_list: ^0.4.1
   path_provider: ^2.1.4
   url_launcher: ^6.1.10
-  package_info_plus: ^8.0.2
   lukehog: ^0.4.1+2
   ffmpeg_kit_flutter_video: ^6.0.3
 dev_dependencies:

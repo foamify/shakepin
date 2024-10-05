@@ -39,50 +39,65 @@ class DropTarget: NSView {
 
         for item in pasteboard.pasteboardItems ?? [] {
             if let imageData = item.data(forType: .tiff) {
-                paths.append(
-                    saveDataToTemp(data: imageData, prefix: "temp_file_", extension: "tiff"))
+                let path = saveDataToTemp(data: imageData, prefix: "temp_file_", extension: "tiff")
+                paths.append(path)
+                NSLog("Saved TIFF image: \(path)")
             } else if let imageData = item.data(forType: .png) {
-                paths.append(
-                    saveDataToTemp(data: imageData, prefix: "temp_file_", extension: "png"))
-            } else if let string = item.string(forType: .string) {
-                paths.append(
-                    saveStringToTemp(string: string, prefix: "temp_file_", extension: "txt"))
+                let path = saveDataToTemp(data: imageData, prefix: "temp_file_", extension: "png")
+                paths.append(path)
+                NSLog("Saved PNG image: \(path)")
+            } else if let urlString = item.string(forType: .fileURL),
+                let url = URL(string: urlString)
+            {
+                paths.append(url.standardized.path)
+                NSLog("Added file URL path: \(url.standardized.path)")
             } else if let urlString = item.string(forType: .URL), let url = URL(string: urlString) {
                 paths.append(url.standardized.path)
+                NSLog("Added URL path: \(url.standardized.path)")
                 // } else if let colorData = item.data(forType: .color),
                 //     let color = NSColor(data: colorData)
                 // {
                 //     paths.append(saveColorToTemp(color: color))
             } else if let rtfData = item.data(forType: .rtf) {
-                paths.append(
-                    saveDataToTemp(data: rtfData, prefix: "temp_file_", extension: "rtf"))
+                let path = saveDataToTemp(data: rtfData, prefix: "temp_file_", extension: "rtf")
+                paths.append(path)
+                NSLog("Saved RTF data: \(path)")
             } else if let rtfdData = item.data(forType: .rtfd) {
-                paths.append(
-                    saveDataToTemp(data: rtfdData, prefix: "temp_file_", extension: "rtfd"))
+                let path = saveDataToTemp(data: rtfdData, prefix: "temp_file_", extension: "rtfd")
+                paths.append(path)
+                NSLog("Saved RTFD data: \(path)")
             } else if let htmlData = item.data(forType: .html) {
-                paths.append(
-                    saveDataToTemp(data: htmlData, prefix: "temp_file_", extension: "html"))
+                let path = saveDataToTemp(data: htmlData, prefix: "temp_file_", extension: "html")
+                paths.append(path)
+                NSLog("Saved HTML data: \(path)")
             } else if let pdfData = item.data(forType: .pdf) {
-                paths.append(
-                    saveDataToTemp(data: pdfData, prefix: "temp_file_", extension: "pdf"))
+                let path = saveDataToTemp(data: pdfData, prefix: "temp_file_", extension: "pdf")
+                paths.append(path)
+                NSLog("Saved PDF data: \(path)")
             } else if let tabularText = item.string(forType: .tabularText) {
-                paths.append(
-                    saveStringToTemp(
-                        string: tabularText, prefix: "temp_file_", extension: "txt"))
+                let path = saveStringToTemp(
+                    string: tabularText, prefix: "temp_file_", extension: "txt")
+                paths.append(path)
+                NSLog("Saved tabular text: \(path)")
                 // } else if let fontData = item.data(forType: .font),
                 //     let font = NSFont(data: fontData, size: 0)
                 // {
                 //     paths.append(saveFontToTemp(font: font))
             } else if let soundData = item.data(forType: .sound) {
-                paths.append(
-                    saveDataToTemp(data: soundData, prefix: "temp_file_", extension: "aiff"))
-            } else if let urlString = item.string(forType: .fileURL),
-                let url = URL(string: urlString)
-            {
-                paths.append(url.standardized.path)
+                let path = saveDataToTemp(data: soundData, prefix: "temp_file_", extension: "aiff")
+                paths.append(path)
+                NSLog("Saved sound data: \(path)")
+            } else if let string = item.string(forType: .string) {
+                let path = saveStringToTemp(string: string, prefix: "temp_file_", extension: "txt")
+                paths.append(path)
+                NSLog("Saved string: \(path)")
             } else if let fileContents = item.data(forType: .fileContents) {
-                paths.append(
-                    saveDataToTemp(data: fileContents, prefix: "temp_file_", extension: "dat"))
+                let path = saveDataToTemp(
+                    data: fileContents, prefix: "temp_file_", extension: "dat")
+                paths.append(path)
+                NSLog("Saved file contents: \(path)")
+            } else {
+                NSLog("Unhandled pasteboard item type")
             }
         }
 
@@ -108,7 +123,7 @@ class DropTarget: NSView {
             try data.write(to: fileURL)
             return fileURL.path
         } catch {
-            print("Error saving data: \(error)")
+            NSLog("Error saving data: \(error)")
             return ""
         }
     }
@@ -122,7 +137,7 @@ class DropTarget: NSView {
             try string.write(to: fileURL, atomically: true, encoding: .utf8)
             return fileURL.standardized.path
         } catch {
-            print("Error saving string: \(error)")
+            NSLog("Error saving string: \(error)")
             return ""
         }
     }
