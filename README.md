@@ -1,32 +1,8 @@
 # ShakePin
 
-- Simple fun project inspired by [Dropover](https://dropoverapp.com/)
-- Open source
-- MIT-licensed
-
-## Why I Made This
-
-- I kinda like Dropover
-- Support me on [Ko-fi](https://ko-fi.com/damywise)
-
-## Why You Should Use This Instead of Dropover
-
-\-
-
-## How to Use
-
-Download from here https://github.com/foamify/shakepin/releases
-
-Or TestFlight Link: https://testflight.apple.com/join/afqRhd8c
-
-1. Run the app.
-2. Drag files and shake the cursor to show the app.
-3. Put the files in the app.
-4. Now you can move/copy/link the files from there
-
 ### Screenshot
 
-https://github.com/user-attachments/assets/67ba056e-f505-4e9c-80bc-9c060bf6e908
+[!screenshot](https://github.com/user-attachments/assets/67ba056e-f505-4e9c-80bc-9c060bf6e908)
 
 ## How to Build
 
