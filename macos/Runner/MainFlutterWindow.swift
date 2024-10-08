@@ -473,6 +473,7 @@ class MainFlutterWindow: NSWindow {
     var isDragging = false
     var shakeDetected = false
 
+    // TODO: change to use global event loop  
     func watch(using closure: @escaping () -> Void) {
       var changeCount = 0
 

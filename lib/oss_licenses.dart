@@ -2631,13 +2631,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: []
   );
 
-/// libcaesium_dart 0.0.1
+/// libcaesium_dart 0.1.0
 const _libcaesium_dart = Package(
     name: 'libcaesium_dart',
     description: 'A Flutter FFI plugin for libcaesium, a powerful image compression library written in Rust.',
     homepage: 'https://github.com/foamify/libcaesium_dart',
     authors: [],
-    version: '0.0.1',
+    version: '0.1.0',
     license: '''MIT License
 
 Copyright (c) 2024 damywise

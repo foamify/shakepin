@@ -2,9 +2,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:macos_ui/macos_ui.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shakepin/utils/analytics.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 
@@ -36,8 +34,8 @@ class _ArchiveAppState extends State<ArchiveApp> {
 
   Future<void> _initializeOutputFolder() async {
     if (isAppStore) {
-      final downloadsDir = await getDownloadsDirectory();
-      outputFolder = downloadsDir?.path ?? '';
+      await loadOutputDirectory();
+      outputFolder = outputDirectory.value ?? '';
       if (files.isNotEmpty) {
         final paths = items();
         compressToZip(paths.toList());
@@ -79,7 +77,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
         await Process.run('cp', [path, destPath]);
 
         // Calculate and update progress
-        double progress = ((i + 1) / totalPaths) * 80; // First 50% for copying
+        double progress = ((i + 1) / totalPaths) * 80; // First 80% for copying
         archiveProgress.value = progress;
       }
 

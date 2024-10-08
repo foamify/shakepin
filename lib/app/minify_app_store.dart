@@ -2,7 +2,6 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shakepin/utils/analytics.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +12,7 @@ import 'package:libcaesium_dart/libcaesium_dart.dart';
 import 'package:ffmpeg_kit_flutter_video/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_video/return_code.dart';
 import 'package:ffmpeg_kit_flutter_video/ffmpeg_session.dart';
+import 'package:file_selector/file_selector.dart';
 
 import '../state.dart';
 import '../utils/utils.dart';
@@ -303,6 +303,7 @@ class _MinifyAppState extends State<MinifyApp> {
     SharedPreferences.getInstance().then((prefs) {
       this.prefs = prefs;
     });
+    loadOutputDirectory();
 
     dropChannel.setMinimumSize(AppSizes.minify);
     files.value = items().where(isSupportedFile).toSet();
@@ -318,6 +319,27 @@ class _MinifyAppState extends State<MinifyApp> {
   }
 
   Future<void> minifyFiles() async {
+    if (outputDirectory.value == null) {
+      await loadOutputDirectory();
+      if (outputDirectory.value == null && mounted) {
+        await showMacosAlertDialog(
+          context: context,
+          builder: (_) => MacosAlertDialog(
+            appIcon: const FlutterLogo(size: 56),
+            title: const Text('No Output Directory Selected'),
+            message:
+                const Text('Please select an output directory to continue.'),
+            primaryButton: PushButton(
+              controlSize: ControlSize.regular,
+              child: const Text('OK'),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() {
       minifyInProgress = true;
       minifyFinished = false;
@@ -334,20 +356,7 @@ class _MinifyAppState extends State<MinifyApp> {
       imageFormat: imageFormat,
     );
 
-    Directory outputDir;
-    if (isAppStore) {
-      final downloadsDir = await getDownloadsDirectory();
-      if (downloadsDir == null) {
-        setState(() {
-          errorMessages.add(
-              'Failed to get downloads directory.\nPlease make sure you have a Downloads folder in your home directory.');
-        });
-        return;
-      }
-      outputDir = downloadsDir;
-    } else {
-      outputDir = Directory(path.dirname(files().first));
-    }
+    Directory outputDir = Directory(outputDirectory.value!);
 
     for (final filePath in files()) {
       if (!minifyInProgress) {
@@ -395,8 +404,9 @@ class _MinifyAppState extends State<MinifyApp> {
                 Border.all(color: CupertinoColors.systemGrey.withOpacity(.2)),
             borderRadius: BorderRadius.circular(8),
           ),
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (hasVideos) ...[
                 _buildDropdownSetting(
@@ -429,10 +439,18 @@ class _MinifyAppState extends State<MinifyApp> {
                   minifyInProgress,
                 ),
               ],
+              const SizedBox(height: 16),
+              MacosTextField(
+                placeholder: 'Output Directory',
+                prefix: const MacosIcon(CupertinoIcons.folder),
+                controller: TextEditingController(text: outputDirectory.value),
+                readOnly: true,
+                maxLines: 1,
+                style: const TextStyle(fontSize: 12),
+              ),
               const SizedBox(height: 8),
               SizedBox(
-                width: 300,
-                height: 36,
+                width: double.infinity,
                 child: (minifyInProgress)
                     ? Column(
                         children: [
@@ -451,7 +469,7 @@ class _MinifyAppState extends State<MinifyApp> {
                                 style: const TextStyle(fontSize: 12),
                               ),
                               PushButton(
-                                controlSize: ControlSize.regular,
+                                controlSize: ControlSize.small,
                                 onPressed: cancelMinification,
                                 child: const Text('Cancel'),
                               ),
@@ -459,17 +477,31 @@ class _MinifyAppState extends State<MinifyApp> {
                           ),
                         ],
                       )
-                    : PushButton(
-                        controlSize: ControlSize.large,
-                        onPressed: (files().isEmpty)
-                            ? null
-                            : () async {
-                                await minifyFiles();
-                              },
-                        child: const Text(
-                          'Minify',
-                          style: TextStyle(fontSize: 14),
-                        ),
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: PushButton(
+                              controlSize: ControlSize.large,
+                              onPressed: (files().isEmpty || outputDirectory.value == null)
+                                  ? null
+                                  : minifyFiles,
+                              child: const Text(
+                                'Minify',
+                                style: TextStyle(fontSize: 14),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          PushButton(
+                            controlSize: ControlSize.large,
+                            onPressed: () => loadOutputDirectory(),
+                            child: MacosIcon(
+                              CupertinoIcons.folder,
+                              size: 16,
+                              color: CupertinoColors.label.resolveFrom(context),
+                            ),
+                          ),
+                        ],
                       ),
               ),
               if (errorMessages.isNotEmpty) ...[

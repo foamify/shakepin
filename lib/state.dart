@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:shakepin/app/minify_app_common.dart';
 
 final items = ValueNotifier<Set<String>>({});
@@ -9,6 +10,22 @@ final isAboutApp = ValueNotifier<bool>(false);
 const isAppStore = appFlavor != 'oss';
 
 final minifiedFiles = ValueNotifier<List<MinifiedFile>>([]);
+final outputDirectory = ValueNotifier<String?>(null);
+
+// Function to update the output directory
+void updateOutputDirectory(String? newDirectory) {
+  outputDirectory.value = newDirectory;
+}
+
+// Function to load or select a new output directory
+Future<void> loadOutputDirectory() async {
+  if (outputDirectory.value == null) {
+    final String? selectedDirectory = await getDirectoryPath();
+    if (selectedDirectory != null) {
+      updateOutputDirectory(selectedDirectory);
+    }
+  }
+}
 
 extension ListenableEx<T> on ValueListenable<T> {
   T call() => value;
