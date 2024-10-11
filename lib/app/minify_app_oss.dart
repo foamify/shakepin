@@ -710,6 +710,7 @@ class _MinifyAppState extends State<MinifyApp> {
           child: MacosIconButton(
             padding: const EdgeInsets.all(4),
             onPressed: () async {
+              _minificationManager?.cancelMinification();
               items.value = {};
               isMinifyApp.value = false;
             },

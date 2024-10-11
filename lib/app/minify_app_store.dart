@@ -12,7 +12,6 @@ import 'package:libcaesium_dart/libcaesium_dart.dart';
 import 'package:ffmpeg_kit_flutter_video/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_video/return_code.dart';
 import 'package:ffmpeg_kit_flutter_video/ffmpeg_session.dart';
-import 'package:file_selector/file_selector.dart';
 
 import '../state.dart';
 import '../utils/utils.dart';
@@ -303,7 +302,9 @@ class _MinifyAppState extends State<MinifyApp> {
     SharedPreferences.getInstance().then((prefs) {
       this.prefs = prefs;
     });
-    loadOutputDirectory();
+    loadOutputDirectory().then((_) {
+      setState(() {});
+    });
 
     dropChannel.setMinimumSize(AppSizes.minify);
     files.value = items().where(isSupportedFile).toSet();
@@ -482,7 +483,8 @@ class _MinifyAppState extends State<MinifyApp> {
                           Expanded(
                             child: PushButton(
                               controlSize: ControlSize.large,
-                              onPressed: (files().isEmpty || outputDirectory.value == null)
+                              onPressed: (files().isEmpty ||
+                                      outputDirectory.value == null)
                                   ? null
                                   : minifyFiles,
                               child: const Text(
@@ -640,6 +642,7 @@ class _MinifyAppState extends State<MinifyApp> {
           child: MacosIconButton(
             padding: const EdgeInsets.all(4),
             onPressed: () async {
+              _minificationManager?.cancelMinification();
               items.value = {};
               isMinifyApp.value = false;
             },
