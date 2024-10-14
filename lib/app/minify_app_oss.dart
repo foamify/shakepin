@@ -15,6 +15,8 @@ import 'minify_app_common.dart';
 
 enum ImageFormat { sameAsInput, png, jpg, webp, tiff }
 
+enum VideoFormat { webm, mp4, gif }
+
 class MinificationManager {
   final String oxipngPath;
   final String ffmpegPath;
@@ -38,6 +40,27 @@ class MinificationManager {
     required this.videoFormat,
     required this.removeInputFiles,
   });
+
+  int _getGifWidth(VideoQuality quality) {
+    switch (quality) {
+      case VideoQuality.lowestQuality:
+        return 320;
+      case VideoQuality.lowQuality:
+        return 480;
+      case VideoQuality.mediumQuality:
+        return 640;
+      case VideoQuality.goodQuality:
+        return 800;
+      case VideoQuality.highQuality:
+        return 1024;
+      case VideoQuality.veryHighQuality:
+        return 1280;
+      case VideoQuality.highestQuality:
+        return 1920;
+      case VideoQuality.lossless:
+        return 2560;
+    }
+  }
 
   Future<MinifiedFile?> minifyFile(String filePath) async {
     final stopwatch = Stopwatch()..start();
@@ -166,12 +189,12 @@ class MinificationManager {
     final file = File(filePath);
     final fileName = path.basename(filePath);
     final fileNameWithoutExtension = path.basenameWithoutExtension(fileName);
-    final fileExtension = path.extension(fileName).toLowerCase();
 
-    var outputExtension = fileExtension;
-    if (videoFormat != VideoFormat.sameAsInput) {
-      outputExtension = '.${videoFormat.name}';
-    }
+    String outputExtension = switch (videoFormat) {
+      VideoFormat.webm => '.webm',
+      VideoFormat.mp4 => '.mp4',
+      VideoFormat.gif => '.gif',
+    };
 
     var newFileName = '${fileNameWithoutExtension}_minified$outputExtension';
     var outputPath = outputFolder == 'Same as input'
@@ -189,46 +212,63 @@ class MinificationManager {
       counter++;
     }
 
-    final qualityArg = switch (videoQuality) {
-      VideoQuality.lowQuality => '17',
-      VideoQuality.mediumQuality => '23',
-      VideoQuality.highQuality => '28',
-      _ => '23', // Default to Medium
-    };
-
     List<String> command;
-    if (videoFormat == VideoFormat.webm) {
+    if (videoFormat == VideoFormat.gif) {
       command = [
         '-i',
         filePath,
-        '-c:v',
-        'libvpx',
-        '-crf',
-        qualityArg,
-        '-b:v',
-        '1M',
-        '-c:a',
-        'libvorbis',
-        '-b:a',
-        '128k',
+        '-vf',
+        // This FFmpeg filter command does the following:
+        // 1. 'fps=10': Sets the frame rate to 10 frames per second
+        // 2. 'scale=width:-1:flags=lanczos': Scales the width based on quality, maintaining aspect ratio, using Lanczos scaling
+        // 3. 'split[s0][s1]': Splits the video stream into two identical streams
+        // 4. '[s0]palettegen[p]': Generates a palette from the first stream
+        // 5. '[s1][p]paletteuse': Applies the generated palette to the second stream
+        // This combination optimizes the GIF for size and quality
+        'fps=10,scale=${_getGifWidth(videoQuality)}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+        '-loop',
+        '0',
         outputPath,
       ];
     } else {
-      command = [
-        '-i',
-        filePath,
-        '-c:v',
-        'libx264',
-        '-crf',
-        qualityArg,
-        '-preset',
-        'medium',
-        '-c:a',
-        'aac',
-        '-b:a',
-        '128k',
-        outputPath,
-      ];
+      final qualityArg = switch (videoQuality) {
+        VideoQuality.lowestQuality => '51',
+        VideoQuality.lowQuality => '40',
+        VideoQuality.mediumQuality => '30',
+        VideoQuality.goodQuality => '23',
+        VideoQuality.highQuality => '18',
+        VideoQuality.veryHighQuality => '12',
+        VideoQuality.highestQuality => '6',
+        VideoQuality.lossless => '0',
+      };
+
+      if (videoFormat == VideoFormat.webm) {
+        command = [
+          '-i',
+          filePath,
+          '-c:v',
+          'libvpx',
+          '-crf',
+          qualityArg,
+          '-c:a',
+          'copy',
+          outputPath,
+        ];
+      } else {
+        command = [
+          '-i',
+          filePath,
+          '-c:v',
+          'libx264',
+          '-crf',
+          qualityArg,
+          '-preset',
+          'medium',
+          '-c:a',
+          'copy',
+          outputPath,
+        ];
+      }
     }
 
     try {
