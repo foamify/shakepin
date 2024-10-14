@@ -94,7 +94,9 @@ class MinificationManager {
     }
 
     List<String> command;
-    if (fileExtension == '.png' && imageFormat == ImageFormat.sameAsInput) {
+    if (fileExtension == '.png' &&
+        (imageFormat == ImageFormat.sameAsInput ||
+            imageFormat == ImageFormat.png)) {
       final qualityArg = switch (imageQuality) {
         ImageQuality.lowest => ['-o', '6'],
         ImageQuality.low => ['-o', '4'],
@@ -286,7 +288,7 @@ class _MinifyAppState extends State<MinifyApp> {
   String outputFolder = 'Same as input';
   VideoQuality videoQuality = VideoQuality.mediumQuality;
   VideoFormat videoFormat = VideoFormat.mp4;
-  ImageFormat imageFormat = ImageFormat.png;
+  ImageFormat imageFormat = ImageFormat.sameAsInput;
   ImageQuality imageQuality = ImageQuality.normal;
   bool removeInputFiles = false;
   bool minifyInProgress = false;
@@ -495,6 +497,9 @@ class _MinifyAppState extends State<MinifyApp> {
               if (hasImages) ...[
                 _buildDropdownSetting('Image quality', imageQuality,
                     ImageQuality.values, minifyInProgress),
+                const SizedBox(height: 4),
+                _buildDropdownSetting('Image format', imageFormat,
+                    ImageFormat.values, minifyInProgress),
               ],
               const SizedBox(height: 8),
               SizedBox(
@@ -602,6 +607,9 @@ class _MinifyAppState extends State<MinifyApp> {
                         case 'Image quality':
                           imageQuality = newValue as ImageQuality;
                           break;
+                        case 'Image format':
+                          imageFormat = newValue as ImageFormat;
+                          break;
                       }
                     });
                   }
@@ -609,7 +617,9 @@ class _MinifyAppState extends State<MinifyApp> {
           items: options.map((option) {
             return MacosPopupMenuItem<T>(
               value: option,
-              child: Text(formatEnumName(option.name)),
+              child: Text(label == 'Image format'
+                  ? option.name.toLowerCase()
+                  : formatEnumName(option.name)),
             );
           }).toList(),
         ),
