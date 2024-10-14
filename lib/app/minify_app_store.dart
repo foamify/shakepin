@@ -34,6 +34,9 @@ enum ImageQuality { lowest, low, normal, high, highest }
 // Add this enum for video formats
 enum VideoFormat { webm, mp4 }
 
+// Add this enum for image formats
+enum ImageFormat { sameAsInput, png, jpg, webp, tiff }
+
 class MinificationManager {
   final ImageQuality imageQuality;
   final VideoQuality videoQuality;
@@ -82,33 +85,19 @@ class MinificationManager {
     final fileNameWithoutExtension = path.basenameWithoutExtension(fileName);
 
     String inputPath = filePath;
-    bool needsConversion =
-        path.extension(fileName).toLowerCase() != '.${imageFormat.name}';
-
-    if (needsConversion) {
-      try {
-        final convertedPath =
-            await dropChannel.convertImage(filePath, imageFormat);
-        if (convertedPath == null) {
-          print('Failed to convert image to ${imageFormat.name}');
-          return null;
-        }
-        inputPath = convertedPath;
-      } catch (e) {
-        print('Error converting image to ${imageFormat.name}: $e');
-        return null;
-      }
+    String outputExtension = path.extension(fileName).toLowerCase();
+    if (imageFormat != ImageFormat.sameAsInput) {
+      outputExtension = '.${imageFormat.name}';
     }
 
-    var newFileName =
-        '${fileNameWithoutExtension}_minified.${imageFormat.name}';
+    var newFileName = '${fileNameWithoutExtension}_minified$outputExtension';
     var outputPath = path.join(downloadsDir.path, newFileName);
 
     // Check if the file already exists and generate a unique name if it does
     var counter = 1;
     while (File(outputPath).existsSync()) {
       newFileName =
-          '${fileNameWithoutExtension}_minified_$counter.${imageFormat.name}';
+          '${fileNameWithoutExtension}_minified_$counter$outputExtension';
       outputPath = path.join(downloadsDir.path, newFileName);
       counter++;
     }
@@ -130,11 +119,6 @@ class MinificationManager {
       );
       final originalSize = file.lengthSync();
       final minifiedSize = File(outputPath).lengthSync();
-
-      // Clean up the temporary PNG file if we had to convert
-      if (needsConversion) {
-        await File(inputPath).delete();
-      }
 
       return MinifiedFile(
         originalPath: filePath,
@@ -281,7 +265,7 @@ class _MinifyAppState extends State<MinifyApp> {
   VideoQuality videoQuality = VideoQuality.goodQuality;
   VideoFormat videoFormat = VideoFormat.mp4;
   ImageQuality imageQuality = ImageQuality.normal;
-  ImageFormat imageFormat = ImageFormat.png;
+  ImageFormat imageFormat = ImageFormat.sameAsInput;
   bool minifyInProgress = false;
   bool minifyFinished = false;
   int processedFiles = 0;
