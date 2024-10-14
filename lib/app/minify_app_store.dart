@@ -32,7 +32,7 @@ enum VideoQuality {
 enum ImageQuality { lowest, low, normal, high, highest }
 
 // Add this enum for video formats
-enum VideoFormat { webm, mp4 }
+enum VideoFormat { webm, mp4, gif }
 
 // Add this enum for image formats
 enum ImageFormat { sameAsInput, png, jpg, webp, tiff }
@@ -142,6 +142,7 @@ class MinificationManager {
     final extension = switch (videoFormat) {
       VideoFormat.webm => '.webm',
       VideoFormat.mp4 => '.mp4',
+      VideoFormat.gif => '.gif',
     };
 
     var newFileName = '${fileNameWithoutExtension}_minified$extension';
@@ -155,39 +156,34 @@ class MinificationManager {
       counter++;
     }
 
-    final (qualityArg, codec, audioCodec) = switch (videoFormat) {
-      VideoFormat.webm => (
-          '-crf ${_getVP9QualityArg(videoQuality)}',
-          'libvpx-vp9',
-          'libopus'
-        ),
-      VideoFormat.mp4 => (
-          '-b:v ${_getHEVCBitrate(videoQuality)}k',
-          'hevc_videotoolbox',
-          'aac'
-        ),
-    };
+    String command;
+    if (videoFormat == VideoFormat.gif) {
+      command =
+          '-i "$filePath" -vf "fps=60,scale=${_getGifWidth(videoQuality)}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 "$outputPath"';
+    } else {
+      final (qualityArg, codec, audioCodec) = switch (videoFormat) {
+        VideoFormat.webm => (
+            '-crf ${_getVP9QualityArg(videoQuality)}',
+            'libvpx-vp9',
+            'libopus'
+          ),
+        VideoFormat.mp4 => (
+            '-b:v ${_getHEVCBitrate(videoQuality)}k',
+            'hevc_videotoolbox',
+            'aac'
+          ),
+        VideoFormat.gif =>
+          throw Exception('Unexpected GIF format'), // This should never happen
+      };
 
-    // at first I thought there's something wrong with the command, but it works just fine in losslesscut but not in IINA
-
-    // final mediaInformation =
-    //     (await FFprobeKit.getMediaInformation(filePath)).getMediaInformation();
-    // if (mediaInformation == null) {
-    //   print('Error getting media information');
-    //   return null;
-    // }
-
-    // final streams = mediaInformation.getStreams();
-    // final videoStream = streams.firstWhere(
-    //     (stream) => stream.getStringProperty('codec_type') == 'video');
-    // final colorTransfer =
-    //     videoStream.getStringProperty('color_transfer') ?? 'bt709';
-    // final colorSpace = videoStream.getStringProperty('color_space') ?? 'bt709';
-    // final colorPrimaries =
-    //     videoStream.getStringProperty('color_primaries') ?? 'bt709';
-
-    String command =
-        '-i "$filePath" -c:v $codec $qualityArg -b:a 128k -c:a $audioCodec "$outputPath"';
+      if (videoFormat != VideoFormat.gif) {
+        command =
+            '-i "$filePath" -c:v $codec $qualityArg -b:a 128k -c:a $audioCodec "$outputPath"';
+      } else {
+        command =
+            ''; // This should never be used, as GIF is handled in the if statement above
+      }
+    }
 
     try {
       currentSession = await FFmpegKit.execute(command);
@@ -239,6 +235,19 @@ class MinificationManager {
       VideoQuality.veryHighQuality => '8000',
       VideoQuality.highestQuality => '12000',
       VideoQuality.lossless => '20000',
+    };
+  }
+
+  int _getGifWidth(VideoQuality quality) {
+    return switch (quality) {
+      VideoQuality.lowestQuality => 320,
+      VideoQuality.lowQuality => 480,
+      VideoQuality.mediumQuality => 640,
+      VideoQuality.goodQuality => 800,
+      VideoQuality.highQuality => 1024,
+      VideoQuality.veryHighQuality => 1280,
+      VideoQuality.highestQuality => 1920,
+      VideoQuality.lossless => 2560,
     };
   }
 
