@@ -15,6 +15,7 @@ import 'package:shakepin/utils/drop_channel.dart';
 import 'package:flutter/material.dart' show Colors, Durations;
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
+import 'package:share_plus/share_plus.dart';
 
 class PinApp extends StatefulWidget {
   const PinApp({super.key});
@@ -44,6 +45,12 @@ class _PinAppState extends State<PinApp> with DragDropListener {
         selectedItems.clear();
       }
     });
+  }
+
+  void _shareSelectedFiles() async {
+    final filesToShare = selectedItems.isNotEmpty ? selectedItems : items();
+    final xFiles = filesToShare.map((path) => XFile(path)).toList();
+    await Share.shareXFiles(xFiles);
   }
 
   @override
@@ -266,6 +273,7 @@ class _PinAppState extends State<PinApp> with DragDropListener {
         Positioned(
           top: 10,
           left: 10,
+          right: 10,
           child: Row(
             children: [
               MacosIconButton(
@@ -306,6 +314,21 @@ class _PinAppState extends State<PinApp> with DragDropListener {
                 pressedOpacity: .6,
                 icon: Icon(
                   FluentIcons.arrow_minimize_24_regular,
+                  color: CupertinoColors.systemBackground.resolveFrom(context),
+                  size: 14,
+                ),
+              ),
+              const Spacer(),
+              MacosIconButton(
+                padding: const EdgeInsets.all(4),
+                onPressed: _shareSelectedFiles,
+                backgroundColor:
+                    CupertinoColors.label.resolveFrom(context).withOpacity(.5),
+                hoverColor:
+                    CupertinoColors.label.resolveFrom(context).withOpacity(.9),
+                pressedOpacity: .6,
+                icon: Icon(
+                  FluentIcons.share_24_filled,
                   color: CupertinoColors.systemBackground.resolveFrom(context),
                   size: 14,
                 ),
