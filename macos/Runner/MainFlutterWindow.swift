@@ -301,6 +301,13 @@ class MainFlutterWindow: NSWindow {
     case "getAppVersion":
       result(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
 
+    case "shareXFiles":
+        if let fileURLs = call.arguments as? [String] {
+            shareXFiles(fileURLs: fileURLs, result: result)
+        } else {
+            result(FlutterError(code: "INVALID_ARGUMENT", message: "Invalid arguments for shareXFiles", details: nil))
+        }
+
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -690,6 +697,20 @@ class MainFlutterWindow: NSWindow {
   func hidePopover() {
     popover?.close()
   }
+
+  func shareXFiles(fileURLs: [String], result: @escaping FlutterResult) {
+    DispatchQueue.main.async {
+        let urls = fileURLs.map { URL(fileURLWithPath: $0) }
+        let picker = NSSharingServicePicker(items: urls)
+        picker.delegate = ShareSuccessDelegate(result: result).keep()
+        
+        if let contentView = self.contentView {
+            picker.show(relativeTo: self.frame, of: self.contentView!, preferredEdge: .minY)
+        } else {
+            result(FlutterError(code: "SHARE_ERROR", message: "Unable to show share picker", details: nil))
+        }
+    }
+  }
 }
 
 class DragSource: NSView, NSDraggingSource {
@@ -765,3 +786,23 @@ extension NSImage {
     return rotatedImage
   }
 }
+
+class ShareSuccessDelegate: NSObject, NSSharingServicePickerDelegate {
+    private var result: FlutterResult
+    private var keepSelf: (() -> Void)?
+
+    init(result: @escaping FlutterResult) {
+        self.result = result
+    }
+
+    public func keep() -> Self {
+        self.keepSelf = { _ = self }
+        return self
+    }
+
+    public func sharingServicePicker(_ sharingServicePicker: NSSharingServicePicker, didChoose service: NSSharingService?) {
+        result(service != nil ? service!.title : "")
+        self.keepSelf = nil
+    }
+}
+

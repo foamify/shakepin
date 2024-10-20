@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:shakepin/utils/handle_menu_item.dart';
 import 'package:flutter/foundation.dart';
+import 'package:file_selector/file_selector.dart';
 
 typedef ShakeDetectedCallback = void Function(double x, double y);
 typedef DraggingSessionEndedCallback = void Function(int operation);
@@ -161,7 +162,8 @@ class DropChannel {
 
   Future<String?> convertImage(String inputPath, ImageFormat format) async {
     try {
-      final result = await _channel.invokeMethod('convertImage', [inputPath, format.index]);
+      final result = await _channel
+          .invokeMethod('convertImage', [inputPath, format.index]);
       return result as String?;
     } on PlatformException catch (e) {
       throw FlutterError('Error converting image: ${e.message}');
@@ -186,6 +188,17 @@ class DropChannel {
       throw FlutterError('Error getting app version: ${e.message}');
     } catch (e) {
       throw FlutterError('Unexpected error getting app version: $e');
+    }
+  }
+
+  Future<void> shareXFiles(List<XFile> xFiles) async {
+    try {
+      final filePaths = xFiles.map((xFile) => xFile.path).toList();
+      await _channel.invokeMethod('shareXFiles', filePaths);
+    } on PlatformException catch (e) {
+      throw FlutterError('Error sharing files: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error sharing files: $e');
     }
   }
 

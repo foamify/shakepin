@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:extended_text/extended_text.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/gestures.dart';
@@ -15,7 +16,6 @@ import 'package:shakepin/utils/drop_channel.dart';
 import 'package:flutter/material.dart' show Colors, Durations;
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
-import 'package:share_plus/share_plus.dart';
 
 class PinApp extends StatefulWidget {
   const PinApp({super.key});
@@ -50,7 +50,11 @@ class _PinAppState extends State<PinApp> with DragDropListener {
   void _shareSelectedFiles() async {
     final filesToShare = selectedItems.isNotEmpty ? selectedItems : items();
     final xFiles = filesToShare.map((path) => XFile(path)).toList();
-    await Share.shareXFiles(xFiles);
+    try {
+       await dropChannel.shareXFiles(xFiles);
+    } catch (e) {
+      print('Error sharing files: $e');
+    }
   }
 
   @override
