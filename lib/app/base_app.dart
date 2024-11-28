@@ -11,6 +11,7 @@ import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drag_to_move_area.dart';
 import 'package:shakepin/widgets/multi_hit_stack.dart';
+import 'package:shakepin/app/misc_app.dart';
 
 class BaseApp extends StatefulWidget {
   const BaseApp({super.key});
@@ -155,6 +156,7 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
                   items,
                   isMinifyApp,
                   isAboutApp,
+                  isMiscApp,
                 ]),
                 builder: (context, child) {
                   if (isAboutApp()) {
@@ -167,6 +169,9 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
                     return const ArchiveApp();
                   }
                   if (items().isNotEmpty) {
+                    if (isMiscApp()) {
+                      return const MiscApp();
+                    }
                     return const PinApp();
                   }
                   return const PanelApp();

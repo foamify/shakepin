@@ -20,6 +20,7 @@ enum VideoFormat { webm, mp4, gif }
 class MinificationManager {
   final String oxipngPath;
   final String ffmpegPath;
+  final String ffprobePath;
   final String imageMagickPath;
   final String outputFolder;
   final ImageQuality imageQuality;
@@ -32,6 +33,7 @@ class MinificationManager {
   MinificationManager({
     required this.oxipngPath,
     required this.ffmpegPath,
+    required this.ffprobePath,
     required this.imageMagickPath,
     required this.outputFolder,
     required this.imageQuality,
@@ -212,11 +214,17 @@ class MinificationManager {
       counter++;
     }
 
-    List<String> command;
+    // Base command with hardware acceleration and progress reporting
+    List<String> baseCommand = [
+      '-hwaccel', 'auto',
+      '-progress', 'pipe:1',
+      '-y',
+      '-i', filePath,
+    ];
+
+    List<String> encodingParams;
     if (videoFormat == VideoFormat.gif) {
-      command = [
-        '-i',
-        filePath,
+      encodingParams = [
         '-vf',
         // This FFmpeg filter command does the following:
         // 1. 'fps=10': Sets the frame rate to 10 frames per second
@@ -226,8 +234,7 @@ class MinificationManager {
         // 5. '[s1][p]paletteuse': Applies the generated palette to the second stream
         // This combination optimizes the GIF for size and quality
         'fps=10,scale=${_getGifWidth(videoQuality)}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
-        '-loop',
-        '0',
+        '-loop', '0',
         outputPath,
       ];
     } else {
@@ -243,60 +250,175 @@ class MinificationManager {
       };
 
       if (videoFormat == VideoFormat.webm) {
-        command = [
-          '-i',
-          filePath,
-          '-c:v',
-          'libvpx',
-          '-crf',
-          qualityArg,
-          '-c:a',
-          'copy',
+        encodingParams = [
+          '-c:v', 'libvpx-vp9',  // Using VP9 for better quality
+          '-crf', qualityArg,
+          '-b:v', '0',           // Let CRF control quality
+          '-deadline', 'good',    // Balanced encoding speed
+          '-cpu-used', '2',      // Balanced CPU usage
+          '-pix_fmt', 'yuv420p', // Ensure compatibility
+          '-c:a', 'libopus',     // Better audio codec
           outputPath,
         ];
       } else {
-        command = [
-          '-i',
-          filePath,
-          '-c:v',
-          'libx264',
-          '-crf',
-          qualityArg,
-          '-preset',
-          'medium',
-          '-c:a',
-          'copy',
+        // Calculate optimal bitrate based on resolution
+        final probe = await _probeVideoInfo(filePath);
+        final maxRate = _calculateOptimalBitrate(probe);
+        final bufSize = maxRate * 2;
+
+        encodingParams = [
+          '-c:v', 'libx264',
+          '-preset', 'fast',     // Faster encoding
+          '-crf', qualityArg,
+          if (maxRate > 0) ...[
+            '-maxrate', '${maxRate}k',
+            '-bufsize', '${bufSize}k',
+          ],
+          '-pix_fmt', 'yuv420p', // Ensure compatibility
+          '-profile:v', 'high',  // High profile for better compression
+          '-level', '4.1',       // Widely compatible level
+          '-movflags', '+faststart', // Enable streaming
+          '-c:a', 'aac',        // AAC audio codec
+          '-b:a', '128k',       // Decent audio quality
           outputPath,
         ];
       }
     }
 
+    final command = [...baseCommand, ...encodingParams];
+
     try {
       _currentProcess = await Process.start(ffmpegPath, command);
+      
+      // Handle progress reporting
+      _currentProcess!.stdout
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen((line) {
+        _parseProgress(line);
+      });
+
+      // Collect error output
+      final errorBuffer = StringBuffer();
+      _currentProcess!.stderr
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen(errorBuffer.writeln);
+
       final exitCode = await _currentProcess!.exitCode;
       if (exitCode != 0) {
-        print(
-            'Error minifying video: ${await _currentProcess!.stderr.transform(utf8.decoder).join()}');
+        print('FFmpeg error: ${errorBuffer.toString()}');
         return null;
-      } else {
-        final originalSize = file.lengthSync();
-        final minifiedSize = File(outputPath).lengthSync();
+      }
 
-        if (removeInputFiles) {
-          await file.delete();
-        }
+      final originalSize = file.lengthSync();
+      final minifiedSize = File(outputPath).lengthSync();
+      final duration = await _getVideoDuration(outputPath);
 
-        return MinifiedFile(
-          originalPath: filePath,
-          minifiedPath: outputPath,
-          originalSize: originalSize,
-          minifiedSize: minifiedSize,
-          duration: const Duration(),
-        );
+      if (removeInputFiles) {
+        await file.delete();
+      }
+
+      return MinifiedFile(
+        originalPath: filePath,
+        minifiedPath: outputPath,
+        originalSize: originalSize,
+        minifiedSize: minifiedSize,
+        duration: duration,
+      );
+    } catch (e, stackTrace) {
+      print('Error minifying video: $e');
+      print('Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  // Helper function to probe video information
+  Future<Map<String, dynamic>> _probeVideoInfo(String filePath) async {
+    try {
+      final result = await Process.run(
+        ffprobePath,
+        [
+          '-v', 'quiet',
+          '-print_format', 'json',
+          '-show_format',
+          '-show_streams',
+          filePath,
+        ],
+      );
+      
+      if (result.exitCode == 0) {
+        return json.decode(result.stdout as String);
       }
     } catch (e) {
-      print('Error minifying video: $e');
-      return null;
+      print('Error probing video: $e');
+    }
+    return {};
+  }
+
+  // Calculate optimal bitrate based on video resolution
+  int _calculateOptimalBitrate(Map<String, dynamic> probe) {
+    try {
+      final streams = probe['streams'] as List;
+      final videoStream = streams.firstWhere(
+        (stream) => stream['codec_type'] == 'video',
+        orElse: () => {},
+      );
+
+      if (videoStream.isEmpty) return 0;
+
+      final width = videoStream['width'] as int;
+      final height = videoStream['height'] as int;
+      final pixels = width * height;
+
+      // Calculate bitrate based on resolution
+      // These are conservative estimates for good quality
+      if (pixels <= 921600) { // 1280x720
+        return 5000; // 5 Mbps
+      } else if (pixels <= 2073600) { // 1920x1080
+        return 8000; // 8 Mbps
+      } else if (pixels <= 8294400) { // 4K
+        return 16000; // 16 Mbps
+      } else {
+        return 20000; // > 4K
+      }
+    } catch (e) {
+      print('Error calculating bitrate: $e');
+      return 0;
+    }
+  }
+
+  // Get video duration using ffprobe
+  Future<Duration> _getVideoDuration(String filePath) async {
+    try {
+      final result = await Process.run(
+        ffprobePath,
+        [
+          '-v', 'quiet',
+          '-show_entries', 'format=duration',
+          '-of', 'default=noprint_wrappers=1:nokey=1',
+          filePath,
+        ],
+      );
+      
+      if (result.exitCode == 0) {
+        final seconds = double.parse(result.stdout.toString().trim());
+        return Duration(milliseconds: (seconds * 1000).round());
+      }
+    } catch (e) {
+      print('Error getting video duration: $e');
+    }
+    return const Duration();
+  }
+
+  // Parse FFmpeg progress output
+  void _parseProgress(String line) {
+    if (line.contains('time=')) {
+      final timeMatch = RegExp(r'time=(\d+:\d+:\d+.\d+)').firstMatch(line);
+      if (timeMatch != null) {
+        // You can emit progress updates here
+        // For example, using a StreamController or callback
+      }
     }
   }
 
@@ -317,12 +439,14 @@ class _MinifyAppState extends State<MinifyApp> {
   // TODO: none of these works
   late final TextEditingController oxipngController;
   late final TextEditingController ffmpegController;
+  late final TextEditingController ffprobeController;
   late final TextEditingController imageMagickController;
   final _minifileScrollController = ScrollController();
   final _fileScrollController = ScrollController();
 
   var oxipngPath = '';
   var ffmpegPath = '';
+  var ffprobePath = '';
   var imageMagickPath = '';
 
   String outputFolder = 'Same as input';
@@ -351,6 +475,7 @@ class _MinifyAppState extends State<MinifyApp> {
 
     oxipngController = TextEditingController(text: oxipngPath);
     ffmpegController = TextEditingController(text: ffmpegPath);
+    ffprobeController = TextEditingController(text: ffprobePath);
     imageMagickController = TextEditingController(text: imageMagickPath);
 
     SharedPreferences.getInstance().then((prefs) {
@@ -358,6 +483,7 @@ class _MinifyAppState extends State<MinifyApp> {
       setState(() {
         oxipngPath = prefs.getString('oxipng_path') ?? '';
         ffmpegPath = prefs.getString('ffmpeg_path') ?? '';
+        ffprobePath = prefs.getString('ffprobe_path') ?? '';
         imageMagickPath = prefs.getString('imagemagick_path') ?? '';
 
         // Check if the paths are valid
@@ -369,6 +495,10 @@ class _MinifyAppState extends State<MinifyApp> {
           ffmpegPath = '';
           prefs.remove('ffmpeg_path');
         }
+        if (!File(ffprobePath).existsSync()) {
+          ffprobePath = '';
+          prefs.remove('ffprobe_path');
+        }
         if (!File(imageMagickPath).existsSync()) {
           imageMagickPath = '';
           prefs.remove('imagemagick_path');
@@ -376,6 +506,7 @@ class _MinifyAppState extends State<MinifyApp> {
 
         oxipngController.text = oxipngPath;
         ffmpegController.text = ffmpegPath;
+        ffprobeController.text = ffprobePath;
         imageMagickController.text = imageMagickPath;
       });
     });
@@ -391,6 +522,7 @@ class _MinifyAppState extends State<MinifyApp> {
   void dispose() {
     oxipngController.dispose();
     ffmpegController.dispose();
+    ffprobeController.dispose();
     imageMagickController.dispose();
     minifiedFiles.clear();
     super.dispose();
@@ -409,6 +541,7 @@ class _MinifyAppState extends State<MinifyApp> {
     _minificationManager = MinificationManager(
       oxipngPath: oxipngPath,
       ffmpegPath: ffmpegPath,
+      ffprobePath: ffprobePath,
       imageMagickPath: imageMagickPath,
       outputFolder: outputFolder,
       imageQuality: imageQuality,
@@ -461,7 +594,9 @@ class _MinifyAppState extends State<MinifyApp> {
               ? 'Used for minifying images.'
               : label.contains('FFmpeg')
                   ? 'Used for minifying videos.'
-                  : 'Used for minifying images (non-PNG).',
+                  : label.contains('FFprobe')
+                      ? 'Used for probing video information.'
+                      : 'Used for minifying images (non-PNG).',
           style:
               const TextStyle(fontSize: 12, color: CupertinoColors.systemGrey),
         ),
@@ -502,10 +637,12 @@ class _MinifyAppState extends State<MinifyApp> {
     setState(() {
       oxipngPath = oxipngController.text;
       ffmpegPath = ffmpegController.text;
+      ffprobePath = ffprobeController.text;
       imageMagickPath = imageMagickController.text;
 
       prefs.setString('oxipng_path', oxipngPath);
       prefs.setString('ffmpeg_path', ffmpegPath);
+      prefs.setString('ffprobe_path', ffprobePath);
       prefs.setString('imagemagick_path', imageMagickPath);
     });
   }
@@ -575,6 +712,7 @@ class _MinifyAppState extends State<MinifyApp> {
                         controlSize: ControlSize.large,
                         onPressed: (oxipngPath.isEmpty ||
                                 ffmpegPath.isEmpty ||
+                                ffprobePath.isEmpty ||
                                 imageMagickPath.isEmpty ||
                                 files().isEmpty)
                             ? null
@@ -694,6 +832,7 @@ class _MinifyAppState extends State<MinifyApp> {
                 const SizedBox(height: 24),
                 if (oxipngPath.isEmpty ||
                     ffmpegPath.isEmpty ||
+                    ffprobePath.isEmpty ||
                     imageMagickPath.isEmpty)
                   Column(
                     children: [
@@ -710,6 +849,14 @@ class _MinifyAppState extends State<MinifyApp> {
                         ffmpegController,
                         (String path) {
                           ffmpegController.text = path;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPathSelector(
+                        'Select FFprobe path',
+                        ffprobeController,
+                        (String path) {
+                          ffprobeController.text = path;
                         },
                       ),
                       const SizedBox(height: 16),

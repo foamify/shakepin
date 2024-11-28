@@ -22,7 +22,8 @@ dependencies:
   path_provider: ^2.1.4
   url_launcher: ^6.1.10
   lukehog: ^0.4.1+2
-  ffmpeg_kit_flutter_video: ^6.0.3
+  gradient_borders: ^1.0.1
+  flutter_pty: ^0.4.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

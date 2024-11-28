@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:shakepin/app/minify_app_common.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final items = ValueNotifier<Set<String>>({});
 final archiveProgress = ValueNotifier<double>(-1);
 final isMinifyApp = ValueNotifier<bool>(false);
 final isAboutApp = ValueNotifier<bool>(false);
+
 const isAppStore = appFlavor != 'oss';
 
 final minifiedFiles = ValueNotifier<List<MinifiedFile>>([]);
@@ -44,3 +46,12 @@ extension ListenableSetEx<T> on ValueNotifier<Set<T>> {
   void remove(T item) => value = value.where((element) => element != item).toSet();
   void clear() => value = {};
 }
+
+final isMiscApp = ValueNotifier<bool>(false);
+
+// Paths for external tools
+String imageMagickPath = '';
+String ffmpegPath = '';
+
+// Update the existing variables or add if not present:
+late final SharedPreferences prefs;

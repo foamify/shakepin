@@ -4,10 +4,11 @@ import 'package:macos_haptic_feedback/macos_haptic_feedback.dart';
 
 sealed class AppSizes {
   static const archive = Size(300, 200);
-  static const panel = Size(64 * 3, 72);
+  static const panel = Size(64 * 4, 72); // width is 64 * [amount of apps]
   static const pin = Size(180, 180);
   static const minify = Size(360, 460);
   static const about = Size(360, 360);
+  static const misc = Size(300, 300); // Adjust size as needed
 }
 
 final haptic = MacosHapticFeedback();

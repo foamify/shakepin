@@ -20,6 +20,9 @@ class MainFlutterWindow: NSWindow {
   var iconCache = NSCache<NSString, NSImage>()
   var popover: NSPopover?
 
+  var dropdownChannel: FlutterMethodChannel!
+  var dropdownMenu: NSMenu?
+
   override func awakeFromNib() {
     cleanup()
     flutterViewController = FlutterViewController()
@@ -33,6 +36,8 @@ class MainFlutterWindow: NSWindow {
 
     dragSource = DragSource(channel: channel)
     flutterViewController.view.addSubview(dragSource, positioned: .below, relativeTo: nil)
+
+    setupNativeDropdownChannel()
 
     setupWindow(flutterViewController)
 
@@ -54,6 +59,111 @@ class MainFlutterWindow: NSWindow {
 
   override var isKeyWindow: Bool {
     return true
+  }
+
+  override var isMainWindow: Bool {
+    return true
+  }
+
+  override var canBecomeKey: Bool {
+    return true
+  }
+
+  override var canBecomeMain: Bool {
+    return true
+  }
+
+  func setupNativeDropdownChannel() {
+    dropdownChannel = FlutterMethodChannel(
+      name: "com.damywise.flutter_macos_native_dropdown/channel",
+      binaryMessenger: flutterViewController.engine.binaryMessenger)
+    dropdownChannel.setMethodCallHandler(handleNativeDropdownMethodCall)
+  }
+
+  func handleNativeDropdownMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    if call.method == "showDropdownMenu" {
+      guard let args = call.arguments as? [String: Any],
+        let items = args["items"] as? [[String: Any]],
+        let x = args["x"] as? CGFloat,
+        let y = args["y"] as? CGFloat,
+        let selectedIndex = args["selectedIndex"] as? Int,
+        let dropdownId = args["dropdownId"] as? String
+      else {
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENTS",
+            message: "Invalid arguments for showDropdownMenu",
+            details: nil))
+        return
+      }
+
+      DispatchQueue.main.async {
+        self.showDropdownMenu(
+          items: items,
+          selectedIndex: selectedIndex,
+          dropdownId: dropdownId,
+          at: NSPoint(x: x, y: y)
+        ) { selectedIndex in
+          result(selectedIndex)
+        }
+      }
+    } else {
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private func showDropdownMenu(
+    items: [[String: Any]],
+    selectedIndex: Int,
+    dropdownId: String,
+    at point: NSPoint,
+    completion: @escaping (Int) -> Void
+  ) {
+    let menu = NSMenu()
+    menu.autoenablesItems = false
+
+    for (index, item) in items.enumerated() {
+      if let title = item["text"] as? String {
+        let menuItem = NSMenuItem(
+          title: title,
+          action: #selector(self.handleMenuSelection(_:)),
+          keyEquivalent: ""
+        )
+        menuItem.target = self
+        menuItem.tag = index
+        menuItem.isEnabled = !(item["disabled"] as? Bool ?? false)
+        menuItem.representedObject = dropdownId  // Store the dropdown ID
+
+        if index == selectedIndex {
+          menuItem.state = .on
+        }
+
+        menu.addItem(menuItem)
+      } else if item["isDivider"] as? Bool == true {
+        menu.addItem(NSMenuItem.separator())
+      }
+    }
+
+    self.dropdownMenu = menu
+
+    let screenPoint = self.convertPoint(toScreen: point)
+    menu.popUp(
+      positioning: nil,
+      at: NSPoint(x: screenPoint.x, y: screenPoint.y),
+      in: nil
+    )
+  }
+
+  @objc private func handleMenuSelection(_ sender: NSMenuItem) {
+    if let dropdownId = sender.representedObject as? String {
+      channel.invokeMethod(
+        "onDropdownMenuSelected",
+        arguments: [
+          "id": dropdownId,
+          "index": sender.tag,
+        ]
+      )
+    }
   }
 
   func setupWindow(_ flutterViewController: FlutterViewController) {
@@ -302,11 +412,13 @@ class MainFlutterWindow: NSWindow {
       result(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
 
     case "shareXFiles":
-        if let fileURLs = call.arguments as? [String] {
-            shareXFiles(fileURLs: fileURLs, result: result)
-        } else {
-            result(FlutterError(code: "INVALID_ARGUMENT", message: "Invalid arguments for shareXFiles", details: nil))
-        }
+      if let fileURLs = call.arguments as? [String] {
+        shareXFiles(fileURLs: fileURLs, result: result)
+      } else {
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT", message: "Invalid arguments for shareXFiles", details: nil))
+      }
 
     default:
       result(FlutterMethodNotImplemented)
@@ -627,6 +739,7 @@ class MainFlutterWindow: NSWindow {
       ("Show", 1),
       ("Hide", 2),
       ("About Shakepin", 3),
+      ("Reset Settings", 4),
       ("Quit", -1),
     ]
 
@@ -700,15 +813,16 @@ class MainFlutterWindow: NSWindow {
 
   func shareXFiles(fileURLs: [String], result: @escaping FlutterResult) {
     DispatchQueue.main.async {
-        let urls = fileURLs.map { URL(fileURLWithPath: $0) }
-        let picker = NSSharingServicePicker(items: urls)
-        picker.delegate = ShareSuccessDelegate(result: result).keep()
-        
-        if let contentView = self.contentView {
-            picker.show(relativeTo: self.frame, of: self.contentView!, preferredEdge: .minY)
-        } else {
-            result(FlutterError(code: "SHARE_ERROR", message: "Unable to show share picker", details: nil))
-        }
+      let urls = fileURLs.map { URL(fileURLWithPath: $0) }
+      let picker = NSSharingServicePicker(items: urls)
+      picker.delegate = ShareSuccessDelegate(result: result).keep()
+
+      if let contentView = self.contentView {
+        picker.show(relativeTo: self.frame, of: self.contentView!, preferredEdge: .minY)
+      } else {
+        result(
+          FlutterError(code: "SHARE_ERROR", message: "Unable to show share picker", details: nil))
+      }
     }
   }
 }
@@ -788,21 +902,22 @@ extension NSImage {
 }
 
 class ShareSuccessDelegate: NSObject, NSSharingServicePickerDelegate {
-    private var result: FlutterResult
-    private var keepSelf: (() -> Void)?
+  private var result: FlutterResult
+  private var keepSelf: (() -> Void)?
 
-    init(result: @escaping FlutterResult) {
-        self.result = result
-    }
+  init(result: @escaping FlutterResult) {
+    self.result = result
+  }
 
-    public func keep() -> Self {
-        self.keepSelf = { _ = self }
-        return self
-    }
+  public func keep() -> Self {
+    self.keepSelf = { _ = self }
+    return self
+  }
 
-    public func sharingServicePicker(_ sharingServicePicker: NSSharingServicePicker, didChoose service: NSSharingService?) {
-        result(service != nil ? service!.title : "")
-        self.keepSelf = nil
-    }
+  public func sharingServicePicker(
+    _ sharingServicePicker: NSSharingServicePicker, didChoose service: NSSharingService?
+  ) {
+    result(service != nil ? service!.title : "")
+    self.keepSelf = nil
+  }
 }
-

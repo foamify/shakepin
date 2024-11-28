@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:shakepin/app/drop_widgets/drop_archive.dart';
 import 'package:shakepin/app/drop_widgets/drop_minify.dart';
 import 'package:shakepin/app/drop_widgets/drop_pin.dart';
+import 'package:shakepin/app/drop_widgets/drop_misc.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
 
@@ -48,6 +49,12 @@ class _PanelAppState extends State<PanelApp> {
               DropArchive(
                 icon: Icon(
                   FluentIcons.archive_24_regular,
+                  color: CupertinoColors.label.resolveFrom(context),
+                ),
+              ),
+              DropMisc(
+                icon: Icon(
+                  FluentIcons.apps_24_regular,
                   color: CupertinoColors.label.resolveFrom(context),
                 ),
               ),

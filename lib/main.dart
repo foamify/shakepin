@@ -3,12 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:libcaesium_dart/libcaesium_dart.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/app/base_app.dart';
+import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   await RustLib.init();
   WidgetsFlutterBinding.ensureInitialized();
+  
+  prefs = await SharedPreferences.getInstance();
+  
   dropChannel.setTrayIcon(
     Uint8List.view(
         (await rootBundle.load('assets/images/tray_icon.png')).buffer),
