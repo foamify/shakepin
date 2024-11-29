@@ -156,7 +156,7 @@ class MainFlutterWindow: NSWindow {
 
   @objc private func handleMenuSelection(_ sender: NSMenuItem) {
     if let dropdownId = sender.representedObject as? String {
-      channel.invokeMethod(
+      dropdownChannel.invokeMethod(
         "onDropdownMenuSelected",
         arguments: [
           "id": dropdownId,
