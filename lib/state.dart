@@ -49,9 +49,5 @@ extension ListenableSetEx<T> on ValueNotifier<Set<T>> {
 
 final isMiscApp = ValueNotifier<bool>(false);
 
-// Paths for external tools
-String imageMagickPath = '';
-String ffmpegPath = '';
-
 // Update the existing variables or add if not present:
 late final SharedPreferences prefs;

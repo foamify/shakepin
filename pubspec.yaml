@@ -34,6 +34,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/tray_icon.png
+    - assets/setup.sh
 icons_launcher:
   image_path: "assets/images/icon.png"
   platforms:

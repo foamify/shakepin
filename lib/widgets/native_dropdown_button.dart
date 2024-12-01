@@ -26,6 +26,7 @@ class PlatformChannelHandler {
   }
 
   Future<void> _handleMethodCall(MethodCall call) async {
+    debugPrint('call: ${call.method}, args: ${call.arguments}');
     switch (call.method) {
       case 'onDropdownMenuSelected':
         DropdownManager.handleMethodCall(call);

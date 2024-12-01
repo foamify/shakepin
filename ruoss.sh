@@ -1,2 +1,2 @@
 sh ./setup_oss.sh
-flutter run -d macos $OSS_ARG
+flutter run -d macos --flavor oss

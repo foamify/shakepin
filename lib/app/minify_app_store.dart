@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/utils/analytics.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/widgets/native_dropdown_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
@@ -28,8 +29,6 @@ enum VideoQuality {
   highestQuality,
   lossless
 }
-
-enum ImageQuality { lowest, low, normal, high, highest }
 
 // Add this enum for video formats
 enum VideoFormat { webm, mp4, gif }
@@ -80,11 +79,9 @@ class MinificationManager {
 
   Future<MinifiedFile?> minifyImage(
       String filePath, Directory downloadsDir) async {
-    final file = File(filePath);
     final fileName = path.basename(filePath);
     final fileNameWithoutExtension = path.basenameWithoutExtension(fileName);
 
-    String inputPath = filePath;
     String outputExtension = path.extension(fileName).toLowerCase();
     if (imageFormat != ImageFormat.sameAsInput) {
       outputExtension = '.${imageFormat.name}';
@@ -102,35 +99,7 @@ class MinificationManager {
       counter++;
     }
 
-    try {
-      await compress(
-        inputPath: inputPath,
-        outputPath: outputPath,
-        quality: switch (imageQuality) {
-          ImageQuality.lowest => 30,
-          ImageQuality.low => 50,
-          ImageQuality.normal => 80,
-          ImageQuality.high => 90,
-          ImageQuality.highest => 95,
-        },
-        pngOptimizationLevel: 3,
-        keepMetadata: true,
-        optimize: false,
-      );
-      final originalSize = file.lengthSync();
-      final minifiedSize = File(outputPath).lengthSync();
-
-      return MinifiedFile(
-        originalPath: filePath,
-        minifiedPath: outputPath,
-        originalSize: originalSize,
-        minifiedSize: minifiedSize,
-        duration: const Duration(),
-      );
-    } catch (e) {
-      print('Error minifying image: $e');
-      return null;
-    }
+    return await minifyImageWithCaesium(filePath, outputPath, imageQuality);
   }
 
   Future<MinifiedFile?> minifyVideo(
@@ -542,7 +511,7 @@ class _MinifyAppState extends State<MinifyApp> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: const TextStyle(fontSize: 12)),
-        MacosPopupButton<T>(
+        NativeDropdownButton<T>(
           value: value,
           onChanged: disabled
               ? null
@@ -567,13 +536,19 @@ class _MinifyAppState extends State<MinifyApp> {
                   }
                 },
           items: options.map((option) {
-            return MacosPopupMenuItem<T>(
+            return NativeDropdownItem<T>(
               value: option,
-              child: Text(label == 'Image format'
+              label: label == 'Image format'
                   ? option.name.toLowerCase()
-                  : formatEnumName(option.name)),
+                  : formatEnumName(option.name),
             );
           }).toList(),
+          child: Text(
+            label == 'Image format'
+                ? value.name.toLowerCase()
+                : formatEnumName(value.name),
+            style: const TextStyle(fontSize: 12),
+          ),
         ),
       ],
     );

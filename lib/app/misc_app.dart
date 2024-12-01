@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/app/misc/tools/tools.dart';
@@ -26,28 +24,12 @@ class _MiscAppState extends State<MiscApp> {
   void initState() {
     super.initState();
     dropChannel.setMinimumSize(AppSizes.misc);
-    _loadPaths();
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadPaths() async {
-    imageMagickPath = prefs.getString('imagemagick_path') ?? '';
-    ffmpegPath = prefs.getString('ffmpeg_path') ?? '';
-
-    if (!File(imageMagickPath).existsSync()) {
-      imageMagickPath = '';
-      prefs.remove('imagemagick_path');
-    }
-    if (!File(ffmpegPath).existsSync()) {
-      ffmpegPath = '';
-      prefs.remove('ffmpeg_path');
-    }
-    setState(() {});
   }
 
   Widget _buildToolSelector() {
@@ -92,116 +74,7 @@ class _MiscAppState extends State<MiscApp> {
   }
 
   Widget _buildPathSelector() {
-    if (_selectedTool == ToolType.convertToIco && imageMagickPath.isEmpty) {
-      return _buildImageMagickPathSelector();
-    } else if (_selectedTool == ToolType.convertToWav && ffmpegPath.isEmpty) {
-      return _buildFFmpegPathSelector();
-    }
     return Tools.getToolWidget(_selectedTool);
-  }
-
-  Widget _buildImageMagickPathSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('ImageMagick Path'),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: MacosTextField(
-                placeholder: 'Enter ImageMagick path',
-                controller: TextEditingController(text: imageMagickPath),
-                onChanged: (value) => imageMagickPath = value,
-              ),
-            ),
-            const SizedBox(width: 8),
-            PushButton(
-              controlSize: ControlSize.regular,
-              child: const Text('Select'),
-              onPressed: () async {
-                final result = await openFile(acceptedTypeGroups: [
-                  const XTypeGroup(
-                    label: 'Executable',
-                    uniformTypeIdentifiers: ['public.executable'],
-                  )
-                ]);
-                if (result != null) {
-                  setState(() {
-                    imageMagickPath = result.path;
-                  });
-                  prefs.setString('imagemagick_path', imageMagickPath);
-                }
-              },
-            ),
-            const SizedBox(width: 8),
-            PushButton(
-              controlSize: ControlSize.regular,
-              child: const Text('Save'),
-              onPressed: () {
-                if (imageMagickPath.isNotEmpty) {
-                  setState(() {
-                    prefs.setString('imagemagick_path', imageMagickPath);
-                  });
-                }
-              },
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFFmpegPathSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('FFmpeg Path'),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: MacosTextField(
-                placeholder: 'Enter FFmpeg path',
-                controller: TextEditingController(text: ffmpegPath),
-                onChanged: (value) => ffmpegPath = value,
-              ),
-            ),
-            const SizedBox(width: 8),
-            PushButton(
-              controlSize: ControlSize.regular,
-              child: const Text('Select'),
-              onPressed: () async {
-                final result = await openFile(acceptedTypeGroups: [
-                  const XTypeGroup(
-                    label: 'Executable',
-                    uniformTypeIdentifiers: ['public.executable'],
-                  )
-                ]);
-                if (result != null) {
-                  setState(() {
-                    ffmpegPath = result.path;
-                  });
-                  prefs.setString('ffmpeg_path', ffmpegPath);
-                }
-              },
-            ),
-            const SizedBox(width: 8),
-            PushButton(
-              controlSize: ControlSize.regular,
-              child: const Text('Save'),
-              onPressed: () {
-                if (ffmpegPath.isNotEmpty) {
-                  setState(() {
-                    prefs.setString('ffmpeg_path', ffmpegPath);
-                  });
-                }
-              },
-            ),
-          ],
-        ),
-      ],
-    );
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:path/path.dart' as path;
 import 'package:shakepin/app/misc/tools/tool.dart';
 import 'package:shakepin/state.dart';
+import 'package:shakepin/utils/cli.dart';
 
 class ConvertToWavTool extends ToolWidget {
   const ConvertToWavTool({super.key});
@@ -20,6 +21,7 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
   Duration? _endTime;
   Duration? _mediaDuration;
   String? _errorMessage;
+  final Cli _cli = cli;
 
   @override
   void initState() {
@@ -27,32 +29,37 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
     _getMediaDuration();
   }
 
+  @override
+  void dispose() {
+    _cli.dispose();
+    super.dispose();
+  }
+
   Future<void> _getMediaDuration() async {
-    if (items().isEmpty) return;
+    print('[_getMediaDuration] Starting to get media duration');
+    if (items().isEmpty) {
+      print('[_getMediaDuration] No items found, returning early');
+      return;
+    }
 
     try {
-      final result = await Process.run(ffmpegPath, [
-        '-i',
-        items().first,
-        '-show_entries',
-        'format=duration',
-        '-v',
-        'quiet',
-        '-of',
-        'csv=p=0',
-      ]);
-
-      if (result.exitCode == 0) {
-        final duration = double.tryParse(result.stdout.toString().trim());
-        if (duration != null) {
-          setState(() {
-            _mediaDuration = Duration(milliseconds: (duration * 1000).round());
-            _endTime = _mediaDuration;
-          });
-        }
+      print('[_getMediaDuration] Getting duration for file: ${items().first}');
+      final duration = await _cli.getMediaDuration(items().first);
+      print('[_getMediaDuration] Received duration: $duration');
+      if (duration != null) {
+        setState(() {
+          print('[_getMediaDuration] Updating state with duration: $duration');
+          _mediaDuration = duration;
+          _endTime = _mediaDuration;
+        });
+      } else {
+        print('[_getMediaDuration] Duration was null');
       }
     } catch (e) {
-      print('Error getting media duration: $e');
+      print('[_getMediaDuration] Error occurred: $e');
+      setState(() {
+        _errorMessage = e.toString();
+      });
     }
   }
 
@@ -65,7 +72,11 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
   }
 
   Future<void> _convertToWav() async {
-    if (items().isEmpty) return;
+    print('[_convertToWav] Starting conversion');
+    if (items().isEmpty) {
+      print('[_convertToWav] No items to convert');
+      return;
+    }
 
     setState(() {
       _isConverting = true;
@@ -73,7 +84,10 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
     });
 
     final String inputPath = items().first;
+    print('[_convertToWav] Input path: $inputPath');
+
     if (outputDirectory.value == null) {
+      print('[_convertToWav] Loading output directory');
       await loadOutputDirectory();
     }
 
@@ -82,53 +96,41 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
         outputDirectory.value!,
         '${path.basenameWithoutExtension(inputPath)}_16k.wav',
       );
+      print('[_convertToWav] Output path: $outputPath');
 
       try {
-        List<String> ffmpegArgs = [
-          '-i',
-          inputPath,
-        ];
-
+        print('[_convertToWav] Starting conversion process');
+        print('[_convertToWav] Trim enabled: $_enableTrim');
         if (_enableTrim) {
-          ffmpegArgs.addAll(['-ss', _formatDuration(_startTime)]);
-          if (_endTime != null) {
-            ffmpegArgs.addAll(['-to', _formatDuration(_endTime!)]);
-          }
+          print('[_convertToWav] Start time: $_startTime');
+          print('[_convertToWav] End time: $_endTime');
         }
 
-        ffmpegArgs.addAll([
-          '-acodec',
-          'pcm_s16le',
-          '-ar',
-          '16000',
-          '-ac',
-          '1',
-          '-y',
+        await _cli.convertToWav(
+          inputPath,
           outputPath,
-        ]);
+          startTime: _enableTrim ? _startTime : null,
+          endTime: _enableTrim ? _endTime : null,
+        );
 
-        final result = await Process.run(ffmpegPath, ffmpegArgs);
-
-        if (result.exitCode != 0) {
-          setState(() {
-            _errorMessage = 'Error converting to WAV: ${result.stderr}';
-          });
-          print('Error converting to WAV: ${result.stderr}');
-        } else {
-          setState(() {
-            _outputPath = outputPath;
-          });
-        }
+        print('[_convertToWav] Conversion completed successfully');
+        setState(() {
+          _outputPath = outputPath;
+          _isConverting = false;
+        });
       } catch (e) {
+        print('[_convertToWav] Error during conversion: $e');
         setState(() {
           _errorMessage = 'Error converting to WAV: $e';
-        });
-        print('Error converting to WAV: $e');
-      } finally {
-        setState(() {
           _isConverting = false;
         });
       }
+    } else {
+      print('[_convertToWav] No output directory selected');
+      setState(() {
+        _errorMessage = 'No output directory selected';
+        _isConverting = false;
+      });
     }
   }
 
@@ -236,7 +238,8 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
       children: [
         Container(
           decoration: BoxDecoration(
-            border: Border.all(color: CupertinoColors.systemGrey.withOpacity(.2)),
+            border:
+                Border.all(color: CupertinoColors.systemGrey.withOpacity(.2)),
             borderRadius: BorderRadius.circular(8),
           ),
           padding: const EdgeInsets.all(16),

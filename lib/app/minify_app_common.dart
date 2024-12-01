@@ -6,6 +6,7 @@ import 'package:shakepin/state.dart';
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'dart:io';
+import 'package:libcaesium_dart/libcaesium_dart.dart';
 
 import '../utils/utils.dart';
 import '../widgets/drop_target.dart';
@@ -25,6 +26,8 @@ enum VideoQuality {
 }
 
 enum VideoFormat { webm, mp4, sameAsInput }
+
+enum ImageFormat { sameAsInput, png, jpg, webp, tiff }
 
 class MinifiedFile {
   final String originalPath;
@@ -46,6 +49,55 @@ class MinifiedFile {
 
   String get originalFileName => path.basename(originalPath);
   String get minifiedFileName => path.basename(minifiedPath);
+}
+
+Future<MinifiedFile?> minifyImageWithCaesium(
+    String filePath,
+    String outputPath,
+    ImageQuality quality,
+    {bool removeInputFile = false}) async {
+  final file = File(filePath);
+  
+  try {
+    debugPrint('Starting image compression');
+    await compress(
+      inputPath: filePath,
+      outputPath: outputPath,
+      quality: switch (quality) {
+        ImageQuality.lowest => 30,
+        ImageQuality.low => 50,
+        ImageQuality.normal => 80,
+        ImageQuality.high => 90,
+        ImageQuality.highest => 95,
+      },
+      pngOptimizationLevel: 3,
+      keepMetadata: true,
+      optimize: false,
+    );
+    debugPrint('Compression completed');
+    
+    final originalSize = file.lengthSync();
+    debugPrint('Original size: $originalSize bytes');
+    final minifiedSize = File(outputPath).lengthSync();
+    debugPrint('Minified size: $minifiedSize bytes');
+
+    if (removeInputFile) {
+      debugPrint('Removing input file');
+      await file.delete();
+    }
+
+    debugPrint('Creating MinifiedFile object');
+    return MinifiedFile(
+      originalPath: filePath,
+      minifiedPath: outputPath,
+      originalSize: originalSize,
+      minifiedSize: minifiedSize,
+      duration: const Duration(),
+    );
+  } catch (e) {
+    print('Error minifying image: $e');
+    return null;
+  }
 }
 
 class FileHoverWidget extends StatefulWidget {

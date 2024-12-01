@@ -31,8 +31,7 @@ class _ConvertToIcoToolState extends State<ConvertToIcoTool> {
       );
 
       try {
-        final result = await Process.run(imageMagickPath, [
-          'convert',
+        final result = await Process.run('magick', [
           inputPath,
           '-define',
           'icon:auto-resize=16,32,48,64,128,256',

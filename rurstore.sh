@@ -1,2 +1,2 @@
 sh ./setup_store.sh
-flutter run -d macos --release $STORE_ARG
+flutter run -d macos --release

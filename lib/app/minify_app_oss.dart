@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:file_selector/file_selector.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:path/path.dart' as path;
+import 'package:shakepin/widgets/native_dropdown_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../state.dart';
@@ -18,10 +18,6 @@ enum ImageFormat { sameAsInput, png, jpg, webp, tiff }
 enum VideoFormat { webm, mp4, gif }
 
 class MinificationManager {
-  final String oxipngPath;
-  final String ffmpegPath;
-  final String ffprobePath;
-  final String imageMagickPath;
   final String outputFolder;
   final ImageQuality imageQuality;
   final ImageFormat imageFormat;
@@ -31,10 +27,6 @@ class MinificationManager {
   Process? _currentProcess;
 
   MinificationManager({
-    required this.oxipngPath,
-    required this.ffmpegPath,
-    required this.ffprobePath,
-    required this.imageMagickPath,
     required this.outputFolder,
     required this.imageQuality,
     required this.imageFormat,
@@ -92,7 +84,6 @@ class MinificationManager {
   }
 
   Future<MinifiedFile?> minifyImage(String filePath) async {
-    final file = File(filePath);
     final fileName = path.basename(filePath);
     final fileExtension = path.extension(fileName).toLowerCase();
     final fileNameWithoutExtension = path.basenameWithoutExtension(fileName);
@@ -118,73 +109,12 @@ class MinificationManager {
       counter++;
     }
 
-    List<String> command;
-    if (fileExtension == '.png' &&
-        (imageFormat == ImageFormat.sameAsInput ||
-            imageFormat == ImageFormat.png)) {
-      final qualityArg = switch (imageQuality) {
-        ImageQuality.lowest => ['-o', '6'],
-        ImageQuality.low => ['-o', '4'],
-        ImageQuality.normal => ['-o', '2'],
-        ImageQuality.high => ['-o', '0'],
-        _ => ['-o', '2'], // Default to Medium
-      };
-
-      command = [
-        oxipngPath,
-        ...qualityArg,
-        '-p', // preserve metadata
-        '--force',
-        filePath,
-        '--out',
-        outputPath,
-      ];
-    } else {
-      final qualityArg = switch (imageQuality) {
-        ImageQuality.lowest => '85',
-        ImageQuality.low => '90',
-        ImageQuality.normal => '95',
-        ImageQuality.high => '100',
-        _ => '95', // Default to Medium
-      };
-
-      command = [
-        imageMagickPath,
-        'convert',
-        filePath,
-        '-quality',
-        qualityArg,
-        outputPath,
-      ];
-    }
-
-    try {
-      _currentProcess = await Process.start(command[0], command.sublist(1));
-      final exitCode = await _currentProcess!.exitCode;
-      if (exitCode != 0) {
-        print(
-            'Error minifying image: ${await _currentProcess!.stderr.transform(utf8.decoder).join()}');
-        return null;
-      } else {
-        final originalSize = file.lengthSync();
-        final minifiedSize = File(outputPath).lengthSync();
-
-        if (removeInputFiles) {
-          await file.delete();
-        }
-
-        return MinifiedFile(
-          originalPath: filePath,
-          minifiedPath: outputPath,
-          originalSize: originalSize,
-          minifiedSize: minifiedSize,
-          duration: const Duration(),
-        );
-      }
-    } catch (e) {
-      print('Error minifying image: $e');
-      return null;
-    }
+    return await minifyImageWithCaesium(
+      filePath,
+      outputPath,
+      imageQuality,
+      removeInputFile: removeInputFiles,
+    );
   }
 
   Future<MinifiedFile?> minifyVideo(String filePath) async {
@@ -216,10 +146,13 @@ class MinificationManager {
 
     // Base command with hardware acceleration and progress reporting
     List<String> baseCommand = [
-      '-hwaccel', 'auto',
-      '-progress', 'pipe:1',
+      '-hwaccel',
+      'auto',
+      '-progress',
+      'pipe:1',
       '-y',
-      '-i', filePath,
+      '-i',
+      filePath,
     ];
 
     List<String> encodingParams;
@@ -251,13 +184,13 @@ class MinificationManager {
 
       if (videoFormat == VideoFormat.webm) {
         encodingParams = [
-          '-c:v', 'libvpx-vp9',  // Using VP9 for better quality
+          '-c:v', 'libvpx-vp9', // Using VP9 for better quality
           '-crf', qualityArg,
-          '-b:v', '0',           // Let CRF control quality
-          '-deadline', 'good',    // Balanced encoding speed
-          '-cpu-used', '2',      // Balanced CPU usage
+          '-b:v', '0', // Let CRF control quality
+          '-deadline', 'good', // Balanced encoding speed
+          '-cpu-used', '2', // Balanced CPU usage
           '-pix_fmt', 'yuv420p', // Ensure compatibility
-          '-c:a', 'libopus',     // Better audio codec
+          '-c:a', 'libopus', // Better audio codec
           outputPath,
         ];
       } else {
@@ -268,18 +201,20 @@ class MinificationManager {
 
         encodingParams = [
           '-c:v', 'libx264',
-          '-preset', 'fast',     // Faster encoding
+          '-preset', 'fast', // Faster encoding
           '-crf', qualityArg,
           if (maxRate > 0) ...[
-            '-maxrate', '${maxRate}k',
-            '-bufsize', '${bufSize}k',
+            '-maxrate',
+            '${maxRate}k',
+            '-bufsize',
+            '${bufSize}k',
           ],
           '-pix_fmt', 'yuv420p', // Ensure compatibility
-          '-profile:v', 'high',  // High profile for better compression
-          '-level', '4.1',       // Widely compatible level
+          '-profile:v', 'high', // High profile for better compression
+          '-level', '4.1', // Widely compatible level
           '-movflags', '+faststart', // Enable streaming
-          '-c:a', 'aac',        // AAC audio codec
-          '-b:a', '128k',       // Decent audio quality
+          '-c:a', 'aac', // AAC audio codec
+          '-b:a', '128k', // Decent audio quality
           outputPath,
         ];
       }
@@ -288,8 +223,8 @@ class MinificationManager {
     final command = [...baseCommand, ...encodingParams];
 
     try {
-      _currentProcess = await Process.start(ffmpegPath, command);
-      
+      _currentProcess = await Process.start('ffmpeg', command);
+
       // Handle progress reporting
       _currentProcess!.stdout
           .transform(utf8.decoder)
@@ -337,16 +272,18 @@ class MinificationManager {
   Future<Map<String, dynamic>> _probeVideoInfo(String filePath) async {
     try {
       final result = await Process.run(
-        ffprobePath,
+        'ffprobe',
         [
-          '-v', 'quiet',
-          '-print_format', 'json',
+          '-v',
+          'quiet',
+          '-print_format',
+          'json',
           '-show_format',
           '-show_streams',
           filePath,
         ],
       );
-      
+
       if (result.exitCode == 0) {
         return json.decode(result.stdout as String);
       }
@@ -373,11 +310,14 @@ class MinificationManager {
 
       // Calculate bitrate based on resolution
       // These are conservative estimates for good quality
-      if (pixels <= 921600) { // 1280x720
+      if (pixels <= 921600) {
+        // 1280x720
         return 5000; // 5 Mbps
-      } else if (pixels <= 2073600) { // 1920x1080
+      } else if (pixels <= 2073600) {
+        // 1920x1080
         return 8000; // 8 Mbps
-      } else if (pixels <= 8294400) { // 4K
+      } else if (pixels <= 8294400) {
+        // 4K
         return 16000; // 16 Mbps
       } else {
         return 20000; // > 4K
@@ -392,15 +332,18 @@ class MinificationManager {
   Future<Duration> _getVideoDuration(String filePath) async {
     try {
       final result = await Process.run(
-        ffprobePath,
+        'ffprobe',
         [
-          '-v', 'quiet',
-          '-show_entries', 'format=duration',
-          '-of', 'default=noprint_wrappers=1:nokey=1',
+          '-v',
+          'quiet',
+          '-show_entries',
+          'format=duration',
+          '-of',
+          'default=noprint_wrappers=1:nokey=1',
           filePath,
         ],
       );
-      
+
       if (result.exitCode == 0) {
         final seconds = double.parse(result.stdout.toString().trim());
         return Duration(milliseconds: (seconds * 1000).round());
@@ -437,17 +380,8 @@ class MinifyApp extends StatefulWidget {
 class _MinifyAppState extends State<MinifyApp> {
   late final SharedPreferences prefs;
   // TODO: none of these works
-  late final TextEditingController oxipngController;
-  late final TextEditingController ffmpegController;
-  late final TextEditingController ffprobeController;
-  late final TextEditingController imageMagickController;
   final _minifileScrollController = ScrollController();
   final _fileScrollController = ScrollController();
-
-  var oxipngPath = '';
-  var ffmpegPath = '';
-  var ffprobePath = '';
-  var imageMagickPath = '';
 
   String outputFolder = 'Same as input';
   VideoQuality videoQuality = VideoQuality.mediumQuality;
@@ -473,42 +407,8 @@ class _MinifyAppState extends State<MinifyApp> {
     minifiedFiles.clear();
     Analytics.openMinifyApp();
 
-    oxipngController = TextEditingController(text: oxipngPath);
-    ffmpegController = TextEditingController(text: ffmpegPath);
-    ffprobeController = TextEditingController(text: ffprobePath);
-    imageMagickController = TextEditingController(text: imageMagickPath);
-
     SharedPreferences.getInstance().then((prefs) {
       this.prefs = prefs;
-      setState(() {
-        oxipngPath = prefs.getString('oxipng_path') ?? '';
-        ffmpegPath = prefs.getString('ffmpeg_path') ?? '';
-        ffprobePath = prefs.getString('ffprobe_path') ?? '';
-        imageMagickPath = prefs.getString('imagemagick_path') ?? '';
-
-        // Check if the paths are valid
-        if (!File(oxipngPath).existsSync()) {
-          oxipngPath = '';
-          prefs.remove('oxipng_path');
-        }
-        if (!File(ffmpegPath).existsSync()) {
-          ffmpegPath = '';
-          prefs.remove('ffmpeg_path');
-        }
-        if (!File(ffprobePath).existsSync()) {
-          ffprobePath = '';
-          prefs.remove('ffprobe_path');
-        }
-        if (!File(imageMagickPath).existsSync()) {
-          imageMagickPath = '';
-          prefs.remove('imagemagick_path');
-        }
-
-        oxipngController.text = oxipngPath;
-        ffmpegController.text = ffmpegPath;
-        ffprobeController.text = ffprobePath;
-        imageMagickController.text = imageMagickPath;
-      });
     });
 
     dropChannel.setMinimumSize(AppSizes.minify);
@@ -520,10 +420,6 @@ class _MinifyAppState extends State<MinifyApp> {
 
   @override
   void dispose() {
-    oxipngController.dispose();
-    ffmpegController.dispose();
-    ffprobeController.dispose();
-    imageMagickController.dispose();
     minifiedFiles.clear();
     super.dispose();
   }
@@ -539,10 +435,6 @@ class _MinifyAppState extends State<MinifyApp> {
     });
 
     _minificationManager = MinificationManager(
-      oxipngPath: oxipngPath,
-      ffmpegPath: ffmpegPath,
-      ffprobePath: ffprobePath,
-      imageMagickPath: imageMagickPath,
       outputFolder: outputFolder,
       imageQuality: imageQuality,
       imageFormat: imageFormat,
@@ -579,71 +471,6 @@ class _MinifyAppState extends State<MinifyApp> {
     _minificationManager?.cancelMinification();
     setState(() {
       minifyInProgress = false;
-    });
-  }
-
-  Widget _buildPathSelector(String label, TextEditingController controller,
-      Function(String) onSelect) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12)),
-        const SizedBox(height: 4),
-        Text(
-          label.contains('Oxipng')
-              ? 'Used for minifying images.'
-              : label.contains('FFmpeg')
-                  ? 'Used for minifying videos.'
-                  : label.contains('FFprobe')
-                      ? 'Used for probing video information.'
-                      : 'Used for minifying images (non-PNG).',
-          style:
-              const TextStyle(fontSize: 12, color: CupertinoColors.systemGrey),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: MacosTextField(
-                controller: controller,
-                placeholder: 'Enter path or select file',
-                // Remove the readOnly property to make it editable
-              ),
-            ),
-            const SizedBox(width: 8),
-            PushButton(
-              controlSize: ControlSize.regular,
-              onPressed: () async {
-                final result = await openFile(acceptedTypeGroups: [
-                  const XTypeGroup(
-                    label: 'Executable',
-                    uniformTypeIdentifiers: ['public.executable'],
-                  )
-                ]);
-                if (result != null) {
-                  controller.text = result.path;
-                }
-              },
-              child: const Text('Select'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  void _savePaths() {
-    setState(() {
-      oxipngPath = oxipngController.text;
-      ffmpegPath = ffmpegController.text;
-      ffprobePath = ffprobeController.text;
-      imageMagickPath = imageMagickController.text;
-
-      prefs.setString('oxipng_path', oxipngPath);
-      prefs.setString('ffmpeg_path', ffmpegPath);
-      prefs.setString('ffprobe_path', ffprobePath);
-      prefs.setString('imagemagick_path', imageMagickPath);
     });
   }
 
@@ -710,11 +537,7 @@ class _MinifyAppState extends State<MinifyApp> {
                       )
                     : PushButton(
                         controlSize: ControlSize.large,
-                        onPressed: (oxipngPath.isEmpty ||
-                                ffmpegPath.isEmpty ||
-                                ffprobePath.isEmpty ||
-                                imageMagickPath.isEmpty ||
-                                files().isEmpty)
+                        onPressed: (files().isEmpty)
                             ? null
                             : () async {
                                 await minifyFiles();
@@ -768,38 +591,46 @@ class _MinifyAppState extends State<MinifyApp> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: const TextStyle(fontSize: 12)),
-        MacosPopupButton<T>(
-          value: value,
-          onChanged: disabled
-              ? null
-              : (newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      switch (label) {
-                        case 'Video quality':
-                          videoQuality = newValue as VideoQuality;
-                          break;
-                        case 'Video format':
-                          videoFormat = newValue as VideoFormat;
-                          break;
-                        case 'Image quality':
-                          imageQuality = newValue as ImageQuality;
-                          break;
-                        case 'Image format':
-                          imageFormat = newValue as ImageFormat;
-                          break;
-                      }
-                    });
-                  }
-                },
-          items: options.map((option) {
-            return MacosPopupMenuItem<T>(
-              value: option,
-              child: Text(label == 'Image format'
-                  ? option.name.toLowerCase()
-                  : formatEnumName(option.name)),
-            );
-          }).toList(),
+        IntrinsicWidth(
+          child: NativeDropdownButton<T>(
+            value: value,
+            onChanged: disabled
+                ? null
+                : (newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        switch (label) {
+                          case 'Video quality':
+                            videoQuality = newValue as VideoQuality;
+                            break;
+                          case 'Video format':
+                            videoFormat = newValue as VideoFormat;
+                            break;
+                          case 'Image quality':
+                            imageQuality = newValue as ImageQuality;
+                            break;
+                          case 'Image format':
+                            imageFormat = newValue as ImageFormat;
+                            break;
+                        }
+                      });
+                    }
+                  },
+            items: options.map((option) {
+              return NativeDropdownItem<T>(
+                value: option,
+                label: label == 'Image format'
+                    ? option.name.toLowerCase()
+                    : formatEnumName(option.name),
+              );
+            }).toList(),
+            child: Text(
+              label == 'Image format'
+                  ? value.name.toLowerCase()
+                  : formatEnumName(value.name),
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
         ),
       ],
     );
@@ -830,73 +661,23 @@ class _MinifyAppState extends State<MinifyApp> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                if (oxipngPath.isEmpty ||
-                    ffmpegPath.isEmpty ||
-                    ffprobePath.isEmpty ||
-                    imageMagickPath.isEmpty)
-                  Column(
-                    children: [
-                      _buildPathSelector(
-                        'Select Oxipng path',
-                        oxipngController,
-                        (String path) {
-                          oxipngController.text = path;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPathSelector(
-                        'Select FFmpeg path',
-                        ffmpegController,
-                        (String path) {
-                          ffmpegController.text = path;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPathSelector(
-                        'Select FFprobe path',
-                        ffprobeController,
-                        (String path) {
-                          ffprobeController.text = path;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPathSelector(
-                        'Select ImageMagick path',
-                        imageMagickController,
-                        (String path) {
-                          imageMagickController.text = path;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      PushButton(
-                        controlSize: ControlSize.regular,
-                        onPressed: _savePaths,
-                        child: const Text('Save Paths'),
-                      ),
-                    ],
-                  )
-                else
-                  Column(
-                    children: [
-                      buildFileList(
-                        files,
-                        isDragging,
-                        _fileScrollController,
-                        (String filePath) {
-                          setState(() {
-                            files.remove(filePath);
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildSettingsSection(),
-                      if (minifiedFiles().isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        buildMinifiedFilesList(
-                            minifiedFiles(), _minifileScrollController),
-                      ],
-                    ],
-                  ),
+                buildFileList(
+                  files,
+                  isDragging,
+                  _fileScrollController,
+                  (String filePath) {
+                    setState(() {
+                      files.remove(filePath);
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                _buildSettingsSection(),
+                if (minifiedFiles().isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  buildMinifiedFilesList(
+                      minifiedFiles(), _minifileScrollController),
+                ],
               ],
             ),
           ),
