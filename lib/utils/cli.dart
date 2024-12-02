@@ -305,11 +305,12 @@ class Cli {
       'format=duration',
       '-of',
       'default=noprint_wrappers=1:nokey=1',
-      '"$filePath"'
+      filePath,
     ];
 
     try {
       final process = await Process.start('ffprobe', args);
+      print('Executing "ffprobe ${args.join(' ')}"');
 
       final completer = Completer<Duration?>();
       String output = '';

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:path/path.dart' as path;
 import 'package:shakepin/app/misc/tools/tool.dart';
+import 'package:shakepin/app/misc/tools/widgets/common_tool_widgets.dart';
 import 'package:shakepin/state.dart';
 
 class ConvertToIcoTool extends ToolWidget {
@@ -53,65 +54,27 @@ class _ConvertToIcoToolState extends State<ConvertToIcoTool> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ToolContainer(
       children: [
-        Container(
-          decoration: BoxDecoration(
-            border:
-                Border.all(color: CupertinoColors.systemGrey.withOpacity(.2)),
-            borderRadius: BorderRadius.circular(8),
+        if (items().isNotEmpty) ...[
+          FilePathDisplay(
+            label: 'Selected File',
+            filePath: items().first,
           ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (items().isNotEmpty) ...[
-                const Text(
-                  'Selected File',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.systemGrey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: SelectableText(
-                    items().first,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              PushButton(
-                controlSize: ControlSize.large,
-                onPressed: _convertToIco,
-                child: const Text('Convert to ICO'),
-              ),
-              if (_outputPath != null) ...[
-                const SizedBox(height: 16),
-                const Text(
-                  'Output File',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: CupertinoColors.systemGreen.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    _outputPath!,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ],
-          ),
+          const SizedBox(height: 16),
+        ],
+        PushButton(
+          controlSize: ControlSize.large,
+          onPressed: _convertToIco,
+          child: const Text('Convert to ICO'),
         ),
+        if (_outputPath != null) ...[
+          const SizedBox(height: 16),
+          FilePathDisplay(
+            label: 'Output File',
+            filePath: _outputPath!,
+          ),
+        ],
       ],
     );
   }

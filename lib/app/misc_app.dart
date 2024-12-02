@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/app/misc/tools/tools.dart';
@@ -98,7 +100,13 @@ class _MiscAppState extends State<MiscApp> {
               padding: const EdgeInsets.only(
                   top: 40, bottom: 20, left: 20, right: 20),
               children: [
-                _buildToolSelector(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Tool:'),
+                    _buildToolSelector(),
+                  ],
+                ),
                 const SizedBox(height: 20),
                 _buildPathSelector(),
               ],
@@ -111,48 +119,66 @@ class _MiscAppState extends State<MiscApp> {
           right: 10,
           child: Row(
             children: [
-              MacosIconButton(
-                padding: const EdgeInsets.all(4),
-                onPressed: () {
-                  items.value = {};
-                  setState(() {});
-                },
-                backgroundColor:
-                    CupertinoColors.label.resolveFrom(context).withOpacity(.5),
-                hoverColor:
-                    CupertinoColors.label.resolveFrom(context).withOpacity(.9),
-                pressedOpacity: .6,
-                icon: Icon(
-                  FluentIcons.dismiss_24_filled,
-                  color: CupertinoColors.systemBackground.resolveFrom(context),
-                  size: 14,
+              ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  blendMode: BlendMode.src,
+                  child: MacosIconButton(
+                    padding: const EdgeInsets.all(4),
+                    onPressed: () {
+                      items.value = {};
+                      setState(() {});
+                    },
+                    backgroundColor: CupertinoColors.label
+                        .resolveFrom(context)
+                        .withOpacity(.5),
+                    hoverColor: CupertinoColors.label
+                        .resolveFrom(context)
+                        .withOpacity(.9),
+                    pressedOpacity: .6,
+                    icon: Icon(
+                      FluentIcons.dismiss_24_filled,
+                      color:
+                          CupertinoColors.systemBackground.resolveFrom(context),
+                      size: 14,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 6),
-              MacosIconButton(
-                padding: const EdgeInsets.all(4),
-                onPressed: () async {
-                  dropChannel.setFrame(
-                    Rect.fromCenter(
-                      center: await dropChannel.center() +
-                          Offset(0, AppSizes.misc.height / 2),
-                      width: AppSizes.misc.width,
-                      height: 1,
+              ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  blendMode: BlendMode.src,
+                  child: MacosIconButton(
+                    padding: const EdgeInsets.all(4),
+                    onPressed: () async {
+                      dropChannel.setFrame(
+                        Rect.fromCenter(
+                          center: await dropChannel.center() +
+                              Offset(0, AppSizes.misc.height / 2),
+                          width: AppSizes.misc.width,
+                          height: 1,
+                        ),
+                        animate: true,
+                      );
+                      await Future.delayed(Durations.short4);
+                      dropChannel.setVisible(false);
+                    },
+                    backgroundColor: CupertinoColors.label
+                        .resolveFrom(context)
+                        .withOpacity(.5),
+                    hoverColor: CupertinoColors.label
+                        .resolveFrom(context)
+                        .withOpacity(.9),
+                    pressedOpacity: .6,
+                    icon: Icon(
+                      FluentIcons.arrow_minimize_24_regular,
+                      color:
+                          CupertinoColors.systemBackground.resolveFrom(context),
+                      size: 14,
                     ),
-                    animate: true,
-                  );
-                  await Future.delayed(Durations.short4);
-                  dropChannel.setVisible(false);
-                },
-                backgroundColor:
-                    CupertinoColors.label.resolveFrom(context).withOpacity(.5),
-                hoverColor:
-                    CupertinoColors.label.resolveFrom(context).withOpacity(.9),
-                pressedOpacity: .6,
-                icon: Icon(
-                  FluentIcons.arrow_minimize_24_regular,
-                  color: CupertinoColors.systemBackground.resolveFrom(context),
-                  size: 14,
+                  ),
                 ),
               ),
             ],
