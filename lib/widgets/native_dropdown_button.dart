@@ -113,29 +113,27 @@ class NativeDropdownButton<T> extends StatefulWidget {
   });
 
   @override
-  State<NativeDropdownButton<T>> createState() =>
-      _NativeDropdownButtonState<T>();
+  State<NativeDropdownButton<T>> createState() => _NativeDropdownButtonState<T>();
 }
 
-class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
-    with WidgetsBindingObserver {
-  final _buttonKey = GlobalKey();
-  late final String _dropdownId;
+class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>> with WidgetsBindingObserver {
   bool _isHovered = false;
   bool _hasPrimaryFocus = false;
   late FocusHighlightMode _focusHighlightMode;
   FocusNode? _internalNode;
   FocusNode? get focusNode => _internalNode;
+  late final String dropdownId;
 
   @override
   void initState() {
     super.initState();
-    _dropdownId = DropdownManager.registerDropdown(this);
     _internalNode = FocusNode(debugLabel: '${widget.runtimeType}');
     focusNode!.addListener(_handleFocusChanged);
     final FocusManager focusManager = WidgetsBinding.instance.focusManager;
     _focusHighlightMode = focusManager.highlightMode;
     focusManager.addHighlightModeListener(_handleFocusHighlightModeChange);
+    dropdownId = DropdownManager.registerDropdown(this);
+    PlatformChannelHandler.instance.initialize();
   }
 
   void _handleFocusChanged() {
@@ -166,34 +164,37 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
     }
   }
 
-  Future<void> _showDropdown() async {
-    final renderBox =
-        _buttonKey.currentContext!.findRenderObject() as RenderBox;
-    final buttonPosition = renderBox.localToGlobal(Offset.zero);
+  void _updateNativeControl({bool remove = false}) {
+    final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
 
-    final items = widget.items.map((item) {
-      return {
-        'text': item.label,
-        'disabled': !item.enabled,
-        if (item.isDivider) 'isDivider': true,
-      };
-    }).toList();
+    final position = renderBox.localToGlobal(Offset.zero);
+    final size = renderBox.size;
 
-    final selectedIndex =
-        widget.items.indexWhere((item) => item.value == widget.value);
+    final selectedIndex = widget.value == null
+        ? -1
+        : widget.items.indexWhere((item) => item.value == widget.value);
 
-    await PlatformChannelHandler.instance.showDropdownMenu(
-      items: items,
-      x: buttonPosition.dx,
-      y: MediaQuery.sizeOf(context).height - buttonPosition.dy,
-      selectedIndex: selectedIndex >= 0 ? selectedIndex : 0,
-      dropdownId: _dropdownId,
-    );
+    PlatformChannelHandler.channel.invokeMethod('updateNativeDropdown', {
+      'dropdownId': dropdownId,
+      'items': widget.items.map((item) => {
+        'title': item.label,
+        'enabled': item.enabled,
+      }).toList(),
+      'x': position.dx,
+      'y': position.dy,
+      'width': size.width,
+      'height': size.height,
+      'selectedIndex': selectedIndex,
+      'enabled': widget.enabled,
+      'remove': remove,
+    });
   }
 
   @override
   void dispose() {
-    DropdownManager.unregisterDropdown(_dropdownId);
+    _updateNativeControl(remove: true);
+    DropdownManager.unregisterDropdown(dropdownId);
     focusNode?.removeListener(_handleFocusChanged);
     WidgetsBinding.instance.focusManager
         .removeHighlightModeListener(_handleFocusHighlightModeChange);
@@ -212,9 +213,12 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
-        child: GestureDetector(
-          key: _buttonKey,
-          onTapDown: (_) => widget.enabled ? _showDropdown() : null,
+        child: CustomPaint(
+          painter: _DropdownPainter(
+            isEnabled: widget.enabled,
+            isDark: Theme.of(context).brightness == Brightness.dark,
+            onPaint: () => _updateNativeControl(),
+          ),
           child: Container(
             height: widget.controlSize == ControlSize.large ? 28 : 24,
             decoration: _showHighlight
@@ -327,10 +331,7 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
     );
   }
 
-  _ButtonStyles _getButtonStyles(
-    bool enabled,
-    BuildContext context,
-  ) {
+  _ButtonStyles _getButtonStyles(bool enabled, BuildContext context) {
     final theme = MacosTheme.of(context);
     final brightness = theme.brightness;
     Color textColor = theme.typography.body.color!;
@@ -449,6 +450,28 @@ class _UpDownCaretsPainter extends CustomPainter {
 
   @override
   bool shouldRebuildSemantics(_UpDownCaretsPainter oldDelegate) => false;
+}
+
+class _DropdownPainter extends CustomPainter {
+  final bool isEnabled;
+  final bool isDark;
+  final VoidCallback? onPaint;
+
+  _DropdownPainter({
+    required this.isEnabled,
+    required this.isDark,
+    this.onPaint,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    onPaint?.call();
+  }
+
+  @override
+  bool shouldRepaint(_DropdownPainter oldDelegate) {
+    return isEnabled != oldDelegate.isEnabled || isDark != oldDelegate.isDark;
+  }
 }
 
 class NativeDropdownItem<T> {

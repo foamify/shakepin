@@ -12,7 +12,21 @@ import '../utils/utils.dart';
 import '../widgets/drop_target.dart';
 
 // Common enums
-enum ImageQuality { lowest, low, normal, high, highest }
+enum ImageQuality {
+  lowest,
+  low,
+  normal,
+  high,
+  highest;
+
+  String get name => switch (this) {
+        ImageQuality.lowest => 'Lowest',
+        ImageQuality.low => 'Low',
+        ImageQuality.normal => 'Normal',
+        ImageQuality.high => 'High',
+        ImageQuality.highest => 'Highest',
+      };
+}
 
 enum VideoQuality {
   lowestQuality,
@@ -22,12 +36,49 @@ enum VideoQuality {
   highQuality,
   veryHighQuality,
   highestQuality,
-  lossless
+  lossless;
+
+  String get name => switch (this) {
+        VideoQuality.lowestQuality => 'Lowest quality',
+        VideoQuality.lowQuality => 'Low quality',
+        VideoQuality.mediumQuality => 'Medium quality',
+        VideoQuality.goodQuality => 'Good quality',
+        VideoQuality.highQuality => 'High quality',
+        VideoQuality.veryHighQuality => 'Very high quality',
+        VideoQuality.highestQuality => 'Highest quality',
+        VideoQuality.lossless => 'Lossless',
+      };
 }
 
-enum VideoFormat { webm, mp4, sameAsInput }
+enum VideoFormat {
+  webm,
+  mp4,
+  gif,
+  sameAsInput;
 
-enum ImageFormat { sameAsInput, png, jpg, webp, tiff }
+  String get name => switch (this) {
+        VideoFormat.webm => 'WebM',
+        VideoFormat.mp4 => 'MP4',
+        VideoFormat.gif => 'GIF',
+        VideoFormat.sameAsInput => 'Same as input',
+      };
+}
+
+enum ImageFormat {
+  sameAsInput,
+  png,
+  jpg,
+  webp,
+  tiff;
+
+  String get name => switch (this) {
+        ImageFormat.sameAsInput => 'Same as input',
+        ImageFormat.png => 'PNG',
+        ImageFormat.jpg => 'JPG',
+        ImageFormat.webp => 'WEBP',
+        ImageFormat.tiff => 'TIFF',
+      };
+}
 
 class MinifiedFile {
   final String originalPath;
@@ -52,12 +103,10 @@ class MinifiedFile {
 }
 
 Future<MinifiedFile?> minifyImageWithCaesium(
-    String filePath,
-    String outputPath,
-    ImageQuality quality,
+    String filePath, String outputPath, ImageQuality quality,
     {bool removeInputFile = false}) async {
   final file = File(filePath);
-  
+
   try {
     debugPrint('Starting image compression');
     await compress(
@@ -75,7 +124,7 @@ Future<MinifiedFile?> minifyImageWithCaesium(
       optimize: false,
     );
     debugPrint('Compression completed');
-    
+
     final originalSize = file.lengthSync();
     debugPrint('Original size: $originalSize bytes');
     final minifiedSize = File(outputPath).lengthSync();

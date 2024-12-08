@@ -13,10 +13,6 @@ import '../utils/drop_channel.dart';
 import '../utils/utils.dart';
 import 'minify_app_common.dart';
 
-enum ImageFormat { sameAsInput, png, jpg, webp, tiff }
-
-enum VideoFormat { webm, mp4, gif }
-
 class MinificationManager {
   final String outputFolder;
   final ImageQuality imageQuality;
@@ -121,11 +117,13 @@ class MinificationManager {
     final file = File(filePath);
     final fileName = path.basename(filePath);
     final fileNameWithoutExtension = path.basenameWithoutExtension(fileName);
+    final fileExtension = path.extension(fileName).toLowerCase();
 
     String outputExtension = switch (videoFormat) {
       VideoFormat.webm => '.webm',
       VideoFormat.mp4 => '.mp4',
       VideoFormat.gif => '.gif',
+      VideoFormat.sameAsInput => fileExtension,
     };
 
     var newFileName = '${fileNameWithoutExtension}_minified$outputExtension';
@@ -628,7 +626,6 @@ class _MinifyAppState extends State<MinifyApp> {
               label == 'Image format'
                   ? value.name.toLowerCase()
                   : formatEnumName(value.name),
-              style: const TextStyle(fontSize: 12),
             ),
           ),
         ),

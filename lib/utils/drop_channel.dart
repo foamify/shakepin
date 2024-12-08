@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:shakepin/app/minify_app_common.dart';
 import 'package:shakepin/utils/handle_menu_item.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_selector/file_selector.dart';
@@ -227,11 +228,4 @@ mixin class DragDropListener {
   void onDragPerform(List<String> paths) {}
   void shakeDetected(Offset position) {}
   void onDragSessionEnded(DropOperation operation) {}
-}
-
-enum ImageFormat {
-  png,
-  jpeg,
-  tiff,
-  webp,
 }

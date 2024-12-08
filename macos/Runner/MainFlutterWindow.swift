@@ -21,6 +21,7 @@ class MainFlutterWindow: NSWindow {
   var popover: NSPopover?
 
   var dropdownChannel: FlutterMethodChannel!
+  var dropdownButtons: [String: NSPopUpButton] = [:]
   var dropdownMenu: NSMenu?
 
   override func awakeFromNib() {
@@ -97,19 +98,88 @@ class MainFlutterWindow: NSWindow {
         return
       }
 
-      DispatchQueue.main.async {
-        self.showDropdownMenu(
-          items: items,
-          selectedIndex: selectedIndex,
-          dropdownId: dropdownId,
-          at: NSPoint(x: x, y: y)
-        ) { selectedIndex in
-          result(selectedIndex)
-        }
+      self.showDropdownMenu(
+        items: items,
+        selectedIndex: selectedIndex,
+        dropdownId: dropdownId,
+        at: NSPoint(x: x, y: y)
+      ) { selectedIndex in
+        result(selectedIndex)
       }
+    } else if call.method == "updateNativeDropdown" {
+      guard let args = call.arguments as? [String: Any],
+        let items = args["items"] as? [[String: Any]],
+        let x = args["x"] as? CGFloat,
+        let y = args["y"] as? CGFloat,
+        let width = args["width"] as? CGFloat,
+        let height = args["height"] as? CGFloat,
+        let selectedIndex = args["selectedIndex"] as? Int,
+        let dropdownId = args["dropdownId"] as? String,
+        let enabled = args["enabled"] as? Bool,
+        let remove = args["remove"] as? Bool
+      else {
+        result(FlutterError(
+          code: "INVALID_ARGUMENTS",
+          message: "Invalid arguments for updateNativeDropdown",
+          details: nil))
+        return
+      }
+
+      if remove {
+        if let button = dropdownButtons[dropdownId] {
+          button.removeFromSuperview()
+          dropdownButtons.removeValue(forKey: dropdownId)
+        }
+        result(nil)
+        return
+      }
+
+      let button: NSPopUpButton
+      if let existingButton = dropdownButtons[dropdownId] {
+        button = existingButton
+      } else {
+        button = NSPopUpButton(frame: .zero, pullsDown: false)
+        button.bezelStyle = .rounded
+        button.target = self
+        button.action = #selector(handlePopUpButtonAction(_:))
+        button.isBordered = false
+        button.alphaValue = 0
+        flutterViewController.view.addSubview(button)
+        dropdownButtons[dropdownId] = button
+      }
+
+      // Update frame
+      let flutterViewHeight = flutterViewController.view.frame.height
+      let buttonFrame = NSRect(x: x, y: flutterViewHeight - y - 24, width: 200, height: 24)
+      button.frame = buttonFrame
+      
+      // Update items
+      button.removeAllItems()
+      for item in items {
+        guard let title = item["title"] as? String,
+              let enabled = item["enabled"] as? Bool else { continue }
+        button.menu?.addItem(withTitle: title, action: nil, keyEquivalent: "")
+        button.menu?.items.last?.isEnabled = enabled
+      }
+
+      // Update selection and state
+      if selectedIndex >= 0 && selectedIndex < items.count {
+        button.selectItem(at: selectedIndex)
+      }
+      button.isEnabled = enabled
+
+      result(nil)
     } else {
       result(FlutterMethodNotImplemented)
     }
+  }
+
+  @objc private func handlePopUpButtonAction(_ sender: NSPopUpButton) {
+    guard let dropdownId = dropdownButtons.first(where: { $0.value === sender })?.key else { return }
+    dropdownChannel.invokeMethod("onDropdownMenuSelected", arguments: [
+      "id": dropdownId,
+      "index": sender.indexOfSelectedItem
+    ])
   }
 
   private func showDropdownMenu(
@@ -152,6 +222,11 @@ class MainFlutterWindow: NSWindow {
       at: NSPoint(x: screenPoint.x, y: screenPoint.y),
       in: nil
     )
+
+    // Make sure the window remains key window after showing the menu
+    DispatchQueue.main.async {
+      self.makeKeyAndOrderFront(nil)
+    }
   }
 
   @objc private func handleMenuSelection(_ sender: NSMenuItem) {
