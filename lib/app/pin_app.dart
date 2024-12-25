@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:extended_text/extended_text.dart';
 import 'package:file_selector/file_selector.dart';
@@ -14,6 +13,7 @@ import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_hover_widget.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:flutter/material.dart' show Colors, Durations;
+import 'package:shakepin/widgets/file_image_widget.dart';
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 
@@ -51,7 +51,7 @@ class _PinAppState extends State<PinApp> with DragDropListener {
     final filesToShare = selectedItems.isNotEmpty ? selectedItems : items();
     final xFiles = filesToShare.map((path) => XFile(path)).toList();
     try {
-       await dropChannel.shareXFiles(xFiles);
+      await dropChannel.shareXFiles(xFiles);
     } catch (e) {
       print('Error sharing files: $e');
     }
@@ -341,61 +341,6 @@ class _PinAppState extends State<PinApp> with DragDropListener {
           ),
         ),
       ],
-    );
-  }
-}
-
-class FileImageWidget extends StatefulWidget {
-  const FileImageWidget({super.key, required this.path});
-
-  final String path;
-
-  @override
-  State<FileImageWidget> createState() => _FileImageWidgetState();
-}
-
-class _FileImageWidgetState extends State<FileImageWidget> {
-  Uint8List? _iconData;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadIcon();
-  }
-
-  Future<void> _loadIcon() async {
-    try {
-      final iconData = await dropChannel.getFileIcon(widget.path);
-      if (mounted) {
-        setState(() {
-          _iconData = iconData;
-        });
-      }
-    } catch (e) {
-      print('Error loading file icon: $e');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_iconData == null) {
-      return const SizedBox(
-        width: 48,
-        height: 48,
-        child: Center(child: ProgressCircle()),
-      );
-    }
-
-    return Image.memory(
-      _iconData!,
-      width: 48,
-      height: 48,
-      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        if (wasSynchronouslyLoaded || frame != null) {
-          return child;
-        }
-        return const ProgressCircle();
-      },
     );
   }
 }

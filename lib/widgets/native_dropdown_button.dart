@@ -1,25 +1,20 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:gradient_borders/gradient_borders.dart';
+import 'package:shakepin/utils/utils.dart';
 
-extension ColorExtension on CupertinoDynamicColor {
-  Color resolvedColor(BuildContext context) {
-    return MacosTheme.brightnessOf(context) == Brightness.dark
-        ? darkColor
-        : color;
-  }
-}
-
-class PlatformChannelHandler {
+class DropdownChannel {
   static const channel =
       MethodChannel('com.damywise.flutter_macos_native_dropdown/channel');
-  static final _instance = PlatformChannelHandler._();
+  static final _instance = DropdownChannel._();
 
-  PlatformChannelHandler._();
+  DropdownChannel._();
 
-  static PlatformChannelHandler get instance => _instance;
+  static DropdownChannel get instance => _instance;
 
   Future<void> initialize() async {
     channel.setMethodCallHandler(_handleMethodCall);
@@ -113,10 +108,12 @@ class NativeDropdownButton<T> extends StatefulWidget {
   });
 
   @override
-  State<NativeDropdownButton<T>> createState() => _NativeDropdownButtonState<T>();
+  State<NativeDropdownButton<T>> createState() =>
+      _NativeDropdownButtonState<T>();
 }
 
-class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>> with WidgetsBindingObserver {
+class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
+    with WidgetsBindingObserver {
   bool _isHovered = false;
   bool _hasPrimaryFocus = false;
   late FocusHighlightMode _focusHighlightMode;
@@ -133,7 +130,7 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>> with 
     _focusHighlightMode = focusManager.highlightMode;
     focusManager.addHighlightModeListener(_handleFocusHighlightModeChange);
     dropdownId = DropdownManager.registerDropdown(this);
-    PlatformChannelHandler.instance.initialize();
+    DropdownChannel.instance.initialize();
   }
 
   void _handleFocusChanged() {
@@ -165,6 +162,20 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>> with 
   }
 
   void _updateNativeControl({bool remove = false}) {
+    if (remove) {
+      DropdownChannel.channel.invokeMethod('updateNativeDropdown', {
+        'dropdownId': dropdownId,
+        'items': [],
+        'x': 0,
+        'y': 0,
+        'width': 0,
+        'height': 0,
+        'selectedIndex': 0,
+        'enabled': false,
+        'remove': true,
+      });
+      return;
+    }
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
@@ -175,12 +186,14 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>> with 
         ? -1
         : widget.items.indexWhere((item) => item.value == widget.value);
 
-    PlatformChannelHandler.channel.invokeMethod('updateNativeDropdown', {
+    DropdownChannel.channel.invokeMethod('updateNativeDropdown', {
       'dropdownId': dropdownId,
-      'items': widget.items.map((item) => {
-        'title': item.label,
-        'enabled': item.enabled,
-      }).toList(),
+      'items': widget.items
+          .map((item) => {
+                'title': item.label,
+                'enabled': item.enabled,
+              })
+          .toList(),
       'x': position.dx,
       'y': position.dy,
       'width': size.width,
@@ -208,123 +221,150 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>> with 
     final brightness = MacosTheme.of(context).brightness;
     final isEnabledFactor = widget.enabled ? 1.0 : 0.5;
 
-    return Focus(
-      focusNode: focusNode,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        child: CustomPaint(
-          painter: _DropdownPainter(
-            isEnabled: widget.enabled,
-            isDark: Theme.of(context).brightness == Brightness.dark,
-            onPaint: () => _updateNativeControl(),
-          ),
-          child: Container(
-            height: widget.controlSize == ControlSize.large ? 28 : 24,
-            decoration: _showHighlight
-                ? const BoxDecoration(
-                    color: MacosColors.systemGrayColor,
-                    borderRadius: BorderRadius.all(Radius.circular(4)),
-                  )
-                : BoxDecoration(
-                    gradient: _isHovered && widget.enabled
-                        ? LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: brightness == Brightness.light
-                                ? [
+    return IntrinsicWidth(
+      child: Focus(
+        focusNode: focusNode,
+        child: MouseRegion(
+          onEnter: (_) {
+            setState(() => _isHovered = true);
+            _updateNativeControl();
+          },
+          onExit: (_) {
+            setState(() => _isHovered = false);
+            _updateNativeControl(remove: true);
+          },
+          child: Stack(
+            children: [
+              Container(
+                height: widget.controlSize == ControlSize.large ? 28 : 20,
+                decoration: _showHighlight
+                    ? const BoxDecoration(
+                        color: MacosColors.systemGrayColor,
+                        borderRadius: BorderRadius.all(Radius.circular(4)),
+                      )
+                    : BoxDecoration(
+                        gradient: _isHovered && widget.enabled
+                            ? LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: brightness == Brightness.light
+                                    ? [
+                                        MacosColor.fromRGBO(
+                                            255, 255, 255, 1.0 * isEnabledFactor),
+                                        MacosColor.fromRGBO(
+                                            255, 255, 255, 1.0 * isEnabledFactor),
+                                      ]
+                                    : [
+                                        MacosColor.fromRGBO(255, 255, 255,
+                                            0.251 * isEnabledFactor),
+                                        MacosColor.fromRGBO(255, 255, 255,
+                                            0.251 * isEnabledFactor),
+                                      ],
+                              )
+                            : null,
+                        borderRadius: _kBorderRadius,
+                        color: _isHovered ? null : Colors.transparent,
+                        boxShadow: _isHovered && widget.enabled
+                            ? [
+                                BoxShadow(
+                                  color: MacosColor.fromRGBO(
+                                      0, 0, 0, 0.4 * isEnabledFactor),
+                                  blurRadius: 0.5,
+                                  offset: brightness == Brightness.dark
+                                      ? Offset.zero
+                                      : const Offset(0.0, 0.3),
+                                  spreadRadius: 0.0,
+                                  blurStyle: brightness == Brightness.dark
+                                      ? BlurStyle.outer
+                                      : BlurStyle.normal,
+                                ),
+                              ]
+                            : null,
+                      ),
+                foregroundDecoration: _isHovered &&
+                        !_showHighlight &&
+                        widget.enabled
+                    ? BoxDecoration(
+                        border: brightness == Brightness.dark
+                            ? GradientBoxBorder(
+                                gradient: LinearGradient(
+                                  colors: [
                                     MacosColor.fromRGBO(
-                                        255, 255, 255, 1.0 * isEnabledFactor),
-                                    MacosColor.fromRGBO(
-                                        255, 255, 255, 1.0 * isEnabledFactor),
-                                  ]
-                                : [
-                                    MacosColor.fromRGBO(
-                                        255, 255, 255, 0.251 * isEnabledFactor),
-                                    MacosColor.fromRGBO(
-                                        255, 255, 255, 0.251 * isEnabledFactor),
+                                        255, 255, 255, 0.25 * isEnabledFactor),
+                                    const MacosColor.fromRGBO(255, 255, 255, 0.0),
                                   ],
-                          )
-                        : null,
-                    borderRadius: _kBorderRadius,
-                    color: _isHovered ? null : Colors.transparent,
-                    boxShadow: _isHovered && widget.enabled
-                        ? [
-                            BoxShadow(
-                              color: MacosColor.fromRGBO(
-                                  0, 0, 0, 0.4 * isEnabledFactor),
-                              blurRadius: 0.5,
-                              offset: brightness == Brightness.dark
-                                  ? Offset.zero
-                                  : const Offset(0.0, 0.3),
-                              spreadRadius: 0.0,
-                              blurStyle: brightness == Brightness.dark
-                                  ? BlurStyle.outer
-                                  : BlurStyle.normal,
-                            ),
-                          ]
-                        : null,
-                  ),
-            foregroundDecoration: _isHovered &&
-                    !_showHighlight &&
-                    widget.enabled
-                ? BoxDecoration(
-                    border: brightness == Brightness.dark
-                        ? GradientBoxBorder(
-                            gradient: LinearGradient(
-                              colors: [
-                                MacosColor.fromRGBO(
-                                    255, 255, 255, 0.43 * isEnabledFactor),
-                                const MacosColor.fromRGBO(255, 255, 255, 0.0),
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              stops: const [0.0, 0.2],
-                            ),
-                            width: 0.7,
-                          )
-                        : Border.all(
-                            width: .5,
-                            color: widget.enabled
-                                ? brightness == Brightness.light
-                                    ? MacosColors.controlColor.withOpacity(.05)
-                                    : const Color(0xFF007AFF)
-                                : buttonStyles.borderColor,
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  stops: const [0.0, 0.2],
+                                ),
+                                width: 0.7,
+                              )
+                            : Border.all(
+                                width: .5,
+                                color: widget.enabled
+                                    ? brightness == Brightness.light
+                                        ? MacosColors.controlColor
+                                            .withOpacity(.05)
+                                        : const Color(0xFF007AFF)
+                                    : buttonStyles.borderColor,
+                              ),
+                        borderRadius: _kBorderRadius,
+                      )
+                    : null,
+                padding: const EdgeInsets.only(left: 8.0, right: 2.0),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Spacer(),
+                    DefaultTextStyle(
+                      style: MacosTheme.of(context).typography.body.copyWith(
+                            color: buttonStyles.textColor,
                           ),
-                    borderRadius: _kBorderRadius,
-                  )
-                : null,
-            padding: const EdgeInsets.only(left: 8.0, right: 2.0),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Spacer(),
-                DefaultTextStyle(
-                  style: MacosTheme.of(context).typography.body.copyWith(
-                        color: buttonStyles.textColor,
+                      child: widget.child ?? const SizedBox(),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CustomPaint(
+                          painter: _UpDownCaretsPainter(
+                            color: buttonStyles.caretColor,
+                            backgroundColor: _isHovered
+                                ? MacosColors.transparent
+                                : buttonStyles.caretBgColor,
+                            borderColor: _isHovered
+                                ? MacosColors.transparent
+                                : buttonStyles.caretColor.withOpacity(.05),
+                          ),
+                        ),
                       ),
-                  child: widget.child ?? const SizedBox(),
+                    ),
+                  ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CustomPaint(
-                      painter: _UpDownCaretsPainter(
-                        color: buttonStyles.caretColor,
-                        backgroundColor: _isHovered
-                            ? MacosColors.transparent
-                            : buttonStyles.caretBgColor,
-                        borderColor: _isHovered
-                            ? MacosColors.transparent
-                            : buttonStyles.caretColor.withOpacity(.05),
-                      ),
+              ),
+              // TODO: Popup button looks terrible. Must fix later
+              if (Platform.isWindows)
+                Opacity(
+                  opacity: 0,
+                  child: IgnorePointer(
+                    ignoring: false,
+                    child: MacosPopupButton(
+                      value: widget.value,
+                      onChanged: widget.onChanged,
+                      items: widget.items
+                          .map(
+                            (item) => MacosPopupMenuItem(
+                              value: item.value,
+                              enabled: item.enabled,
+                              child: Text(item.label),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
@@ -426,20 +466,18 @@ class _UpDownCaretsPainter extends CustomPainter {
     // Draw carets
     final p1 = Offset(hPadding, size.height / 2 - 2.0);
     final p2 = Offset(size.width / 2, vPadding);
-    final p3 = Offset(size.width / 2 + 1.0, vPadding + 1.0);
     final p4 = Offset(size.width - hPadding, size.height / 2 - 2.0);
     final p5 = Offset(hPadding, size.height / 2 + 2.0);
     final p6 = Offset(size.width / 2, size.height - vPadding);
-    final p7 = Offset(size.width / 2 + 1.0, size.height - vPadding - 1.0);
     final p8 = Offset(size.width - hPadding, size.height / 2 + 2.0);
     final paint = Paint()
       ..color = color
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 1.6;
     canvas.drawLine(p1, p2, paint);
-    canvas.drawLine(p3, p4, paint);
+    canvas.drawLine(p2, p4, paint);
     canvas.drawLine(p5, p6, paint);
-    canvas.drawLine(p7, p8, paint);
+    canvas.drawLine(p6, p8, paint);
   }
 
   @override
@@ -450,28 +488,6 @@ class _UpDownCaretsPainter extends CustomPainter {
 
   @override
   bool shouldRebuildSemantics(_UpDownCaretsPainter oldDelegate) => false;
-}
-
-class _DropdownPainter extends CustomPainter {
-  final bool isEnabled;
-  final bool isDark;
-  final VoidCallback? onPaint;
-
-  _DropdownPainter({
-    required this.isEnabled,
-    required this.isDark,
-    this.onPaint,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    onPaint?.call();
-  }
-
-  @override
-  bool shouldRepaint(_DropdownPainter oldDelegate) {
-    return isEnabled != oldDelegate.isEnabled || isDark != oldDelegate.isDark;
-  }
 }
 
 class NativeDropdownItem<T> {

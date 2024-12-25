@@ -82,31 +82,7 @@ class MainFlutterWindow: NSWindow {
   }
 
   func handleNativeDropdownMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    if call.method == "showDropdownMenu" {
-      guard let args = call.arguments as? [String: Any],
-        let items = args["items"] as? [[String: Any]],
-        let x = args["x"] as? CGFloat,
-        let y = args["y"] as? CGFloat,
-        let selectedIndex = args["selectedIndex"] as? Int,
-        let dropdownId = args["dropdownId"] as? String
-      else {
-        result(
-          FlutterError(
-            code: "INVALID_ARGUMENTS",
-            message: "Invalid arguments for showDropdownMenu",
-            details: nil))
-        return
-      }
-
-      self.showDropdownMenu(
-        items: items,
-        selectedIndex: selectedIndex,
-        dropdownId: dropdownId,
-        at: NSPoint(x: x, y: y)
-      ) { selectedIndex in
-        result(selectedIndex)
-      }
-    } else if call.method == "updateNativeDropdown" {
+    if call.method == "updateNativeDropdown" {
       guard let args = call.arguments as? [String: Any],
         let items = args["items"] as? [[String: Any]],
         let x = args["x"] as? CGFloat,
@@ -180,53 +156,6 @@ class MainFlutterWindow: NSWindow {
       "id": dropdownId,
       "index": sender.indexOfSelectedItem
     ])
-  }
-
-  private func showDropdownMenu(
-    items: [[String: Any]],
-    selectedIndex: Int,
-    dropdownId: String,
-    at point: NSPoint,
-    completion: @escaping (Int) -> Void
-  ) {
-    let menu = NSMenu()
-    menu.autoenablesItems = false
-
-    for (index, item) in items.enumerated() {
-      if let title = item["text"] as? String {
-        let menuItem = NSMenuItem(
-          title: title,
-          action: #selector(self.handleMenuSelection(_:)),
-          keyEquivalent: ""
-        )
-        menuItem.target = self
-        menuItem.tag = index
-        menuItem.isEnabled = !(item["disabled"] as? Bool ?? false)
-        menuItem.representedObject = dropdownId  // Store the dropdown ID
-
-        if index == selectedIndex {
-          menuItem.state = .on
-        }
-
-        menu.addItem(menuItem)
-      } else if item["isDivider"] as? Bool == true {
-        menu.addItem(NSMenuItem.separator())
-      }
-    }
-
-    self.dropdownMenu = menu
-
-    let screenPoint = self.convertPoint(toScreen: point)
-    menu.popUp(
-      positioning: nil,
-      at: NSPoint(x: screenPoint.x, y: screenPoint.y),
-      in: nil
-    )
-
-    // Make sure the window remains key window after showing the menu
-    DispatchQueue.main.async {
-      self.makeKeyAndOrderFront(nil)
-    }
   }
 
   @objc private func handleMenuSelection(_ sender: NSMenuItem) {
@@ -472,14 +401,25 @@ class MainFlutterWindow: NSWindow {
       }
 
     case "showPopover":
-      if let content = call.arguments as? String {
-        showPopover(content: content)
-        result(nil)
-      } else {
-        result(
-          FlutterError(
-            code: "INVALID_ARGUMENT", message: "Invalid argument for showPopover", details: nil))
+      guard let args = call.arguments as? [Any],
+            let content = args[0] as? String,
+            let edgeIndex = args[1] as? Int else {
+        result(FlutterError(code: "INVALID_ARGUMENTS",
+                           message: "Invalid arguments for showPopover",
+                           details: nil))
+        return
       }
+      
+      let edge: NSRectEdge = switch edgeIndex {
+        case 0: .minX  // left
+        case 1: .maxX  // right
+        case 2: .maxY  // top
+        case 3: .minY  // bottom
+        default: .minX // default to left
+      }
+      
+      showPopover(content: content, edge: edge)
+      result(nil)
 
     case "hidePopover":
       hidePopover()
@@ -838,7 +778,7 @@ class MainFlutterWindow: NSWindow {
     }
   }
 
-  func showPopover(content: String) {
+  func showPopover(content: String, edge: NSRectEdge) {
     if popover == nil {
       popover = NSPopover()
     }
@@ -878,9 +818,7 @@ class MainFlutterWindow: NSWindow {
       let windowPoint = self.convertPoint(fromScreen: mouseLocation)
       let viewPoint = self.contentView?.convert(windowPoint, from: nil) ?? windowPoint
 
-      popover?.show(
-        relativeTo: NSRect(origin: viewPoint, size: .zero), of: self.contentView!,
-        preferredEdge: .minY)
+      popover?.show(relativeTo: NSRect(origin: mouseLocation, size: .zero), of: self.contentView!, preferredEdge: edge)
     }
   }
 

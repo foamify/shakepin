@@ -13,6 +13,13 @@ const MethodChannel _channel = MethodChannel('click.shakepin.macos/drop');
 
 final dropChannel = DropChannel._();
 
+enum PopoverEdge {
+  left,
+  right,
+  top,
+  bottom
+}
+
 class DropChannel {
   DropChannel._() {
     _channel.setMethodCallHandler((call) async {
@@ -173,8 +180,8 @@ class DropChannel {
     }
   }
 
-  Future<void> showPopover(String content) async {
-    await _channel.invokeMethod('showPopover', content);
+  Future<void> showPopover(String content, {PopoverEdge edge = PopoverEdge.bottom}) async {
+    await _channel.invokeMethod('showPopover', [content, edge.index]);
   }
 
   Future<void> hidePopover() async {

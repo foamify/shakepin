@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:shakepin/app/minify_app_common.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final items = ValueNotifier<Set<String>>({});
@@ -11,7 +10,6 @@ final isAboutApp = ValueNotifier<bool>(false);
 
 const isAppStore = appFlavor != 'oss';
 
-final minifiedFiles = ValueNotifier<List<MinifiedFile>>([]);
 final outputDirectory = ValueNotifier<String?>(null);
 
 // Function to update the output directory

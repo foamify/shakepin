@@ -190,7 +190,14 @@ class Cli {
   Future<void> minifyVideo(String inputPath, String outputPath,
       {String format = 'mp4',
       String quality = 'medium',
-      bool enableHardwareAcceleration = true}) async {
+      bool enableHardwareAcceleration = true,
+      void Function(double)? onProgress}) async {
+    // Remove extension from output path and append format
+    final outputWithoutExt = outputPath.contains('.')
+        ? outputPath.substring(0, outputPath.lastIndexOf('.'))
+        : outputPath;
+    final finalOutputPath = _getUniqueFilePath('$outputWithoutExt.$format');
+
     List<String> ffmpegArgs = [];
 
     if (enableHardwareAcceleration) {
@@ -263,9 +270,21 @@ class Cli {
         ]);
     }
 
-    ffmpegArgs.add(outputPath);
+    ffmpegArgs.add(finalOutputPath);
 
     try {
+      // Get video duration first
+      final probeResult = await Process.run('ffprobe', [
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        inputPath
+      ]);
+      final duration = double.parse((probeResult.stdout as String).trim());
+
       final process = await Process.start('ffmpeg', ffmpegArgs);
 
       // Handle stdout
@@ -276,6 +295,18 @@ class Cli {
       // Handle stderr
       process.stderr.transform(utf8.decoder).listen((data) {
         debugPrint('[Process.minifyVideo] Error: $data');
+
+        // Parse progress
+        final match =
+            RegExp(r'time=(\d{2}):(\d{2}):(\d{2}\.\d{2})').firstMatch(data);
+        if (match != null && onProgress != null) {
+          final hours = int.parse(match.group(1)!);
+          final minutes = int.parse(match.group(2)!);
+          final seconds = double.parse(match.group(3)!);
+          final currentTime = hours * 3600 + minutes * 60 + seconds;
+          final progress = currentTime / duration;
+          onProgress(progress);
+        }
       });
 
       // Wait for the process to complete
@@ -289,6 +320,28 @@ class Cli {
       debugPrint('[Process.minifyVideo] Error: $e');
       rethrow;
     }
+  }
+
+  String _getUniqueFilePath(String filePath) {
+    if (!File(filePath).existsSync()) {
+      return filePath;
+    }
+
+    final extension = filePath.contains('.')
+        ? filePath.substring(filePath.lastIndexOf('.'))
+        : '';
+    final pathWithoutExt = filePath.contains('.')
+        ? filePath.substring(0, filePath.lastIndexOf('.'))
+        : filePath;
+
+    int counter = 1;
+    String newPath;
+    do {
+      newPath = '$pathWithoutExt ($counter)$extension';
+      counter++;
+    } while (File(newPath).existsSync());
+
+    return newPath;
   }
 
   // MARK: - Utils
