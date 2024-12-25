@@ -33,19 +33,8 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
 
   @override
   void initState() {
-    init();
     dropChannel.addListener(this);
     super.initState();
-  }
-
-  void init() async {
-    dropChannel.setMinimumSize(AppSizes.main);
-    final rect = Rect.fromCenter(
-      center: await dropChannel.center(),
-      width: AppSizes.main.width,
-      height: AppSizes.main.height,
-    );
-    dropChannel.setFrame(rect, animate: true);
   }
 
   void _shareSelectedFiles() async {
@@ -114,7 +103,10 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
         //   AppSizes.main.width,
         //   MediaQuery.sizeOf(context).width - 16,
         // ),
-        height: MediaQuery.sizeOf(context).height - 16,
+        height: switch (appMode()) {
+          AppMode.minify => AppSizes.main.height - 24,
+          _ => MediaQuery.sizeOf(context).height - 16,
+        },
         child: AnimatedContainer(
           duration: Durations.long2,
           curve: Curves.fastEaseInToSlowEaseOut,
@@ -156,6 +148,60 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                               child: Row(
                                 spacing: 4,
                                 children: [
+                                  SizedBox.square(
+                                    dimension: 16,
+                                    child: GlassButton(
+                                      secondary: true,
+                                      padding: EdgeInsets.zero,
+                                      radius: 3,
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedItems.clear();
+                                        });
+                                        items.clear();
+                                        resetFrameAndHide();
+                                      },
+                                      child: MacosIcon(
+                                        FluentIcons.dismiss_16_regular,
+                                        color: MacosColors.labelColor
+                                            .resolvedColor(context),
+                                        size: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox.square(
+                                    dimension: 16,
+                                    child: GlassButton(
+                                      secondary: true,
+                                      padding: EdgeInsets.zero,
+                                      radius: 3,
+                                      onTap: () {
+                                        resetFrameAndHide();
+                                      },
+                                      child: MacosIcon(
+                                        FluentIcons.arrow_minimize_16_regular,
+                                        color: MacosColors.labelColor
+                                            .resolvedColor(context),
+                                        size: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  '${items().length} Files',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                            Expanded(
+                              child: Row(
+                                spacing: 4,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
                                   MacosCheckbox(
                                     value:
                                         _selectedItems.length == items().length
@@ -181,45 +227,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                       radius: 3,
                                       onTap: _shareSelectedFiles,
                                       child: MacosIcon(
-                                        FluentIcons.share_20_regular,
-                                        color: MacosColors.labelColor
-                                            .resolvedColor(context),
-                                        size: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                Text(
-                                  '${items().length} Files',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                            Expanded(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                spacing: 1,
-                                children: [
-                                  SizedBox.square(
-                                    dimension: 16,
-                                    child: GlassButton(
-                                      onTap: () {
-                                        setState(() {
-                                          _displayMode = DisplayMode.grid;
-                                        });
-                                      },
-                                      padding: EdgeInsets.zero,
-                                      radius: 3,
-                                      secondary:
-                                          _displayMode == DisplayMode.grid
-                                              ? false
-                                              : true,
-                                      child: MacosIcon(
-                                        FluentIcons.grid_20_regular,
+                                        FluentIcons.share_16_regular,
                                         color: MacosColors.labelColor
                                             .resolvedColor(context),
                                         size: 12,
@@ -229,20 +237,22 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                   SizedBox.square(
                                     dimension: 16,
                                     child: GlassButton(
+                                      secondary: true,
                                       onTap: () {
                                         setState(() {
-                                          _displayMode = DisplayMode.list;
+                                          _displayMode =
+                                              _displayMode == DisplayMode.grid
+                                                  ? DisplayMode.list
+                                                  : DisplayMode.grid;
                                         });
                                       },
                                       padding: EdgeInsets.zero,
                                       radius: 3,
-                                      secondary:
-                                          _displayMode == DisplayMode.list
-                                              ? false
-                                              : true,
                                       child: MacosIcon(
-                                        FluentIcons
-                                            .text_bullet_list_ltr_20_regular,
+                                        _displayMode == DisplayMode.grid
+                                            ? FluentIcons
+                                                .text_bullet_list_ltr_16_regular
+                                            : FluentIcons.grid_16_regular,
                                         color: MacosColors.labelColor
                                             .resolvedColor(context),
                                         size: 12,
@@ -271,20 +281,20 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                           child: switch (_displayMode) {
                             DisplayMode.list => SuperListView.separated(
                                 itemCount: items().length,
-                                separatorBuilder: (context, index) => Divider(
+                                separatorBuilder: (context, index) =>
+                                    const Divider(
                                   indent: 12,
                                   endIndent: 12,
                                   height: 1,
-                                  color: MacosColors.systemGrayColor
-                                      .resolvedColor(context)
-                                      .withOpacity(.2),
+                                  color: MacosColors.gridColor,
                                 ),
                                 itemBuilder: (context, index) {
                                   final filePath = items().elementAt(index);
                                   final file = File(filePath);
                                   final fileName = path.basename(filePath);
-                                  final fileSize =
-                                      formatFileSize(file.lengthSync());
+                                  final fileSize = file.existsSync()
+                                      ? formatFileSize(file.lengthSync())
+                                      : '';
                                   // final isImage = isImageFile(fileName);
                                   // final isVideo = isVideoFile(fileName);
                                   // final icon = isImage
@@ -292,33 +302,77 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                   //     : isVideo
                                   //         ? FluentIcons.video_24_regular
                                   //         : FluentIcons.document_24_regular;
-                                  return ContextMenuWidget(
-                                    menuProvider: (request) => Menu(
-                                      children: [
-                                        MenuAction(
-                                          callback: () {
-                                            Process.run(
-                                                'open', ['-R', filePath]);
-                                          },
-                                          title: 'Show in Finder',
-                                        ),
-                                        MenuAction(
-                                          callback: () {
-                                            items.remove(filePath);
-                                            _selectedItems.remove(filePath);
-                                          },
-                                          title: 'Remove',
-                                        ),
-                                      ],
-                                    ),
-                                    child: FileHoverWidget(
-                                      fileName: fileName,
-                                      fileSize: fileSize,
-                                      // icon: icon,
-                                      child: SizedBox.square(
-                                        dimension: 16,
-                                        child: FileImageWidget(
-                                          path: filePath,
+                                  return CustomDragGesture(
+                                    onDragStart: () {
+                                      if (!_selectedItems.contains(filePath)) {
+                                        draggedItem = filePath;
+                                        dropChannel
+                                            .performDragSession([filePath]);
+                                      } else {
+                                        dropChannel.performDragSession(
+                                            _selectedItems.toList());
+                                      }
+                                    },
+                                    child: ContextMenuWidget(
+                                      menuProvider: (request) => Menu(
+                                        children: [
+                                          MenuAction(
+                                            callback: () {
+                                              Process.run(
+                                                  'open', ['-R', filePath]);
+                                            },
+                                            title: 'Show in Finder',
+                                          ),
+                                          if (_selectedItems.contains(filePath))
+                                            MenuAction(
+                                              callback: () {
+                                                setState(() {
+                                                  _selectedItems
+                                                      .remove(filePath);
+                                                });
+                                              },
+                                              title: 'Deselect',
+                                            ),
+                                          if (!_selectedItems
+                                              .contains(filePath))
+                                            MenuAction(
+                                              callback: () {
+                                                setState(() {
+                                                  _selectedItems.add(filePath);
+                                                });
+                                              },
+                                              title: 'Select',
+                                            ),
+                                          MenuAction(
+                                            callback: () {
+                                              items.remove(filePath);
+                                              _selectedItems.remove(filePath);
+                                            },
+                                            title: 'Remove',
+                                          ),
+                                        ],
+                                      ),
+                                      child: FileHoverWidget(
+                                        fileName: fileName,
+                                        fileSize: fileSize,
+                                        onTap: () {
+                                          setState(() {
+                                            if (_selectedItems
+                                                .contains(filePath)) {
+                                              _selectedItems.remove(filePath);
+                                            } else {
+                                              _selectedItems.add(filePath);
+                                            }
+                                          });
+                                        },
+                                        selected:
+                                            _selectedItems.contains(filePath),
+                                        // icon: icon,
+                                        child: SizedBox.square(
+                                          dimension: 16,
+                                          child: FileImageWidget(
+                                            path: filePath,
+                                          ),
                                         ),
                                       ),
                                     ),

@@ -17,13 +17,23 @@ class _CustomDragGestureState extends State<CustomDragGesture> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanStart: (details) {
-        print('onPanStart session ${details.kind}');
-        if (details.kind == PointerDeviceKind.mouse) {
-          // print('onPanStartdragfiles');
+    return Listener(
+      onPointerMove: (event) {
+        if (isTapped) return;
+        debugPrint('onPointerMove: ${event.kind}');
+        if (event.kind == PointerDeviceKind.mouse) {
+          isTapped = true;
+          debugPrint('Mouse drag started');
           widget.onDragStart();
         }
+      },
+      onPointerUp: (event) {
+        debugPrint('onPointerUp');
+        isTapped = false;
+      },
+      onPointerCancel: (event) {
+        debugPrint('onPointerCancel');
+        isTapped = false;
       },
       child: widget.child,
     );

@@ -34,14 +34,16 @@ extension ListenableEx<T> on ValueListenable<T> {
 extension ListenableListEx<T> on ValueNotifier<List<T>> {
   void add(T item) => value = [...value, item];
   void addAll(Iterable<T> items) => value = [...value, ...items];
-  void remove(T item) => value = value.where((element) => element != item).toList();
+  void remove(T item) =>
+      value = value.where((element) => element != item).toList();
   void clear() => value = [];
 }
 
 extension ListenableSetEx<T> on ValueNotifier<Set<T>> {
   void add(T item) => value = {...value, item};
   void addAll(Iterable<T> items) => value = {...value, ...items};
-  void remove(T item) => value = value.where((element) => element != item).toSet();
+  void remove(T item) =>
+      value = value.where((element) => element != item).toSet();
   void clear() => value = {};
 }
 
@@ -49,3 +51,12 @@ final isMiscApp = ValueNotifier<bool>(false);
 
 // Update the existing variables or add if not present:
 late final SharedPreferences prefs;
+
+final appMode = ValueNotifier<AppMode>(AppMode.pin);
+
+enum AppMode {
+  pin,
+  minify,
+  archive,
+  misc,
+}

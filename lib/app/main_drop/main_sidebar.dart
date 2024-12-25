@@ -15,8 +15,8 @@ class MainSidebar extends StatelessWidget {
     required this.onHideTooltip,
   });
 
-  final SelectedMode selectedMode;
-  final ValueChanged<SelectedMode> onModeChanged;
+  final AppMode selectedMode;
+  final ValueChanged<AppMode> onModeChanged;
   final void Function(String tooltip) onShowTooltip;
   final VoidCallback onHideTooltip;
 
@@ -27,13 +27,13 @@ class MainSidebar extends StatelessWidget {
       children: [
         SideButton(
           label: 'pin',
-          selected: selectedMode == SelectedMode.pin,
+          selected: selectedMode == AppMode.pin,
           tooltip: 'Drop files here to pin them',
           onDragPerform: (paths) {},
           onShowTooltip: onShowTooltip,
           onHideTooltip: onHideTooltip,
           onTap: () {
-            onModeChanged(SelectedMode.pin);
+            onModeChanged(AppMode.pin);
           },
           child: MacosIcon(
             FluentIcons.pin_24_regular,
@@ -42,7 +42,7 @@ class MainSidebar extends StatelessWidget {
         ),
         SideButton(
           label: 'minify',
-          selected: selectedMode == SelectedMode.minify,
+          selected: selectedMode == AppMode.minify,
           tooltip: 'Drop images and videos here to minify their size',
           onDragPerform: (paths) {
             items.value = {
@@ -50,12 +50,12 @@ class MainSidebar extends StatelessWidget {
               ...paths.videoPaths,
               ...paths.imagePaths
             };
-            onModeChanged(SelectedMode.minify);
+            onModeChanged(AppMode.minify);
           },
           onShowTooltip: onShowTooltip,
           onHideTooltip: onHideTooltip,
           onTap: () {
-            onModeChanged(SelectedMode.minify);
+            onModeChanged(AppMode.minify);
           },
           child: MacosIcon(
             FluentIcons.arrow_minimize_vertical_24_regular,
@@ -64,13 +64,13 @@ class MainSidebar extends StatelessWidget {
         ),
         SideButton(
           label: 'archive',
-          selected: selectedMode == SelectedMode.archive,
+          selected: selectedMode == AppMode.archive,
           tooltip: 'Drop files here to archive them into a .zip',
           onDragPerform: (paths) {},
           onShowTooltip: onShowTooltip,
           onHideTooltip: onHideTooltip,
           onTap: () {
-            onModeChanged(SelectedMode.archive);
+            onModeChanged(AppMode.archive);
           },
           child: MacosIcon(
             FluentIcons.archive_24_regular,
@@ -79,13 +79,13 @@ class MainSidebar extends StatelessWidget {
         ),
         SideButton(
           label: 'misc',
-          selected: selectedMode == SelectedMode.misc,
+          selected: selectedMode == AppMode.misc,
           tooltip: 'Drop files here to open other tools',
           onDragPerform: (paths) {},
           onShowTooltip: onShowTooltip,
           onHideTooltip: onHideTooltip,
           onTap: () {
-            onModeChanged(SelectedMode.misc);
+            onModeChanged(AppMode.misc);
           },
           child: MacosIcon(
             FluentIcons.apps_24_regular,

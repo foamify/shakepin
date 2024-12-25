@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -26,7 +24,6 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
 
   bool _isHoveredTop = false;
   bool _isShowingTooltip = false;
-  SelectedMode _selectedMode = SelectedMode.pin;
 
   @override
   void initState() {
@@ -44,41 +41,18 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
     super.initState();
   }
 
-  void resetFrameAndHide() async {
-    debugPrint('Starting resetFrameAndHide');
-    await dropChannel.setFrame(
-      Rect.fromCenter(
-        center: await dropChannel.center(),
-        width: AppSizes.main.width,
-        height: AppSizes.main.height,
-      ),
-      animate: true,
-    );
-    debugPrint('First frame adjustment complete');
-
-    await Future.delayed(Durations.short4);
-    await dropChannel.setFrame(
-      Rect.fromCenter(
-        center: await dropChannel.center(),
-        width: AppSizes.main.width,
-        height: max(AppSizes.main.height / 4, 48),
-      ),
-      animate: true,
-    );
-    debugPrint('Second frame adjustment complete');
-
-    await Future.delayed(Durations.short4);
-    await dropChannel.setVisible(false);
-    debugPrint('Frame hidden');
-  }
-
   @override
   void shakeDetected(Offset position) async {
     debugPrint('Shake detected at position: $position');
     if (!isShakeDetected) {
       debugPrint('Processing first shake detection');
       isShakeDetected = true;
-      Size appSize = AppSizes.main;
+      final appSize = switch (appMode()) {
+        AppMode.pin => AppSizes.main,
+        AppMode.minify => AppSizes.minify,
+        AppMode.archive => AppSizes.main,
+        AppMode.misc => AppSizes.main,
+      };
 
       debugPrint('Setting frame with size: ${appSize.width}x${appSize.height}');
       await dropChannel.setFrame(
@@ -120,25 +94,25 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
   }
 
   void _handleShowTooltip(String tooltip) {
-    debugPrint('Showing tooltip: $tooltip');
+    // debugPrint('Showing tooltip: $tooltip');
 
-    setState(() {
-      _isShowingTooltip = true;
-    });
-    // dropChannel.showPopover(tooltip, edge: PopoverEdge.right);
+    // setState(() {
+    //   _isShowingTooltip = true;
+    // });
+    // // dropChannel.showPopover(tooltip, edge: PopoverEdge.right);
   }
 
   void _handleHideTooltip() {
-    debugPrint('Hiding tooltip');
-    _isShowingTooltip = false;
-    Future.delayed(const Duration(milliseconds: 700), () {
-      if (!_isShowingTooltip) {
-        debugPrint('Tooltip still not showing, hiding popover');
-        // dropChannel.hidePopover();
-      } else {
-        debugPrint('Tooltip is showing again, not hiding popover');
-      }
-    });
+    // debugPrint('Hiding tooltip');
+    // _isShowingTooltip = false;
+    // Future.delayed(const Duration(milliseconds: 700), () {
+    //   if (!_isShowingTooltip) {
+    //     debugPrint('Tooltip still not showing, hiding popover');
+    //     // dropChannel.hidePopover();
+    //   } else {
+    //     debugPrint('Tooltip is showing again, not hiding popover');
+    //   }
+    // });
   }
 
   @override
@@ -181,39 +155,57 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                     ),
                   ),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    switch (_selectedMode) {
-                      SelectedMode.minify => SizedBox(
-                          width: MediaQuery.sizeOf(context).width - 48 - 8,
+                ListenableBuilder(
+                  listenable: appMode,
+                  builder: (context, _) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        switch (appMode()) {
+                          AppMode.minify => SizedBox(
+                              width: MediaQuery.sizeOf(context).width - 48 - 8,
+                              height: MediaQuery.sizeOf(context).height - 16,
+                              child: const MinifySection(
+                                key: ValueKey('minify_section'),
+                              ),
+                            ),
+                          _ => const Padding(
+                              padding: EdgeInsets.only(bottom: 8.0),
+                              child: DropSection(
+                                key: ValueKey('drop_section'),
+                              ),
+                            )
+                        },
+                        SizedBox(
                           height: MediaQuery.sizeOf(context).height - 16,
-                          child: const MinifySection(
-                            key: ValueKey('minify_section'),
-                          ),
-                        ),
-                      _ => const Padding(
-                          padding: EdgeInsets.only(bottom: 8.0),
-                          child: DropSection(
-                            key: ValueKey('drop_section'),
+                          child: MainSidebar(
+                            selectedMode: appMode(),
+                            onModeChanged: (mode) async {
+                              final appSize = switch (mode) {
+                                AppMode.pin => AppSizes.main,
+                                AppMode.minify => AppSizes.minify,
+                                AppMode.archive => AppSizes.main,
+                                AppMode.misc => AppSizes.main,
+                              };
+                    
+                              appMode.value = mode;
+                    
+                              dropChannel.setMinimumSize(appSize);
+                              final rect = Rect.fromCenter(
+                                center: await dropChannel.center(),
+                                width: appSize.width,
+                                height: appSize.height,
+                              );
+                              dropChannel.setFrame(rect, animate: true);
+                            },
+                            onShowTooltip: _handleShowTooltip,
+                            onHideTooltip: _handleHideTooltip,
                           ),
                         )
-                    },
-                    SizedBox(
-                      height: MediaQuery.sizeOf(context).height - 16,
-                      child: MainSidebar(
-                        selectedMode: _selectedMode,
-                        onModeChanged: (mode) {
-                          setState(() {
-                            _selectedMode = mode;
-                          });
-                        },
-                        onShowTooltip: _handleShowTooltip,
-                        onHideTooltip: _handleHideTooltip,
-                      ),
-                    )
-                  ],
+                      ],
+                    );
+                  }
                 ),
               ],
             ),
@@ -222,11 +214,4 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
       ),
     );
   }
-}
-
-enum SelectedMode {
-  pin,
-  minify,
-  archive,
-  misc,
 }

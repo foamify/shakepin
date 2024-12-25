@@ -130,6 +130,7 @@ class _MinifyDropSectionState extends State<MinifyDropSection> {
                                       ),
                                       child: FileHoverWidget(
                                         icon: icon,
+                                        selected: false,
                                         fileName: fileName,
                                         fileSize: fileSize,
                                       ),

@@ -1,8 +1,12 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:macos_haptic_feedback/macos_haptic_feedback.dart';
 import 'package:path/path.dart' as path;
+import 'package:shakepin/state.dart';
+import 'package:shakepin/utils/drop_channel.dart';
 
 sealed class AppSizes {
   static const archive = Size(300, 200);
@@ -138,4 +142,39 @@ extension IterableExtension<T> on Iterable<String> {
   bool get containsImage => any((path) => isImageFile(path));
   Iterable<String> get videoPaths => where((path) => isVideoFile(path));
   Iterable<String> get imagePaths => where((path) => isImageFile(path));
+}
+
+void resetFrameAndHide() async {
+  final appSize = switch (appMode()) {
+    AppMode.pin => AppSizes.main,
+    AppMode.minify => AppSizes.minify,
+    AppMode.archive => AppSizes.main,
+    AppMode.misc => AppSizes.main,
+  };
+
+  debugPrint('Starting resetFrameAndHide');
+  await dropChannel.setFrame(
+    Rect.fromCenter(
+      center: await dropChannel.center(),
+      width: appSize.width,
+      height: appSize.height,
+    ),
+    animate: true,
+  );
+  debugPrint('First frame adjustment complete');
+
+  await Future.delayed(Durations.short4);
+  await dropChannel.setFrame(
+    Rect.fromCenter(
+      center: await dropChannel.center(),
+      width: AppSizes.main.width,
+      height: max(appSize.height / 4, 48),
+    ),
+    animate: true,
+  );
+  debugPrint('Second frame adjustment complete');
+
+  await Future.delayed(Durations.short4);
+  await dropChannel.setVisible(false);
+  debugPrint('Frame hidden');
 }
