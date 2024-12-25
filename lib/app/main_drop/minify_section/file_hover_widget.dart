@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/utils/utils.dart';
@@ -6,12 +5,17 @@ import 'package:shakepin/utils/utils.dart';
 class FileHoverWidget extends StatefulWidget {
   const FileHoverWidget({
     super.key,
-    required this.icon,
+    this.icon,
+    this.child,
     required this.fileName,
     required this.fileSize,
-  });
+  }) : assert(
+          (icon == null) != (child == null),
+          'Exactly one of icon or child must be provided',
+        );
 
-  final IconData icon;
+  final IconData? icon;
+  final Widget? child;
   final String fileName;
   final String fileSize;
 
@@ -35,7 +39,8 @@ class _FileHoverWidgetState extends State<FileHoverWidget> {
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
         child: Row(
           children: [
-            Icon(widget.icon, size: 16),
+            if (widget.icon != null) Icon(widget.icon, size: 16),
+            if (widget.child != null) widget.child!,
             const SizedBox(width: 8),
             Expanded(
               child: Text(

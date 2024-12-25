@@ -1,11 +1,21 @@
+import 'dart:io';
+
+import 'package:file_selector/file_selector.dart';
+import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:shakepin/app/main_drop/custom_drag_gesture.dart';
 import 'package:shakepin/app/main_drop/dropped_item.dart';
+import 'package:shakepin/app/main_drop/minify_section/file_hover_widget.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_target.dart';
+import 'package:shakepin/widgets/file_image_widget.dart';
+import 'package:shakepin/widgets/glass_button.dart';
+import 'package:super_context_menu/super_context_menu.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
+import 'package:path/path.dart' as path;
 
 class DropSection extends StatefulWidget {
   const DropSection({super.key});
@@ -14,14 +24,17 @@ class DropSection extends StatefulWidget {
   State<DropSection> createState() => _DropSectionState();
 }
 
-class _DropSectionState extends State<DropSection> {
-  bool _isHoveredWithItem = false;
+class _DropSectionState extends State<DropSection> with DragDropListener {
+  bool _isDraggingItemIn = false;
   bool _isHoveredItem = false;
   Set<String> _selectedItems = {};
+  var _displayMode = DisplayMode.grid;
+  String? draggedItem;
 
   @override
   void initState() {
     init();
+    dropChannel.addListener(this);
     super.initState();
   }
 
@@ -35,6 +48,40 @@ class _DropSectionState extends State<DropSection> {
     dropChannel.setFrame(rect, animate: true);
   }
 
+  void _shareSelectedFiles() async {
+    final filesToShare = _selectedItems.isNotEmpty ? _selectedItems : items();
+    final xFiles = filesToShare.map((path) => XFile(path)).toList();
+    try {
+      await dropChannel.shareXFiles(xFiles);
+    } catch (e) {
+      print('Error sharing files: $e');
+    }
+  }
+
+  @override
+  void onDragSessionEnded(DropOperation operation) {
+    // print('onDragSessionEnded $operation');
+    switch (operation) {
+      case DropOperation.move:
+        setState(() {
+          if (draggedItem != null) {
+            debugPrint('Removing dragged item: $draggedItem');
+            _selectedItems.remove(draggedItem!);
+            items.remove(draggedItem!);
+            draggedItem = null;
+          } else {
+            debugPrint('Moving selected items: ${_selectedItems.length}');
+            items.value = items().difference(_selectedItems);
+            _selectedItems.clear();
+          }
+        });
+        debugPrint('Items after move: ${items().length}');
+      default:
+        break;
+    }
+    super.onDragSessionEnded(operation);
+  }
+
   @override
   Widget build(BuildContext context) {
     const maxRowItemLength = 3;
@@ -43,18 +90,18 @@ class _DropSectionState extends State<DropSection> {
       label: 'main-drop-app',
       onDragEnter: (details) {
         setState(() {
-          _isHoveredWithItem = true;
+          _isDraggingItemIn = true;
         });
       },
       onDragExited: () {
         setState(() {
-          _isHoveredWithItem = false;
+          _isDraggingItemIn = false;
         });
       },
       onDragConclude: () {
         dropChannel.hidePopover();
         setState(() {
-          _isHoveredWithItem = false;
+          _isDraggingItemIn = false;
         });
       },
       onDragPerform: (paths) async {
@@ -73,18 +120,18 @@ class _DropSectionState extends State<DropSection> {
           curve: Curves.fastEaseInToSlowEaseOut,
           foregroundDecoration: BoxDecoration(
             border: Border.all(
-              color: _isHoveredWithItem
+              color: _isDraggingItemIn
                   ? MacosColors.controlAccentColor
                   : items().isNotEmpty
                       ? MacosColors.controlColor.resolvedColor(context)
                       : MacosColors.transparent,
-              width: _isHoveredWithItem ? 2.0 : 1.0,
+              width: _isDraggingItemIn ? 2.0 : 1.0,
             ),
             borderRadius: BorderRadius.circular(6),
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(6),
-            color: _isHoveredWithItem
+            color: _isDraggingItemIn
                 ? MacosColors.controlAccentColor.withOpacity(0.1)
                 : items().isNotEmpty
                     ? MacosColors.controlColor
@@ -97,78 +144,295 @@ class _DropSectionState extends State<DropSection> {
           child: ListenableBuilder(
               listenable: items,
               builder: (context, child) {
-                if (items().isNotEmpty) {
-                  return SuperListView.builder(
-                    padding: const EdgeInsets.all(4),
-                    itemCount: (items().length / maxRowItemLength).ceil(),
-                    itemBuilder: (context, rowIndex) {
-                      final startIndex = rowIndex * maxRowItemLength;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 4.0),
+                return Column(
+                  children: [
+                    SizedBox(
+                      height: 24,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
                         child: Row(
-                          spacing: 4,
-                          children: List.generate(maxRowItemLength, (index) {
-                            final itemIndex = startIndex + index;
-                        
-                            if (itemIndex < items().length) {
-                              final path = items().elementAt(itemIndex);
-                              final isSelected = _selectedItems.contains(path);
-                              return Expanded(
-                                child: DroppedItem(
-                                  onEnter: () {
-                                    setState(() {
-                                      _isHoveredItem = true;
-                                    });
-                                  },
-                                  onExit: () {
-                                    setState(() {
-                                      _isHoveredItem = false;
-                                    });
-                                  },
-                                  onRemove: () {
-                                    items.remove(path);
-                                  },
-                                  path: path,
-                                  isSelected: isSelected,
-                                  onToggleSelection: () {
-                                    setState(() {
-                                      if (isSelected) {
-                                        _selectedItems.remove(path);
-                                      } else {
-                                        _selectedItems.add(path);
-                                      }
-                                    });
-                                  },
-                                  isHoveredItem: _isHoveredItem,
+                          children: [
+                            Expanded(
+                              child: Row(
+                                spacing: 4,
+                                children: [
+                                  MacosCheckbox(
+                                    value:
+                                        _selectedItems.length == items().length
+                                            ? true
+                                            : _selectedItems.isEmpty
+                                                ? false
+                                                : null,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        if (value == true) {
+                                          _selectedItems = Set.from(items());
+                                        } else {
+                                          _selectedItems.clear();
+                                        }
+                                      });
+                                    },
+                                  ),
+                                  SizedBox.square(
+                                    dimension: 16,
+                                    child: GlassButton(
+                                      secondary: true,
+                                      padding: EdgeInsets.zero,
+                                      radius: 3,
+                                      onTap: _shareSelectedFiles,
+                                      child: MacosIcon(
+                                        FluentIcons.share_20_regular,
+                                        color: MacosColors.labelColor
+                                            .resolvedColor(context),
+                                        size: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  '${items().length} Files',
+                                  style: const TextStyle(fontSize: 12),
                                 ),
-                              );
-                            } else {
-                              return const Expanded(child: SizedBox.shrink());
-                            }
-                          }),
+                              ],
+                            ),
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                spacing: 1,
+                                children: [
+                                  SizedBox.square(
+                                    dimension: 16,
+                                    child: GlassButton(
+                                      onTap: () {
+                                        setState(() {
+                                          _displayMode = DisplayMode.grid;
+                                        });
+                                      },
+                                      padding: EdgeInsets.zero,
+                                      radius: 3,
+                                      secondary:
+                                          _displayMode == DisplayMode.grid
+                                              ? false
+                                              : true,
+                                      child: MacosIcon(
+                                        FluentIcons.grid_20_regular,
+                                        color: MacosColors.labelColor
+                                            .resolvedColor(context),
+                                        size: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox.square(
+                                    dimension: 16,
+                                    child: GlassButton(
+                                      onTap: () {
+                                        setState(() {
+                                          _displayMode = DisplayMode.list;
+                                        });
+                                      },
+                                      padding: EdgeInsets.zero,
+                                      radius: 3,
+                                      secondary:
+                                          _displayMode == DisplayMode.list
+                                              ? false
+                                              : true,
+                                      child: MacosIcon(
+                                        FluentIcons
+                                            .text_bullet_list_ltr_20_regular,
+                                        color: MacosColors.labelColor
+                                            .resolvedColor(context),
+                                        size: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  );
-                }
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Center(
-                    child: AnimatedDefaultTextStyle(
-                      duration: Durations.long2,
-                      curve: Curves.fastEaseInToSlowEaseOut,
-                      style: TextStyle(
-                        color: _isHoveredWithItem
-                            ? MacosColors.controlAccentColor
-                            : MacosColors.labelColor.resolvedColor(context),
                       ),
-                      child: const Text('Drop files here'),
                     ),
-                  ),
+                    Divider(
+                      height: 1,
+                      color: MacosColors.systemGrayColor
+                          .resolvedColor(context)
+                          .withOpacity(.2),
+                    ),
+                    if (items().isNotEmpty)
+                      Expanded(
+                        child: AnimatedSwitcher(
+                          duration: Durations.medium2,
+                          switchInCurve: Curves.easeInOut,
+                          switchOutCurve: Curves.easeInOut,
+                          child: switch (_displayMode) {
+                            DisplayMode.list => SuperListView.separated(
+                                itemCount: items().length,
+                                separatorBuilder: (context, index) => Divider(
+                                  indent: 12,
+                                  endIndent: 12,
+                                  height: 1,
+                                  color: MacosColors.systemGrayColor
+                                      .resolvedColor(context)
+                                      .withOpacity(.2),
+                                ),
+                                itemBuilder: (context, index) {
+                                  final filePath = items().elementAt(index);
+                                  final file = File(filePath);
+                                  final fileName = path.basename(filePath);
+                                  final fileSize =
+                                      formatFileSize(file.lengthSync());
+                                  // final isImage = isImageFile(fileName);
+                                  // final isVideo = isVideoFile(fileName);
+                                  // final icon = isImage
+                                  //     ? FluentIcons.image_24_regular
+                                  //     : isVideo
+                                  //         ? FluentIcons.video_24_regular
+                                  //         : FluentIcons.document_24_regular;
+                                  return ContextMenuWidget(
+                                    menuProvider: (request) => Menu(
+                                      children: [
+                                        MenuAction(
+                                          callback: () {
+                                            Process.run(
+                                                'open', ['-R', filePath]);
+                                          },
+                                          title: 'Show in Finder',
+                                        ),
+                                        MenuAction(
+                                          callback: () {
+                                            items.remove(filePath);
+                                            _selectedItems.remove(filePath);
+                                          },
+                                          title: 'Remove',
+                                        ),
+                                      ],
+                                    ),
+                                    child: FileHoverWidget(
+                                      fileName: fileName,
+                                      fileSize: fileSize,
+                                      // icon: icon,
+                                      child: SizedBox.square(
+                                        dimension: 16,
+                                        child: FileImageWidget(
+                                          path: filePath,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            _ => SuperListView.builder(
+                                padding: const EdgeInsets.all(4),
+                                itemCount:
+                                    (items().length / maxRowItemLength).ceil(),
+                                itemBuilder: (context, rowIndex) {
+                                  final startIndex =
+                                      rowIndex * maxRowItemLength;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 4.0),
+                                    child: Row(
+                                      spacing: 4,
+                                      children: List.generate(maxRowItemLength,
+                                          (index) {
+                                        final itemIndex = startIndex + index;
+
+                                        if (itemIndex < items().length) {
+                                          final path =
+                                              items().elementAt(itemIndex);
+                                          final isSelected =
+                                              _selectedItems.contains(path);
+                                          return Expanded(
+                                            child: CustomDragGesture(
+                                              onDragStart: () {
+                                                if (!_selectedItems
+                                                    .contains(path)) {
+                                                  draggedItem = path;
+                                                  dropChannel
+                                                      .performDragSession(
+                                                          [path]);
+                                                } else {
+                                                  dropChannel
+                                                      .performDragSession(
+                                                          _selectedItems
+                                                              .toList());
+                                                }
+                                              },
+                                              child: DroppedItem(
+                                                onEnter: () {
+                                                  setState(() {
+                                                    _isHoveredItem = true;
+                                                  });
+                                                },
+                                                onExit: () {
+                                                  setState(() {
+                                                    _isHoveredItem = false;
+                                                  });
+                                                },
+                                                onRemove: () {
+                                                  items.remove(path);
+                                                  _selectedItems.remove(path);
+                                                },
+                                                path: path,
+                                                isSelected: isSelected,
+                                                onToggleSelection: () {
+                                                  setState(() {
+                                                    if (isSelected) {
+                                                      _selectedItems
+                                                          .remove(path);
+                                                    } else {
+                                                      _selectedItems.add(path);
+                                                    }
+                                                  });
+                                                },
+                                                isHoveredItem: _isHoveredItem,
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          return const Expanded(
+                                              child: SizedBox.shrink());
+                                        }
+                                      }),
+                                    ),
+                                  );
+                                },
+                              )
+                          },
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0).copyWith(top: 0),
+                          child: Center(
+                            child: AnimatedDefaultTextStyle(
+                              duration: Durations.long2,
+                              curve: Curves.fastEaseInToSlowEaseOut,
+                              style: TextStyle(
+                                color: _isDraggingItemIn
+                                    ? MacosColors.controlAccentColor
+                                    : MacosColors.labelColor
+                                        .resolvedColor(context),
+                              ),
+                              child: const Text('Drop files here'),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 );
               }),
         ),
       ),
     );
   }
+}
+
+enum DisplayMode {
+  grid,
+  list,
 }
