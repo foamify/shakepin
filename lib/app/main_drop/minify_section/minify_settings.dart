@@ -277,9 +277,9 @@ class _MinifySettingsState extends State<MinifySettings> {
       debugPrint('Starting video minification process...');
       await cli.minifyVideo(
         outputPath,
-        outputPath,
         quality: _videoQuality.name,
-        format: _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
+        format:
+            _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
         onProgress: (progress) {
           minifyOneFileProgress.value = progress;
           // debugPrint(
@@ -323,7 +323,8 @@ class _MinifySettingsState extends State<MinifySettings> {
 
       await cli.minifyImage(
         outputPath,
-        outputPath,
+        fileExtension:
+            _imageFormat == ImageFormat.sameAsInput ? null : _imageFormat.name,
         quality: _imageQuality.value,
         onProgress: (progress) {
           minifyOneFileProgress.value = progress;

@@ -176,13 +176,16 @@ class Cli {
 
   // MARK: - Minify Image
 
-  Future<void> minifyImage(String inputPath, String outputPath,
-      {int quality = 95, void Function(double)? onProgress}) async {
+  Future<void> minifyImage(String inputPath,
+      {String? fileExtension,
+      int quality = 95,
+      void Function(double)? onProgress}) async {
     if (_currentProcess != null) {
       debugPrint('A process is already running. Please cancel it first.');
       return;
     }
-    final outputPath = _getUniqueFilePath(inputPath, suffix: '_minified');
+    final outputPath = _getUniqueFilePath(inputPath,
+        suffix: '_minified', inputExtension: fileExtension);
     final args = [
       inputPath,
       '-quality',
@@ -233,7 +236,7 @@ class Cli {
 
   // MARK: - Minify Video
 
-  Future<void> minifyVideo(String inputPath, String outputPath,
+  Future<void> minifyVideo(String inputPath,
       {String? format,
       String quality = 'medium',
       bool enableHardwareAcceleration = true,
@@ -246,7 +249,7 @@ class Cli {
     format ??= path.extension(inputPath);
 
     final finalOutputPath =
-        _getUniqueFilePath(outputPath, inputExtension: format);
+        _getUniqueFilePath(inputPath, inputExtension: format);
 
     List<String> ffmpegArgs = [];
 
@@ -381,8 +384,9 @@ class Cli {
     }
 
     final bool hasExtension = filePath.contains('.');
-    final String fileExtension = inputExtension ??
-        (hasExtension ? filePath.substring(filePath.lastIndexOf('.')) : '');
+    final String fileExtension = (inputExtension ??
+            (hasExtension ? filePath.substring(filePath.lastIndexOf('.')) : ''))
+        .toLowerCase();
     final String pathWithoutExt = hasExtension
         ? filePath.substring(0, filePath.lastIndexOf('.'))
         : filePath;
@@ -391,7 +395,7 @@ class Cli {
     String newPath;
     do {
       newPath =
-          '$pathWithoutExt${suffix ?? ''}${counter > 0 ? ' ($counter)' : ''}$fileExtension';
+          '$pathWithoutExt${suffix ?? ''}${counter > 0 ? ' ($counter)' : ''}.$fileExtension';
       counter++;
     } while (File(newPath).existsSync());
 
