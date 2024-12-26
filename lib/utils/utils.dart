@@ -27,9 +27,9 @@ bool isVideoFile(String filePath) {
     '.m4v', '.mkv', '.mov', '.mp4', '.mpd', '.mpeg', '.mpg', '.mts', '.mxf',
     '.ogg', '.ogv', '.ps', '.ts', '.vob', '.webm', '.wmv', '.wtv',
     // Audio formats that can be in video containers
-    '.aac', '.ac3', '.eac3', '.m4a', '.mp3', '.wav',
+    // '.aac', '.ac3', '.eac3', '.m4a', '.mp3', '.wav',
     // Less common but supported formats
-    '.rm', '.rmvb', '.swf', '.y4m',
+    // '.rm', '.rmvb', '.swf', '.y4m',
   ];
   return videoExtensions.any((ext) => filePath.toLowerCase().endsWith(ext));
 }

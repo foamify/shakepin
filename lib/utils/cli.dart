@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter_pty/flutter_pty.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 final carriageReturn = Platform.isWindows ? '\r\n' : '\n';
 
@@ -27,6 +28,7 @@ final cli = Cli._();
 class Cli {
   late final Pty pty;
   final listeners = <CliListener>[];
+  Process? _currentProcess;
 
   Cli._() {
     init();
@@ -64,12 +66,23 @@ class Cli {
     listeners.remove(listener);
   }
 
+  void cancel() {
+    if (_currentProcess != null) {
+      _currentProcess!.kill();
+      debugPrint('Process canceled');
+    }
+  }
+
   // MARK: - Process
 
   // MARK: - Convert to WAV
 
   Future<void> convertToWav(String inputPath, String outputPath,
       {Duration? startTime, Duration? endTime}) async {
+    if (_currentProcess != null) {
+      debugPrint('A process is already running. Please cancel it first.');
+      return;
+    }
     List<String> ffmpegArgs = ['-i', inputPath];
 
     if (startTime != null) {
@@ -87,24 +100,24 @@ class Cli {
       '-ac',
       '1',
       '-y',
-      'outputPath',
+      outputPath,
     ]);
 
     try {
-      final process = await Process.start('ffmpeg', ffmpegArgs);
+      _currentProcess = await Process.start('ffmpeg', ffmpegArgs);
 
       // Handle stdout
-      process.stdout.transform(utf8.decoder).listen((data) {
+      _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
         debugPrint('[Process.convertToWav] Output: $data');
       });
 
       // Handle stderr
-      process.stderr.transform(utf8.decoder).listen((data) {
+      _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
         debugPrint('[Process.convertToWav] Error: $data');
       });
 
       // Wait for the process to complete
-      final exitCode = await process.exitCode;
+      final exitCode = await _currentProcess!.exitCode;
       debugPrint('[Process.convertToWav] Process exited with code: $exitCode');
 
       if (exitCode != 0) {
@@ -113,12 +126,18 @@ class Cli {
     } catch (e) {
       debugPrint('[Process.convertToWav] Error: $e');
       rethrow;
+    } finally {
+      _currentProcess = null;
     }
   }
 
   // MARK: - Convert to ICO
 
   Future<void> convertToIco(String inputPath, String outputPath) async {
+    if (_currentProcess != null) {
+      debugPrint('A process is already running. Please cancel it first.');
+      return;
+    }
     final args = [
       'magick',
       inputPath,
@@ -128,20 +147,20 @@ class Cli {
     ];
 
     try {
-      final process = await Process.start('magick', args);
+      _currentProcess = await Process.start('magick', args);
 
       // Handle stdout
-      process.stdout.transform(utf8.decoder).listen((data) {
+      _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
         debugPrint('[Process.convertToIco] Output: $data');
       });
 
       // Handle stderr
-      process.stderr.transform(utf8.decoder).listen((data) {
+      _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
         debugPrint('[Process.convertToIco] Error: $data');
       });
 
       // Wait for the process to complete
-      final exitCode = await process.exitCode;
+      final exitCode = await _currentProcess!.exitCode;
       debugPrint('[Process.convertToIco] Process exited with code: $exitCode');
 
       if (exitCode != 0) {
@@ -150,30 +169,55 @@ class Cli {
     } catch (e) {
       debugPrint('[Process.convertToIco] Error: $e');
       rethrow;
+    } finally {
+      _currentProcess = null;
     }
   }
 
   // MARK: - Minify Image
 
   Future<void> minifyImage(String inputPath, String outputPath,
-      {int quality = 95}) async {
-    final args = [inputPath, '-quality', quality.toString(), outputPath];
+      {int quality = 95, void Function(double)? onProgress}) async {
+    if (_currentProcess != null) {
+      debugPrint('A process is already running. Please cancel it first.');
+      return;
+    }
+    final outputPath = _getUniqueFilePath(inputPath, suffix: '_minified');
+    final args = [
+      inputPath,
+      '-quality',
+      quality.toString(),
+      '-monitor',
+      outputPath
+    ];
 
     try {
-      final process = await Process.start('magick', args);
+      _currentProcess = await Process.start('magick', args);
 
       // Handle stdout
-      process.stdout.transform(utf8.decoder).listen((data) {
+      _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
         debugPrint('[Process.minifyImage] Output: $data');
       });
 
       // Handle stderr
-      process.stderr.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.minifyImage] Error: $data');
+      _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
+        // debugPrint('[Process.minifyImage] Error: $data');
+
+        // Parse progress
+        if (onProgress != null) {
+          final match =
+              RegExp(r'(\d+) of (\d+), (\d+)% complete').firstMatch(data);
+          if (match != null) {
+            final current = int.parse(match.group(1)!);
+            final total = int.parse(match.group(2)!);
+            final progress = current / total;
+            onProgress(progress);
+          }
+        }
       });
 
       // Wait for the process to complete
-      final exitCode = await process.exitCode;
+      final exitCode = await _currentProcess!.exitCode;
       debugPrint('[Process.minifyImage] Process exited with code: $exitCode');
 
       if (exitCode != 0) {
@@ -182,21 +226,27 @@ class Cli {
     } catch (e) {
       debugPrint('[Process.minifyImage] Error: $e');
       rethrow;
+    } finally {
+      _currentProcess = null;
     }
   }
 
   // MARK: - Minify Video
 
   Future<void> minifyVideo(String inputPath, String outputPath,
-      {String format = 'mp4',
+      {String? format,
       String quality = 'medium',
       bool enableHardwareAcceleration = true,
       void Function(double)? onProgress}) async {
-    // Remove extension from output path and append format
-    final outputWithoutExt = outputPath.contains('.')
-        ? outputPath.substring(0, outputPath.lastIndexOf('.'))
-        : outputPath;
-    final finalOutputPath = _getUniqueFilePath('$outputWithoutExt.$format');
+    if (_currentProcess != null) {
+      debugPrint('A process is already running. Please cancel it first.');
+      return;
+    }
+
+    format ??= path.extension(inputPath);
+
+    final finalOutputPath =
+        _getUniqueFilePath(outputPath, inputExtension: format);
 
     List<String> ffmpegArgs = [];
 
@@ -285,15 +335,15 @@ class Cli {
       ]);
       final duration = double.parse((probeResult.stdout as String).trim());
 
-      final process = await Process.start('ffmpeg', ffmpegArgs);
+      _currentProcess = await Process.start('ffmpeg', ffmpegArgs);
 
       // Handle stdout
-      process.stdout.transform(utf8.decoder).listen((data) {
+      _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
         debugPrint('[Process.minifyVideo] Output: $data');
       });
 
       // Handle stderr
-      process.stderr.transform(utf8.decoder).listen((data) {
+      _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
         debugPrint('[Process.minifyVideo] Error: $data');
 
         // Parse progress
@@ -310,7 +360,7 @@ class Cli {
       });
 
       // Wait for the process to complete
-      final exitCode = await process.exitCode;
+      final exitCode = await _currentProcess!.exitCode;
       debugPrint('[Process.minifyVideo] Process exited with code: $exitCode');
 
       if (exitCode != 0) {
@@ -319,25 +369,29 @@ class Cli {
     } catch (e) {
       debugPrint('[Process.minifyVideo] Error: $e');
       rethrow;
+    } finally {
+      _currentProcess = null;
     }
   }
 
-  String _getUniqueFilePath(String filePath) {
+  String _getUniqueFilePath(String filePath,
+      {String? suffix, String? inputExtension}) {
     if (!File(filePath).existsSync()) {
       return filePath;
     }
 
-    final extension = filePath.contains('.')
-        ? filePath.substring(filePath.lastIndexOf('.'))
-        : '';
-    final pathWithoutExt = filePath.contains('.')
+    final bool hasExtension = filePath.contains('.');
+    final String fileExtension = inputExtension ??
+        (hasExtension ? filePath.substring(filePath.lastIndexOf('.')) : '');
+    final String pathWithoutExt = hasExtension
         ? filePath.substring(0, filePath.lastIndexOf('.'))
         : filePath;
 
-    int counter = 1;
+    int counter = 0;
     String newPath;
     do {
-      newPath = '$pathWithoutExt ($counter)$extension';
+      newPath =
+          '$pathWithoutExt${suffix ?? ''}${counter > 0 ? ' ($counter)' : ''}$fileExtension';
       counter++;
     } while (File(newPath).existsSync());
 
@@ -362,7 +416,7 @@ class Cli {
     ];
 
     try {
-      final process = await Process.start('ffprobe', args);
+      final process = await Process.run('ffprobe', args);
       print('Executing "ffprobe ${args.join(' ')}"');
 
       final completer = Completer<Duration?>();

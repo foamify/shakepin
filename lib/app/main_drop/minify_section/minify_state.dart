@@ -44,6 +44,14 @@ enum ImageQuality {
         ImageQuality.high => 'High',
         ImageQuality.highest => 'Highest',
       };
+
+  int get value => switch (this) {
+        ImageQuality.lowest => 30,
+        ImageQuality.low => 50,
+        ImageQuality.normal => 80,
+        ImageQuality.high => 90,
+        ImageQuality.highest => 95,
+      };
 }
 
 enum VideoQuality {

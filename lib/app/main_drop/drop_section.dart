@@ -75,6 +75,10 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
   Widget build(BuildContext context) {
     const maxRowItemLength = 3;
 
+    final containsVideoOnly = items().containsVideo && !items().containsImage;
+    final containsImageOnly = items().containsImage && !items().containsVideo;
+    final containsBoth = items().containsVideo && items().containsImage;
+
     return DropTarget(
       label: 'main-drop-app',
       onDragEnter: (details) {
@@ -104,7 +108,10 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
         //   MediaQuery.sizeOf(context).width - 16,
         // ),
         height: switch (appMode()) {
-          AppMode.minify => AppSizes.main.height - 24,
+          // AppMode.minify when containsVideoOnly => 300,
+          // AppMode.minify when containsImageOnly => 300,
+          // AppMode.minify when containsBoth => 218,
+          AppMode.minify => null,
           _ => MediaQuery.sizeOf(context).height - 16,
         },
         child: AnimatedContainer(

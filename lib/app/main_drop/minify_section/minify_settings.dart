@@ -202,49 +202,6 @@ class _MinifySettingsState extends State<MinifySettings> {
                                       style: TextStyle(fontSize: 14)),
                                 ),
                         ),
-                        if (errorMessages().isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color:
-                                  MacosColors.systemRedColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Text(
-                                      'Errors:',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: MacosColors.systemRedColor,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    GlassButton(
-                                      secondary: true,
-                                      onTap: () =>
-                                          setState(() => errorMessages.clear()),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 4, horizontal: 8),
-                                      child: const Text('Clear'),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                ...errorMessages().map((error) => Text(
-                                      error,
-                                      style: const TextStyle(
-                                          fontSize: 12,
-                                          color: MacosColors.systemRedColor),
-                                    )),
-                              ],
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -256,8 +213,11 @@ class _MinifySettingsState extends State<MinifySettings> {
   }
 
   void cancelMinification() {
-    // TODO: Cancel minification
-    print('TODO: Cancel minification');
+    cli.cancel();
+    processedFiles.value = 0;
+    minifyInProgress.value = false;
+    minifyOneFileProgress.value = 0;
+    totalFiles.value = 0;
   }
 
   void minifyFiles() async {
@@ -266,13 +226,15 @@ class _MinifySettingsState extends State<MinifySettings> {
     final imagePaths = items().imagePaths;
     totalFiles.value = videoPaths.length + imagePaths.length;
     minifyInProgress.value = true;
+    for (var path in imagePaths) {
+      minifyOneFileProgress.value = 0;
+      await minifyImage(path);
+      processedFiles.value++;
+    }
     for (var path in videoPaths) {
       minifyOneFileProgress.value = 0;
       await minifyVideo(path);
-    }
-    for (var path in imagePaths) {
-      minifyOneFileProgress.value = 0;
-      // await minifyImage(path);
+      processedFiles.value++;
     }
     await Future.delayed(const Duration(milliseconds: 800));
     processedFiles.value = totalFiles.value;
@@ -280,10 +242,10 @@ class _MinifySettingsState extends State<MinifySettings> {
     minifyInProgress.value = false;
   }
 
-  Future<void> minifyVideo(String path) async {
-    debugPrint('Starting minification for video: $path');
+  Future<void> minifyVideo(String outputPath) async {
+    debugPrint('Starting minification for video: $outputPath');
+    final stopwatch = Stopwatch()..start();
     try {
-      final outputPath = '${path}_minified.mp4';
       debugPrint('Output path set to: $outputPath');
 
       // Use which command to find ffprobe path
@@ -302,7 +264,7 @@ class _MinifySettingsState extends State<MinifySettings> {
         'format=duration',
         '-of',
         'default=noprint_wrappers=1:nokey=1',
-        path
+        outputPath
       ]);
 
       if (probeResult.exitCode != 0) {
@@ -314,28 +276,28 @@ class _MinifySettingsState extends State<MinifySettings> {
 
       debugPrint('Starting video minification process...');
       await cli.minifyVideo(
-        path,
+        outputPath,
         outputPath,
         quality: _videoQuality.name,
-        format: _videoFormat.name,
+        format: _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
         onProgress: (progress) {
           minifyOneFileProgress.value = progress;
-          debugPrint(
-              'Minification progress: ${(progress * 100).toStringAsFixed(2)}%');
+          // debugPrint(
+          //     'Minification progress: ${(progress * 100).toStringAsFixed(2)}%');
         },
       );
 
-      final originalSize = File(path).lengthSync();
+      final originalSize = File(outputPath).lengthSync();
       final minifiedSize = File(outputPath).lengthSync();
       debugPrint('Original size: $originalSize bytes');
       debugPrint('Minified size: $minifiedSize bytes');
 
       final minifiedFile = MinifiedFile(
-        originalPath: path,
+        originalPath: outputPath,
         minifiedPath: outputPath,
         originalSize: originalSize,
         minifiedSize: minifiedSize,
-        duration: Duration(milliseconds: (duration * 1000).round()),
+        duration: stopwatch.elapsed,
       );
       minifiedFiles.value = [...minifiedFiles(), minifiedFile];
       debugPrint('Minified file added to the list');
@@ -344,17 +306,57 @@ class _MinifySettingsState extends State<MinifySettings> {
       debugPrint('Compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
     } catch (e) {
       debugPrint('Error occurred during minification: $e');
-      errorMessages.value = [...errorMessages(), 'Failed to minify $path: $e'];
+      errorMessages.value = [
+        ...errorMessages(),
+        'Failed to minify $outputPath: $e'
+      ];
     }
-    debugPrint('Minification process completed for: $path');
+    stopwatch.stop();
+    debugPrint('Minification process completed for: $outputPath');
   }
 
-  // Future<void> minifyImage(String path) async {
-  //   final minifiedFile = await minifyImageFile(path);
-  //   if (minifiedFile != null) {
-  //     minifiedFiles.value = [...minifiedFiles(), minifiedFile];
-  //   } else {
-  //     errorMessages.value = [...errorMessages(), 'Failed to minify $path'];
-  //   }
-  // }
+  Future<void> minifyImage(String outputPath) async {
+    debugPrint('Starting minification for image: $outputPath');
+    final stopwatch = Stopwatch()..start();
+    try {
+      debugPrint('Output path set to: $outputPath');
+
+      await cli.minifyImage(
+        outputPath,
+        outputPath,
+        quality: _imageQuality.value,
+        onProgress: (progress) {
+          minifyOneFileProgress.value = progress;
+          // debugPrint(
+          //     'Minification progress: ${(progress * 100).toStringAsFixed(2)}%');
+        },
+      );
+
+      final originalSize = File(outputPath).lengthSync();
+      final minifiedSize = File(outputPath).lengthSync();
+      debugPrint('Original size: $originalSize bytes');
+      debugPrint('Minified size: $minifiedSize bytes');
+
+      final minifiedFile = MinifiedFile(
+        originalPath: outputPath,
+        minifiedPath: outputPath,
+        originalSize: originalSize,
+        minifiedSize: minifiedSize,
+        duration: stopwatch.elapsed,
+      );
+      minifiedFiles.value = [...minifiedFiles(), minifiedFile];
+      debugPrint('Minified file added to the list');
+
+      final compressionRatio = (1 - (minifiedSize / originalSize)) * 100;
+      debugPrint('Compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
+    } catch (e) {
+      debugPrint('Error occurred during image minification: $e');
+      errorMessages.value = [
+        ...errorMessages(),
+        'Failed to minify $outputPath: $e'
+      ];
+    }
+    stopwatch.stop();
+    debugPrint('Minification process completed for: $outputPath');
+  }
 }
