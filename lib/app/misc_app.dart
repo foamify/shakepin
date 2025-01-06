@@ -5,6 +5,7 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/app/misc/tools/tools.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_hover_widget.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
@@ -40,7 +41,7 @@ class _MiscAppState extends State<MiscApp> {
         child: NativeDropdownButton<ToolType>(
           value: _selectedTool,
           onChanged: (ToolType? newValue) {
-            print('onChanged');
+            logger.log('onChanged');
             if (newValue != null) {
               setState(() {
                 _selectedTool = newValue;

@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
 import 'package:shakepin/app/minify_app_common.dart';
 import 'package:shakepin/utils/handle_menu_item.dart';
 import 'package:flutter/foundation.dart';
@@ -78,7 +79,7 @@ class DropChannel {
               .onDraggingUpdated(Offset(args[1] as double, args[2] as double));
 
         default:
-        // print('DropChannel: unknown method ${call.method}');
+        // logger.log('DropChannel: unknown method ${call.method}');
       }
     });
   }

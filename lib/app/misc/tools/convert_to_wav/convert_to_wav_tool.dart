@@ -7,6 +7,7 @@ import 'package:shakepin/app/misc/tools/tool.dart';
 import 'package:shakepin/app/misc/tools/widgets/common_tool_widgets.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/cli.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/widgets/double_slider.dart';
 
 class ConvertToWavTool extends ToolWidget {
@@ -39,27 +40,27 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
   }
 
   Future<void> _getMediaDuration() async {
-    print('[_getMediaDuration] Starting to get media duration');
+    logger.log('[_getMediaDuration] Starting to get media duration');
     if (items().isEmpty) {
-      print('[_getMediaDuration] No items found, returning early');
+      logger.log('[_getMediaDuration] No items found, returning early');
       return;
     }
 
     try {
-      print('[_getMediaDuration] Getting duration for file: ${items().first}');
+      logger.log('[_getMediaDuration] Getting duration for file: ${items().first}');
       final duration = await _cli.getMediaDuration(items().first);
-      print('[_getMediaDuration] Received duration: $duration');
+      logger.log('[_getMediaDuration] Received duration: $duration');
       if (duration != null) {
         setState(() {
-          print('[_getMediaDuration] Updating state with duration: $duration');
+          logger.log('[_getMediaDuration] Updating state with duration: $duration');
           _mediaDuration = duration;
           _endTime = _mediaDuration;
         });
       } else {
-        print('[_getMediaDuration] Duration was null');
+        logger.log('[_getMediaDuration] Duration was null');
       }
     } catch (e) {
-      print('[_getMediaDuration] Error occurred: $e');
+      logger.log('[_getMediaDuration] Error occurred: $e');
       setState(() {
         _errorMessage = e.toString();
       });
@@ -76,9 +77,9 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
   }
 
   Future<void> _convertToWav() async {
-    print('[_convertToWav] Starting conversion');
+    logger.log('[_convertToWav] Starting conversion');
     if (items().isEmpty) {
-      print('[_convertToWav] No items to convert');
+      logger.log('[_convertToWav] No items to convert');
       return;
     }
 
@@ -88,10 +89,10 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
     });
 
     final String inputPath = items().first;
-    print('[_convertToWav] Input path: $inputPath');
+    logger.log('[_convertToWav] Input path: $inputPath');
 
     if (outputDirectory.value == null) {
-      print('[_convertToWav] Loading output directory');
+      logger.log('[_convertToWav] Loading output directory');
       await loadOutputDirectory();
     }
 
@@ -100,14 +101,14 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
         outputDirectory.value!,
         '${path.basenameWithoutExtension(inputPath)}_16k.wav',
       );
-      print('[_convertToWav] Output path: $outputPath');
+      logger.log('[_convertToWav] Output path: $outputPath');
 
       try {
-        print('[_convertToWav] Starting conversion process');
-        print('[_convertToWav] Trim enabled: $_enableTrim');
+        logger.log('[_convertToWav] Starting conversion process');
+        logger.log('[_convertToWav] Trim enabled: $_enableTrim');
         if (_enableTrim) {
-          print('[_convertToWav] Start time: $_startTime');
-          print('[_convertToWav] End time: $_endTime');
+          logger.log('[_convertToWav] Start time: $_startTime');
+          logger.log('[_convertToWav] End time: $_endTime');
         }
 
         await _cli.convertToWav(
@@ -117,20 +118,20 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
           endTime: _enableTrim ? _endTime : null,
         );
 
-        print('[_convertToWav] Conversion completed successfully');
+        logger.log('[_convertToWav] Conversion completed successfully');
         setState(() {
           _outputPath = outputPath;
           _isConverting = false;
         });
       } catch (e) {
-        print('[_convertToWav] Error during conversion: $e');
+        logger.log('[_convertToWav] Error during conversion: $e');
         setState(() {
           _errorMessage = 'Error converting to WAV: $e';
           _isConverting = false;
         });
       }
     } else {
-      print('[_convertToWav] No output directory selected');
+      logger.log('[_convertToWav] No output directory selected');
       setState(() {
         _errorMessage = 'No output directory selected';
         _isConverting = false;

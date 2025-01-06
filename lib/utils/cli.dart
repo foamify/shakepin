@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'package:flutter_pty/flutter_pty.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:shakepin/utils/logger.dart';
 
 final carriageReturn = Platform.isWindows ? '\r\n' : '\n';
 
@@ -69,7 +69,7 @@ class Cli {
   void cancel() {
     if (_currentProcess != null) {
       _currentProcess!.kill();
-      debugPrint('Process canceled');
+      logger.log('Process canceled');
     }
   }
 
@@ -80,7 +80,7 @@ class Cli {
   Future<void> convertToWav(String inputPath, String outputPath,
       {Duration? startTime, Duration? endTime}) async {
     if (_currentProcess != null) {
-      debugPrint('A process is already running. Please cancel it first.');
+      logger.log('A process is already running. Please cancel it first.');
       return;
     }
     List<String> ffmpegArgs = ['-i', inputPath];
@@ -108,23 +108,23 @@ class Cli {
 
       // Handle stdout
       _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.convertToWav] Output: $data');
+        logger.log('[Process.convertToWav] Output: $data');
       });
 
       // Handle stderr
       _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.convertToWav] Error: $data');
+        logger.log('[Process.convertToWav] Error: $data');
       });
 
       // Wait for the process to complete
       final exitCode = await _currentProcess!.exitCode;
-      debugPrint('[Process.convertToWav] Process exited with code: $exitCode');
+      logger.log('[Process.convertToWav] Process exited with code: $exitCode');
 
       if (exitCode != 0) {
         throw Exception('FFmpeg process failed with exit code: $exitCode');
       }
     } catch (e) {
-      debugPrint('[Process.convertToWav] Error: $e');
+      logger.log('[Process.convertToWav] Error: $e');
       rethrow;
     } finally {
       _currentProcess = null;
@@ -135,7 +135,7 @@ class Cli {
 
   Future<void> convertToIco(String inputPath, String outputPath) async {
     if (_currentProcess != null) {
-      debugPrint('A process is already running. Please cancel it first.');
+      logger.log('A process is already running. Please cancel it first.');
       return;
     }
     final args = [
@@ -151,23 +151,23 @@ class Cli {
 
       // Handle stdout
       _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.convertToIco] Output: $data');
+        logger.log('[Process.convertToIco] Output: $data');
       });
 
       // Handle stderr
       _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.convertToIco] Error: $data');
+        logger.log('[Process.convertToIco] Error: $data');
       });
 
       // Wait for the process to complete
       final exitCode = await _currentProcess!.exitCode;
-      debugPrint('[Process.convertToIco] Process exited with code: $exitCode');
+      logger.log('[Process.convertToIco] Process exited with code: $exitCode');
 
       if (exitCode != 0) {
         throw Exception('ImageMagick process failed with exit code: $exitCode');
       }
     } catch (e) {
-      debugPrint('[Process.convertToIco] Error: $e');
+      logger.log('[Process.convertToIco] Error: $e');
       rethrow;
     } finally {
       _currentProcess = null;
@@ -180,12 +180,33 @@ class Cli {
       {String? fileExtension,
       int quality = 95,
       void Function(double)? onProgress}) async {
+    logger.log('=== Starting Image Minification Process ===');
+    logger.log('Input path: $inputPath');
+    logger.log('Target quality: $quality');
+    logger.log('Target format: ${fileExtension ?? "same as input"}');
+
     if (_currentProcess != null) {
-      debugPrint('A process is already running. Please cancel it first.');
+      logger
+          .log('⚠️ Process conflict: Another minification process is running');
+      logger.log('Current process PID: ${_currentProcess!.pid}');
+      logger.log('Aborting new minification request');
       return;
     }
+
     final outputPath = _getUniqueFilePath(inputPath,
         suffix: '_minified', inputExtension: fileExtension);
+    logger.log('Generated output path: $outputPath');
+
+    final inputFile = File(inputPath);
+    if (!inputFile.existsSync()) {
+      logger.log('❌ Error: Input file does not exist at path: $inputPath');
+      throw FileSystemException('Input file not found', inputPath);
+    }
+
+    final inputFileSize = await inputFile.length();
+    logger.log(
+        'Input file size: ${(inputFileSize / 1024).toStringAsFixed(2)} KB');
+
     final args = [
       inputPath,
       '-quality',
@@ -193,44 +214,81 @@ class Cli {
       '-monitor',
       outputPath
     ];
+    logger.log('ImageMagick command arguments: $args');
 
     try {
+      logger.log('🚀 Launching ImageMagick process...');
       _currentProcess = await Process.start('magick', args);
+      logger.log('Process started with PID: ${_currentProcess!.pid}');
 
       // Handle stdout
-      _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.minifyImage] Output: $data');
-      });
+      _currentProcess!.stdout.transform(utf8.decoder).listen(
+        (data) {
+          logger.log('[ImageMagick stdout] $data');
+        },
+        onError: (error) {
+          logger.log('❌ Error on stdout stream: $error');
+        },
+        onDone: () {
+          logger.log('stdout stream completed');
+        },
+      );
 
       // Handle stderr
-      _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
-        // debugPrint('[Process.minifyImage] Error: $data');
-
-        // Parse progress
-        if (onProgress != null) {
-          final match =
-              RegExp(r'(\d+) of (\d+), (\d+)% complete').firstMatch(data);
-          if (match != null) {
-            final current = int.parse(match.group(1)!);
-            final total = int.parse(match.group(2)!);
-            final progress = current / total;
-            onProgress(progress);
+      _currentProcess!.stderr.transform(utf8.decoder).listen(
+        (data) {
+          // Parse progress
+          if (onProgress != null) {
+            final match =
+                RegExp(r'(\d+) of (\d+), (\d+)% complete').firstMatch(data);
+            if (match != null) {
+              final current = int.parse(match.group(1)!);
+              final total = int.parse(match.group(2)!);
+              final progress = current / total;
+              logger.log(
+                  'Processing frame $current of $total (${(progress * 100).toStringAsFixed(1)}%)');
+              onProgress(progress);
+            } else {
+              logger.log('[ImageMagick stderr] $data');
+            }
           }
-        }
-      });
+        },
+        onError: (error) {
+          logger.log('❌ Error on stderr stream: $error');
+        },
+        onDone: () {
+          logger.log('stderr stream completed');
+        },
+      );
 
-      // Wait for the process to complete
+      logger.log('Waiting for process completion...');
       final exitCode = await _currentProcess!.exitCode;
-      debugPrint('[Process.minifyImage] Process exited with code: $exitCode');
+      logger.log('Process exited with code: $exitCode');
 
       if (exitCode != 0) {
+        logger.log('❌ Process failed with exit code: $exitCode');
         throw Exception('ImageMagick process failed with exit code: $exitCode');
       }
+
+      final outputFile = File(outputPath);
+      if (outputFile.existsSync()) {
+        final outputFileSize = await outputFile.length();
+        final compressionRatio = (1 - (outputFileSize / inputFileSize)) * 100;
+        logger.log(
+            'Output file size: ${(outputFileSize / 1024).toStringAsFixed(2)} KB');
+        logger
+            .log('Compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
+      } else {
+        logger.log('❌ Warning: Output file was not created');
+      }
     } catch (e) {
-      debugPrint('[Process.minifyImage] Error: $e');
+      logger.log('❌ Critical error during minification: $e');
+      logger.log('Stack trace: ${StackTrace.current}');
       rethrow;
     } finally {
+      logger.log('Cleaning up process resources');
       _currentProcess = null;
+      logger.log('=== Image Minification Process Completed ===');
     }
   }
 
@@ -241,15 +299,22 @@ class Cli {
       String quality = 'medium',
       bool enableHardwareAcceleration = true,
       void Function(double)? onProgress}) async {
+    await logger.log('[Process.minifyVideo] Starting video minification');
     if (_currentProcess != null) {
-      debugPrint('A process is already running. Please cancel it first.');
+      await logger.log('A process is already running. Please cancel it first.');
       return;
     }
 
     format ??= path.extension(inputPath);
+    await logger.log('[Process.minifyVideo] Input path: $inputPath');
+    await logger.log('[Process.minifyVideo] Format: $format');
+    await logger.log('[Process.minifyVideo] Quality: $quality');
+    await logger.log(
+        '[Process.minifyVideo] Hardware acceleration: $enableHardwareAcceleration');
 
     final finalOutputPath =
         _getUniqueFilePath(inputPath, inputExtension: format);
+    await logger.log('[Process.minifyVideo] Output path: $finalOutputPath');
 
     List<String> ffmpegArgs = [];
 
@@ -271,6 +336,8 @@ class Cli {
           'highest' => '12',
           _ => '30',
         };
+        await logger
+            .log('[Process.minifyVideo] Using WebM encoding with CRF: $crf');
         ffmpegArgs.addAll([
           '-c:v',
           'libvpx-vp9',
@@ -286,6 +353,7 @@ class Cli {
           'libopus',
         ]);
       case 'gif':
+        await logger.log('[Process.minifyVideo] Using GIF encoding');
         ffmpegArgs.addAll([
           '-vf',
           'fps=10,scale=500:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
@@ -301,6 +369,8 @@ class Cli {
           'highest' => '12',
           _ => '30',
         };
+        await logger
+            .log('[Process.minifyVideo] Using MP4 encoding with CRF: $crf');
         ffmpegArgs.addAll([
           '-c:v',
           'libx264',
@@ -324,9 +394,11 @@ class Cli {
     }
 
     ffmpegArgs.add(finalOutputPath);
+    await logger.log(
+        '[Process.minifyVideo] FFmpeg command: ffmpeg ${ffmpegArgs.join(" ")}');
 
     try {
-      // Get video duration first
+      await logger.log('[Process.minifyVideo] Getting video duration...');
       final probeResult = await Process.run('ffprobe', [
         '-v',
         'error',
@@ -337,17 +409,20 @@ class Cli {
         inputPath
       ]);
       final duration = double.parse((probeResult.stdout as String).trim());
+      await logger.log(
+          '[Process.minifyVideo] Video duration: ${duration.toStringAsFixed(2)} seconds');
 
+      await logger.log('[Process.minifyVideo] Starting FFmpeg process...');
       _currentProcess = await Process.start('ffmpeg', ffmpegArgs);
 
       // Handle stdout
-      _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.minifyVideo] Output: $data');
+      _currentProcess!.stdout.transform(utf8.decoder).listen((data) async {
+        await logger.log('[Process.minifyVideo] Output: $data');
       });
 
       // Handle stderr
-      _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.minifyVideo] Error: $data');
+      _currentProcess!.stderr.transform(utf8.decoder).listen((data) async {
+        await logger.log('[Process.minifyVideo] FFmpeg: $data');
 
         // Parse progress
         final match =
@@ -358,22 +433,38 @@ class Cli {
           final seconds = double.parse(match.group(3)!);
           final currentTime = hours * 3600 + minutes * 60 + seconds;
           final progress = currentTime / duration;
+          await logger.log(
+              '[Process.minifyVideo] Progress: ${(progress * 100).toStringAsFixed(2)}%');
           onProgress(progress);
         }
       });
 
       // Wait for the process to complete
       final exitCode = await _currentProcess!.exitCode;
-      debugPrint('[Process.minifyVideo] Process exited with code: $exitCode');
+      await logger.log(
+          '[Process.minifyVideo] Process completed with exit code: $exitCode');
 
       if (exitCode != 0) {
         throw Exception('FFmpeg process failed with exit code: $exitCode');
       }
+
+      final inputSize = await File(inputPath).length();
+      final outputSize = await File(finalOutputPath).length();
+      final compressionRatio = (1 - (outputSize / inputSize)) * 100;
+
+      await logger.log('[Process.minifyVideo] Compression results:');
+      await logger.log(
+          '[Process.minifyVideo] Original size: ${(inputSize / 1024 / 1024).toStringAsFixed(2)} MB');
+      await logger.log(
+          '[Process.minifyVideo] Compressed size: ${(outputSize / 1024 / 1024).toStringAsFixed(2)} MB');
+      await logger.log(
+          '[Process.minifyVideo] Compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
     } catch (e) {
-      debugPrint('[Process.minifyVideo] Error: $e');
+      await logger.log('[Process.minifyVideo] Error: $e');
       rethrow;
     } finally {
       _currentProcess = null;
+      await logger.log('[Process.minifyVideo] Process cleanup completed');
     }
   }
 
@@ -421,7 +512,7 @@ class Cli {
 
     try {
       final process = await Process.run('ffprobe', args);
-      print('Executing "ffprobe ${args.join(' ')}"');
+      logger.log('Executing "ffprobe ${args.join(' ')}"');
 
       final completer = Completer<Duration?>();
       String output = '';
@@ -440,19 +531,19 @@ class Cli {
             completer.complete(null);
           }
         } catch (e) {
-          debugPrint('[Process.getMediaDuration] Error parsing duration: $e');
+          logger.log('[Process.getMediaDuration] Error parsing duration: $e');
           completer.complete(null);
         }
       });
 
       // Handle stderr
       process.stderr.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.getMediaDuration] Error: $data');
+        logger.log('[Process.getMediaDuration] Error: $data');
       });
 
       // Wait for the process to complete
       final exitCode = await process.exitCode;
-      debugPrint(
+      logger.log(
           '[Process.getMediaDuration] Process exited with code: $exitCode');
 
       if (exitCode != 0) {
@@ -461,7 +552,7 @@ class Cli {
 
       return await completer.future;
     } catch (e) {
-      debugPrint('[Process.getMediaDuration] Error: $e');
+      logger.log('[Process.getMediaDuration] Error: $e');
       return null;
     }
   }
@@ -472,24 +563,24 @@ class Cli {
 
       // Handle stdout
       process.stdout.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.openFileLocation] Output: $data');
+        logger.log('[Process.openFileLocation] Output: $data');
       });
 
       // Handle stderr
       process.stderr.transform(utf8.decoder).listen((data) {
-        debugPrint('[Process.openFileLocation] Error: $data');
+        logger.log('[Process.openFileLocation] Error: $data');
       });
 
       // Wait for the process to complete
       final exitCode = await process.exitCode;
-      debugPrint(
+      logger.log(
           '[Process.openFileLocation] Process exited with code: $exitCode');
 
       if (exitCode != 0) {
         throw Exception('Open command failed with exit code: $exitCode');
       }
     } catch (e) {
-      debugPrint('[Process.openFileLocation] Error: $e');
+      logger.log('[Process.openFileLocation] Error: $e');
       rethrow;
     }
   }
@@ -501,7 +592,7 @@ class Cli {
     required Function(String error) onError,
     required Function() onSuccess,
   }) async {
-    debugPrint('[Cli.setup] Starting setup...');
+    logger.log('[Cli.setup] Starting setup...');
 
     final completer = Completer<void>();
     String currentStep = '';
@@ -513,7 +604,7 @@ class Cli {
 
       if (text.isEmpty) return;
 
-      debugPrint('[Cli.setup] Output: $text');
+      logger.log('[Cli.setup] Output: $text');
 
       final steps = [
         'Starting setup...',
@@ -562,7 +653,7 @@ class Cli {
     final setupListener = LocalCliListener()
       ..onOutputCallback = updateProgress
       ..onExitCallback = (text) {
-        debugPrint('[Cli.setup] Process exited: $text');
+        logger.log('[Cli.setup] Process exited: $text');
         completer.complete();
       };
 
@@ -578,9 +669,9 @@ class Cli {
     try {
       _writeToPty(scriptPath);
       await completer.future;
-      debugPrint('[Cli.setup] Setup completed');
+      logger.log('[Cli.setup] Setup completed');
     } catch (e) {
-      debugPrint('[Cli.setup] Setup error: $e');
+      logger.log('[Cli.setup] Setup error: $e');
       rethrow;
     } finally {
       removeListener(setupListener);

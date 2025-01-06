@@ -4,6 +4,8 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:path/path.dart' as path;
+import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/widgets/native_dropdown_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -240,7 +242,7 @@ class MinificationManager {
 
       final exitCode = await _currentProcess!.exitCode;
       if (exitCode != 0) {
-        print('FFmpeg error: ${errorBuffer.toString()}');
+        logger.log('FFmpeg error: ${errorBuffer.toString()}');
         return null;
       }
 
@@ -260,8 +262,8 @@ class MinificationManager {
         duration: duration,
       );
     } catch (e, stackTrace) {
-      print('Error minifying video: $e');
-      print('Stack trace: $stackTrace');
+      logger.log('Error minifying video: $e');
+      logger.log('Stack trace: $stackTrace');
       return null;
     }
   }
@@ -286,7 +288,7 @@ class MinificationManager {
         return json.decode(result.stdout as String);
       }
     } catch (e) {
-      print('Error probing video: $e');
+      logger.log('Error probing video: $e');
     }
     return {};
   }
@@ -321,7 +323,7 @@ class MinificationManager {
         return 20000; // > 4K
       }
     } catch (e) {
-      print('Error calculating bitrate: $e');
+      logger.log('Error calculating bitrate: $e');
       return 0;
     }
   }
@@ -347,7 +349,7 @@ class MinificationManager {
         return Duration(milliseconds: (seconds * 1000).round());
       }
     } catch (e) {
-      print('Error getting video duration: $e');
+      logger.log('Error getting video duration: $e');
     }
     return const Duration();
   }

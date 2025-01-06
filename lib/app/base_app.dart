@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shakepin/app/about_app.dart';
 import 'package:shakepin/app/archive_app.dart';
+import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
 import 'package:shakepin/app/minify_app.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/app/panel_app.dart';
@@ -123,7 +124,7 @@ class _BaseAppState extends State<BaseApp> with DragDropListener {
   @override
   void onDragConclude() async {
     isShakeDetected = false;
-    // print('onDragConclude');
+    // logger.log('onDragConclude');
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (items().isEmpty) {
         resetFrameAndHide();

@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
+import 'package:shakepin/utils/logger.dart';
 
 class CustomDragGesture extends StatefulWidget {
   const CustomDragGesture(
@@ -20,19 +21,19 @@ class _CustomDragGestureState extends State<CustomDragGesture> {
     return Listener(
       onPointerMove: (event) {
         if (isTapped) return;
-        debugPrint('onPointerMove: ${event.kind}');
+        logger.log('onPointerMove: ${event.kind}');
         if (event.kind == PointerDeviceKind.mouse) {
           isTapped = true;
-          debugPrint('Mouse drag started');
+          logger.log('Mouse drag started');
           widget.onDragStart();
         }
       },
       onPointerUp: (event) {
-        debugPrint('onPointerUp');
+        logger.log('onPointerUp');
         isTapped = false;
       },
       onPointerCancel: (event) {
-        debugPrint('onPointerCancel');
+        logger.log('onPointerCancel');
         isTapped = false;
       },
       child: widget.child,

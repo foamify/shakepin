@@ -4,6 +4,7 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shakepin/oss_licenses.dart';
@@ -237,7 +238,7 @@ class _AboutAppState extends State<AboutApp> {
       launchUrl(Uri.parse(url));
     } else {
       // Handle error
-      print('Could not launch $url');
+      logger.log('Could not launch $url');
     }
   }
 

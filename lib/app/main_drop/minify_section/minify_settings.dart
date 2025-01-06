@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/widgets/glass_button.dart';
@@ -197,7 +198,35 @@ class _MinifySettingsState extends State<MinifySettings> {
                                 )
                               : GlassButton(
                                   radius: 12,
-                                  onTap: items().isEmpty ? null : minifyFiles,
+                                  onTap: () async {
+                                    await logger.log('Minify button pressed');
+                                    if (items().isEmpty) {
+                                      await logger.log(
+                                          'Minify button pressed but items list is empty');
+                                      await logger.log(
+                                          'Action aborted - no files to process');
+                                      return;
+                                    }
+                                    await logger.log(
+                                        'Minify button pressed with ${items().length} items');
+                                    await logger.log('Files breakdown:');
+                                    await logger.log(
+                                        '- Video files: ${items().videoPaths.length}');
+                                    await logger.log(
+                                        '- Image files: ${items().imagePaths.length}');
+                                    await logger.log('Selected settings:');
+                                    await logger.log(
+                                        '- Video quality: ${_videoQuality.name}');
+                                    await logger.log(
+                                        '- Video format: ${_videoFormat.name}');
+                                    await logger.log(
+                                        '- Image quality: ${_imageQuality.name}');
+                                    await logger.log(
+                                        '- Image format: ${_imageFormat.name}');
+                                    await logger.log(
+                                        'Starting minification process...');
+                                    minifyFiles();
+                                  },
                                   child: const Text('Minify',
                                       style: TextStyle(fontSize: 14)),
                                 ),
@@ -212,51 +241,88 @@ class _MinifySettingsState extends State<MinifySettings> {
         });
   }
 
-  void cancelMinification() {
+  void cancelMinification() async {
+    await logger.log('Cancelling minification process...');
     cli.cancel();
+    await logger.log('CLI process cancelled');
     processedFiles.value = 0;
+    await logger.log('Reset processed files count to 0');
     minifyInProgress.value = false;
+    await logger.log('Set minification progress status to false');
     minifyOneFileProgress.value = 0;
+    await logger.log('Reset single file progress to 0');
     totalFiles.value = 0;
+    await logger.log('Reset total files count to 0');
+    await logger.log('Minification cancellation completed');
   }
 
   void minifyFiles() async {
+    await logger.log('Starting minification process for all files');
     processedFiles.value = 0;
+    await logger.log('Reset processed files counter to 0');
     final videoPaths = items().videoPaths;
+    await logger.log('Retrieved video paths, count: ${videoPaths.length}');
     final imagePaths = items().imagePaths;
+    await logger.log('Retrieved image paths, count: ${imagePaths.length}');
     totalFiles.value = videoPaths.length + imagePaths.length;
+    await logger.log('Set total files count to: ${totalFiles.value}');
     minifyInProgress.value = true;
+    await logger.log('Set minification in progress status to true');
+
+    await logger.log('Starting image processing...');
     for (var path in imagePaths) {
+      await logger.log('Processing image: $path');
       minifyOneFileProgress.value = 0;
+      await logger.log('Reset progress for current image');
       await minifyImage(path);
       processedFiles.value++;
+      logger
+          .log('Incremented processed files count to: ${processedFiles.value}');
     }
+
+    await logger.log('Starting video processing...');
     for (var path in videoPaths) {
+      await logger.log('Processing video: $path');
       minifyOneFileProgress.value = 0;
+      await logger.log('Reset progress for current video');
       await minifyVideo(path);
       processedFiles.value++;
+      logger
+          .log('Incremented processed files count to: ${processedFiles.value}');
     }
+
+    await logger.log('All files processed, waiting for final delay...');
     await Future.delayed(const Duration(milliseconds: 800));
     processedFiles.value = totalFiles.value;
+    await logger
+        .log('Updated processed files to match total: ${totalFiles.value}');
     await Future.delayed(const Duration(milliseconds: 500));
     minifyInProgress.value = false;
+    await logger.log('Minification process completed successfully');
   }
 
   Future<void> minifyVideo(String outputPath) async {
-    debugPrint('Starting minification for video: $outputPath');
+    await logger.log('Starting minification for video: $outputPath');
     final stopwatch = Stopwatch()..start();
+    await logger.log('Started stopwatch for timing');
     try {
-      debugPrint('Output path set to: $outputPath');
+      await logger.log('Output path set to: $outputPath');
+      await logger.log('Checking for ffprobe availability...');
 
-      // Use which command to find ffprobe path
       final whichResult = await Process.run('which', ['ffprobe']);
+      await logger.log(
+          'which ffprobe command executed with exit code: ${whichResult.exitCode}');
+
       if (whichResult.exitCode != 0) {
+        await logger.log('ffprobe not found in PATH');
         throw Exception(
             'ffprobe not found in PATH. Please ensure FFmpeg is installed.');
       }
-      final ffprobePath = (whichResult.stdout as String).trim();
 
-      debugPrint('Fetching video duration...');
+      final ffprobePath = (whichResult.stdout as String).trim();
+      await logger.log('Found ffprobe at path: $ffprobePath');
+
+      await logger.log('Executing ffprobe to get video duration...');
       final probeResult = await Process.run(ffprobePath, [
         '-v',
         'error',
@@ -266,31 +332,36 @@ class _MinifySettingsState extends State<MinifySettings> {
         'default=noprint_wrappers=1:nokey=1',
         outputPath
       ]);
+      await logger.log(
+          'ffprobe command completed with exit code: ${probeResult.exitCode}');
 
       if (probeResult.exitCode != 0) {
+        await logger.log('Error in ffprobe execution: ${probeResult.stderr}');
         throw Exception('Error getting video duration: ${probeResult.stderr}');
       }
 
       final duration = double.parse((probeResult.stdout as String).trim());
-      debugPrint('Video duration: ${duration.toStringAsFixed(2)} seconds');
+      await logger.log(
+          'Video duration retrieved: ${duration.toStringAsFixed(2)} seconds');
 
-      debugPrint('Starting video minification process...');
+      await logger.log(
+          'Starting video minification with quality: ${_videoQuality.name}');
       await cli.minifyVideo(
         outputPath,
         quality: _videoQuality.name,
         format:
             _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
-        onProgress: (progress) {
+        onProgress: (progress) async {
           minifyOneFileProgress.value = progress;
-          // debugPrint(
-          //     'Minification progress: ${(progress * 100).toStringAsFixed(2)}%');
+          await logger.log(
+              'Video minification progress: ${(progress * 100).toStringAsFixed(2)}%');
         },
       );
 
       final originalSize = File(outputPath).lengthSync();
+      await logger.log('Original file size: $originalSize bytes');
       final minifiedSize = File(outputPath).lengthSync();
-      debugPrint('Original size: $originalSize bytes');
-      debugPrint('Minified size: $minifiedSize bytes');
+      await logger.log('Minified file size: $minifiedSize bytes');
 
       final minifiedFile = MinifiedFile(
         originalPath: outputPath,
@@ -299,44 +370,59 @@ class _MinifySettingsState extends State<MinifySettings> {
         minifiedSize: minifiedSize,
         duration: stopwatch.elapsed,
       );
+      await logger.log(
+          'Created MinifiedFile object with duration: ${stopwatch.elapsed}');
+
       minifiedFiles.value = [...minifiedFiles(), minifiedFile];
-      debugPrint('Minified file added to the list');
+      await logger.log('Added minified file to tracking list');
 
       final compressionRatio = (1 - (minifiedSize / originalSize)) * 100;
-      debugPrint('Compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
+      await logger.log(
+          'Achieved compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
     } catch (e) {
-      debugPrint('Error occurred during minification: $e');
+      await logger.log('Error occurred during video minification: $e');
       errorMessages.value = [
         ...errorMessages(),
         'Failed to minify $outputPath: $e'
       ];
+      await logger.log('Added error message to error messages list');
     }
     stopwatch.stop();
-    debugPrint('Minification process completed for: $outputPath');
+    await logger.log('Video minification process completed for: $outputPath');
   }
 
   Future<void> minifyImage(String outputPath) async {
-    debugPrint('Starting minification for image: $outputPath');
+    await logger.log('Starting minification for image: $outputPath');
     final stopwatch = Stopwatch()..start();
+    await logger.log('Started stopwatch for timing');
+
     try {
-      debugPrint('Output path set to: $outputPath');
+      await logger.log(
+          'Beginning image minification with quality: ${_imageQuality.value}');
+      cli;
+      await logger.log('Output path set to: $outputPath');
+      await logger.log(
+          'Format setting: ${_imageFormat == ImageFormat.sameAsInput ? 'same as input' : _imageFormat.name}');
+      onProgress(progress) async {
+        minifyOneFileProgress.value = progress;
+        await logger.log(
+            'Image minification progress: ${(progress * 100).toStringAsFixed(2)}%');
+      }
+
+      await logger.log('Set progress');
 
       await cli.minifyImage(
         outputPath,
         fileExtension:
             _imageFormat == ImageFormat.sameAsInput ? null : _imageFormat.name,
         quality: _imageQuality.value,
-        onProgress: (progress) {
-          minifyOneFileProgress.value = progress;
-          // debugPrint(
-          //     'Minification progress: ${(progress * 100).toStringAsFixed(2)}%');
-        },
+        onProgress: onProgress,
       );
 
       final originalSize = File(outputPath).lengthSync();
+      await logger.log('Original image size: $originalSize bytes');
       final minifiedSize = File(outputPath).lengthSync();
-      debugPrint('Original size: $originalSize bytes');
-      debugPrint('Minified size: $minifiedSize bytes');
+      await logger.log('Minified image size: $minifiedSize bytes');
 
       final minifiedFile = MinifiedFile(
         originalPath: outputPath,
@@ -345,19 +431,24 @@ class _MinifySettingsState extends State<MinifySettings> {
         minifiedSize: minifiedSize,
         duration: stopwatch.elapsed,
       );
+      await logger.log(
+          'Created MinifiedFile object with duration: ${stopwatch.elapsed}');
+
       minifiedFiles.value = [...minifiedFiles(), minifiedFile];
-      debugPrint('Minified file added to the list');
+      await logger.log('Added minified image to tracking list');
 
       final compressionRatio = (1 - (minifiedSize / originalSize)) * 100;
-      debugPrint('Compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
+      await logger.log(
+          'Achieved compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
     } catch (e) {
-      debugPrint('Error occurred during image minification: $e');
+      await logger.log('Error occurred during image minification: $e');
       errorMessages.value = [
         ...errorMessages(),
         'Failed to minify $outputPath: $e'
       ];
+      await logger.log('Added error message to error messages list');
     }
     stopwatch.stop();
-    debugPrint('Minification process completed for: $outputPath');
+    await logger.log('Image minification process completed for: $outputPath');
   }
 }

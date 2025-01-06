@@ -24,6 +24,10 @@ dependencies:
   lukehog: ^0.4.1+2
   gradient_borders: ^1.0.1
   flutter_pty: ^0.4.1
+  package_info_plus:
+    git:
+      url: https://github.com/fluttercommunity/plus_plugins.git
+      path: packages/package_info_plus/package_info_plus
 dev_dependencies:
   flutter_test:
     sdk: flutter

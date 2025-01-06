@@ -7,6 +7,7 @@ import 'package:macos_haptic_feedback/macos_haptic_feedback.dart';
 import 'package:path/path.dart' as path;
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/logger.dart';
 
 sealed class AppSizes {
   static const archive = Size(300, 200);
@@ -152,7 +153,7 @@ void resetFrameAndHide() async {
     AppMode.misc => AppSizes.main,
   };
 
-  debugPrint('Starting resetFrameAndHide');
+  logger.log('Starting resetFrameAndHide');
   await dropChannel.setFrame(
     Rect.fromCenter(
       center: await dropChannel.center(),
@@ -161,7 +162,7 @@ void resetFrameAndHide() async {
     ),
     animate: true,
   );
-  debugPrint('First frame adjustment complete');
+  logger.log('First frame adjustment complete');
 
   await Future.delayed(Durations.short4);
   await dropChannel.setFrame(
@@ -172,9 +173,9 @@ void resetFrameAndHide() async {
     ),
     animate: true,
   );
-  debugPrint('Second frame adjustment complete');
+  logger.log('Second frame adjustment complete');
 
   await Future.delayed(Durations.short4);
   await dropChannel.setVisible(false);
-  debugPrint('Frame hidden');
+  logger.log('Frame hidden');
 }

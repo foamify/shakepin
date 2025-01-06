@@ -479,6 +479,23 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.1"
+  package_info_plus:
+    dependency: "direct main"
+    description:
+      path: "packages/package_info_plus/package_info_plus"
+      ref: HEAD
+      resolved-ref: "7c8894b99878ccbcc33845f9d19e0921470d5935"
+      url: "https://github.com/fluttercommunity/plus_plugins.git"
+    source: git
+    version: "8.1.2"
+  package_info_plus_platform_interface:
+    dependency: transitive
+    description:
+      name: package_info_plus_platform_interface
+      sha256: a5ef9986efc7bf772f2696183a3992615baa76c1ffb1189318dd8803778fb05b
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.2"
   path:
     dependency: "direct main"
     description:

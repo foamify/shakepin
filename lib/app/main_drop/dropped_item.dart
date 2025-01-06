@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/file_image_widget.dart';
 import 'package:super_context_menu/super_context_menu.dart';
@@ -42,7 +43,7 @@ class DroppedItem extends StatelessWidget {
                 throw Exception(result.stderr);
               }
             } catch (e) {
-              print('Error opening file: $e');
+              logger.log('Error opening file: $e');
             }
           },
         ),

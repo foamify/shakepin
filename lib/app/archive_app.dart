@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/utils/analytics.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/logger.dart';
 
 import '../state.dart';
 import '../utils/utils.dart';
@@ -62,7 +63,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
       // Copy files to temporary directory
       for (int i = 0; i < totalPaths; i++) {
         if (archiveProgress() == -1) {
-          print('Compression cancelled');
+          logger.log('Compression cancelled');
           return;
         }
 
@@ -92,7 +93,7 @@ class _ArchiveAppState extends State<ArchiveApp> {
       ]);
 
       if (result.exitCode != 0) {
-        print('Error compressing files: ${result.stderr}');
+        logger.log('Error compressing files: ${result.stderr}');
         archiveProgress.value = -1;
       } else {
         archiveProgress.value = 100;
@@ -101,14 +102,14 @@ class _ArchiveAppState extends State<ArchiveApp> {
         }
       }
     } catch (e) {
-      print('Error during compression: $e');
+      logger.log('Error during compression: $e');
       archiveProgress.value = -1;
     } finally {
       // Clean up: remove the temporary directory
       try {
         await tempDir.delete(recursive: true);
       } catch (e) {
-        print('Error deleting temporary directory: $e');
+        logger.log('Error deleting temporary directory: $e');
       }
     }
 
@@ -238,12 +239,12 @@ class _ArchiveAppState extends State<ArchiveApp> {
                           try {
                             await File(outputArchive).delete();
                           } catch (e) {
-                            print('Error deleting output archive: $e');
+                            logger.log('Error deleting output archive: $e');
                           }
                           try {
                             await tempDir.delete(recursive: true);
                           } catch (e) {
-                            print('Error deleting output folder: $e');
+                            logger.log('Error deleting output folder: $e');
                           }
                         }
                       },

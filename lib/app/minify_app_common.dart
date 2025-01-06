@@ -2,7 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:path/path.dart' as path;
+import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
 import 'package:shakepin/state.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'dart:io';
@@ -11,104 +13,13 @@ import 'package:libcaesium_dart/libcaesium_dart.dart';
 import '../utils/utils.dart';
 import '../widgets/drop_target.dart';
 
-// Common enums
-enum ImageQuality {
-  lowest,
-  low,
-  normal,
-  high,
-  highest;
-
-  String get name => switch (this) {
-        ImageQuality.lowest => 'Lowest',
-        ImageQuality.low => 'Low',
-        ImageQuality.normal => 'Normal',
-        ImageQuality.high => 'High',
-        ImageQuality.highest => 'Highest',
-      };
-}
-
-enum VideoQuality {
-  lowestQuality,
-  lowQuality,
-  mediumQuality,
-  goodQuality,
-  highQuality,
-  veryHighQuality,
-  highestQuality,
-  lossless;
-
-  String get name => switch (this) {
-        VideoQuality.lowestQuality => 'Lowest quality',
-        VideoQuality.lowQuality => 'Low quality',
-        VideoQuality.mediumQuality => 'Medium quality',
-        VideoQuality.goodQuality => 'Good quality',
-        VideoQuality.highQuality => 'High quality',
-        VideoQuality.veryHighQuality => 'Very high quality',
-        VideoQuality.highestQuality => 'Highest quality',
-        VideoQuality.lossless => 'Lossless',
-      };
-}
-
-enum VideoFormat {
-  webm,
-  mp4,
-  gif,
-  sameAsInput;
-
-  String get name => switch (this) {
-        VideoFormat.webm => 'WebM',
-        VideoFormat.mp4 => 'MP4',
-        VideoFormat.gif => 'GIF',
-        VideoFormat.sameAsInput => 'Same as input',
-      };
-}
-
-enum ImageFormat {
-  sameAsInput,
-  png,
-  jpg,
-  webp,
-  tiff;
-
-  String get name => switch (this) {
-        ImageFormat.sameAsInput => 'Same as input',
-        ImageFormat.png => 'PNG',
-        ImageFormat.jpg => 'JPG',
-        ImageFormat.webp => 'WEBP',
-        ImageFormat.tiff => 'TIFF',
-      };
-}
-
-class MinifiedFile {
-  final String originalPath;
-  final String minifiedPath;
-  final int originalSize;
-  final int minifiedSize;
-  final Duration duration;
-
-  MinifiedFile({
-    required this.originalPath,
-    required this.minifiedPath,
-    required this.originalSize,
-    required this.minifiedSize,
-    required this.duration,
-  });
-
-  double get savingsPercentage =>
-      (originalSize - minifiedSize) / originalSize * 100;
-
-  String get originalFileName => path.basename(originalPath);
-  String get minifiedFileName => path.basename(minifiedPath);
-}
-
 Future<MinifiedFile?> minifyImageWithCaesium(
     String filePath, String outputPath, ImageQuality quality,
     {bool removeInputFile = false}) async {
   final file = File(filePath);
 
   try {
-    debugPrint('Starting image compression');
+    logger.log('Starting image compression');
     await compress(
       inputPath: filePath,
       outputPath: outputPath,
@@ -123,19 +34,19 @@ Future<MinifiedFile?> minifyImageWithCaesium(
       keepMetadata: true,
       optimize: false,
     );
-    debugPrint('Compression completed');
+    logger.log('Compression completed');
 
     final originalSize = file.lengthSync();
-    debugPrint('Original size: $originalSize bytes');
+    logger.log('Original size: $originalSize bytes');
     final minifiedSize = File(outputPath).lengthSync();
-    debugPrint('Minified size: $minifiedSize bytes');
+    logger.log('Minified size: $minifiedSize bytes');
 
     if (removeInputFile) {
-      debugPrint('Removing input file');
+      logger.log('Removing input file');
       await file.delete();
     }
 
-    debugPrint('Creating MinifiedFile object');
+    logger.log('Creating MinifiedFile object');
     return MinifiedFile(
       originalPath: filePath,
       minifiedPath: outputPath,
@@ -144,7 +55,7 @@ Future<MinifiedFile?> minifyImageWithCaesium(
       duration: const Duration(),
     );
   } catch (e) {
-    print('Error minifying image: $e');
+    logger.log('Error minifying image: $e');
     return null;
   }
 }

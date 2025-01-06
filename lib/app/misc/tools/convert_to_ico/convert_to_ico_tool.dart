@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import 'package:shakepin/app/misc/tools/tool.dart';
 import 'package:shakepin/app/misc/tools/widgets/common_tool_widgets.dart';
 import 'package:shakepin/state.dart';
+import 'package:shakepin/utils/logger.dart';
 
 class ConvertToIcoTool extends ToolWidget {
   const ConvertToIcoTool({super.key});
@@ -40,14 +41,14 @@ class _ConvertToIcoToolState extends State<ConvertToIcoTool> {
         ]);
 
         if (result.exitCode != 0) {
-          print('Error converting to ICO: ${result.stderr}');
+          logger.log('Error converting to ICO: ${result.stderr}');
         } else {
           setState(() {
             _outputPath = outputPath;
           });
         }
       } catch (e) {
-        print('Error converting to ICO: $e');
+        logger.log('Error converting to ICO: $e');
       }
     }
   }

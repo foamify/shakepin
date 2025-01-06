@@ -67,6 +67,8 @@ const allDependencies = <Package>[
   _material_color_utilities,
   _meta,
   _nanoid2,
+  _package_info_plus,
+  _package_info_plus_platform_interface,
   _path,
   _path_provider,
   _path_provider_android,
@@ -129,6 +131,7 @@ const dependencies = <Package>[
   _lukehog,
   _macos_haptic_feedback,
   _macos_ui,
+  _package_info_plus,
   _path,
   _path_provider,
   _shared_preferences,
@@ -3028,6 +3031,86 @@ SOFTWARE.''',
     isMarkdown: false,
     isSdk: false,
     dependencies: []
+  );
+
+/// package_info_plus 8.1.2
+const _package_info_plus = Package(
+    name: 'package_info_plus',
+    description: 'Flutter plugin for querying information about the application package, such as CFBundleVersion on iOS or versionCode on Android.',
+    homepage: 'https://github.com/fluttercommunity/plus_plugins',
+    repository: 'https://github.com/fluttercommunity/plus_plugins/tree/main/packages/package_info_plus/package_info_plus',
+    authors: [],
+    version: '8.1.2',
+    license: '''Copyright 2017 The Chromium Authors. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google Inc. nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
+    isMarkdown: false,
+    isSdk: false,
+    dependencies: [PackageRef('ffi'), PackageRef('flutter'), PackageRef('http'), PackageRef('meta'), PackageRef('path'), PackageRef('package_info_plus_platform_interface'), PackageRef('web'), PackageRef('win32'), PackageRef('clock')]
+  );
+
+/// package_info_plus_platform_interface 3.0.2
+const _package_info_plus_platform_interface = Package(
+    name: 'package_info_plus_platform_interface',
+    description: 'A common platform interface for the package_info_plus plugin.',
+    homepage: 'https://github.com/fluttercommunity/plus_plugins',
+    repository: 'https://github.com/fluttercommunity/plus_plugins/tree/main/packages/',
+    authors: [],
+    version: '3.0.2',
+    license: '''Copyright 2017 The Chromium Authors. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google Inc. nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
+    isMarkdown: false,
+    isSdk: false,
+    dependencies: [PackageRef('flutter'), PackageRef('meta'), PackageRef('plugin_platform_interface')]
   );
 
 /// path 1.9.0

@@ -6,6 +6,7 @@ import 'package:shakepin/app/main_drop/drop_section.dart';
 import 'package:shakepin/app/main_drop/main_sidebar.dart';
 import 'package:shakepin/app/main_drop/minify_section/minify_section.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 
 import '../state.dart';
@@ -27,13 +28,13 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
 
   @override
   void initState() {
-    debugPrint('_MainDropAppState: initState');
+    logger.log('_MainDropAppState: initState');
     dropChannel.addListener(this);
 
     items.addListener(() {
-      debugPrint('Items changed: ${items().length} items');
+      logger.log('Items changed: ${items().length} items');
       if (items().isEmpty) {
-        debugPrint('Items empty, resetting frame and hiding');
+        logger.log('Items empty, resetting frame and hiding');
         resetFrameAndHide();
       }
     });
@@ -43,9 +44,9 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
 
   @override
   void shakeDetected(Offset position) async {
-    debugPrint('Shake detected at position: $position');
+    logger.log('Shake detected at position: $position');
     if (!isShakeDetected) {
-      debugPrint('Processing first shake detection');
+      logger.log('Processing first shake detection');
       isShakeDetected = true;
       final appSize = switch (appMode()) {
         AppMode.pin => AppSizes.main,
@@ -54,7 +55,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
         AppMode.misc => AppSizes.main,
       };
 
-      debugPrint('Setting frame with size: ${appSize.width}x${appSize.height}');
+      logger.log('Setting frame with size: ${appSize.width}x${appSize.height}');
       await dropChannel.setFrame(
           Rect.fromCenter(
             center: position + Offset(0, appSize.height / 2),
@@ -63,20 +64,20 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
           ),
           animate: false);
       await dropChannel.setVisible(true);
-      debugPrint('Frame set and made visible');
+      logger.log('Frame set and made visible');
     }
     super.shakeDetected(position);
   }
 
   @override
   void onDragConclude() async {
-    debugPrint('Drag concluded');
+    logger.log('Drag concluded');
     isShakeDetected = false;
 
     SchedulerBinding.instance.addPostFrameCallback((_) async {
-      debugPrint('Post-frame callback: checking items');
+      logger.log('Post-frame callback: checking items');
       if (items().isEmpty) {
-        debugPrint('No items, resetting frame');
+        logger.log('No items, resetting frame');
         resetFrameAndHide();
       }
     });
@@ -88,13 +89,13 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
 
   @override
   void dispose() {
-    debugPrint('Disposing _MainDropAppState');
+    logger.log('Disposing _MainDropAppState');
     dropChannel.removeListener(this);
     super.dispose();
   }
 
   void _handleShowTooltip(String tooltip) {
-    // debugPrint('Showing tooltip: $tooltip');
+    // logger.log('Showing tooltip: $tooltip');
 
     // setState(() {
     //   _isShowingTooltip = true;
@@ -103,14 +104,14 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
   }
 
   void _handleHideTooltip() {
-    // debugPrint('Hiding tooltip');
+    // logger.log('Hiding tooltip');
     // _isShowingTooltip = false;
     // Future.delayed(const Duration(milliseconds: 700), () {
     //   if (!_isShowingTooltip) {
-    //     debugPrint('Tooltip still not showing, hiding popover');
+    //     logger.log('Tooltip still not showing, hiding popover');
     //     // dropChannel.hidePopover();
     //   } else {
-    //     debugPrint('Tooltip is showing again, not hiding popover');
+    //     logger.log('Tooltip is showing again, not hiding popover');
     //   }
     // });
   }

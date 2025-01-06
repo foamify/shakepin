@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/logger.dart';
 
 class FileImageWidget extends StatefulWidget {
   const FileImageWidget({super.key, required this.path});
@@ -31,7 +32,7 @@ class _FileImageWidgetState extends State<FileImageWidget> {
         });
       }
     } catch (e) {
-      print('Error loading file icon: $e');
+      logger.log('Error loading file icon: $e');
     }
   }
 

@@ -2,8 +2,10 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
 import 'package:shakepin/utils/analytics.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/widgets/native_dropdown_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
@@ -171,12 +173,12 @@ class MinificationManager {
         );
       } else {
         final logs = await currentSession!.getLogs();
-        print(
+        logger.log(
             'Error minifying video: ${logs.map((e) => e.getMessage()).join('\n')}');
         return null;
       }
     } catch (e) {
-      print('Error minifying video: $e');
+      logger.log('Error minifying video: $e');
       return null;
     }
   }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:gradient_borders/gradient_borders.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 
 class DropdownChannel {
@@ -21,12 +22,12 @@ class DropdownChannel {
   }
 
   Future<void> _handleMethodCall(MethodCall call) async {
-    debugPrint('call: ${call.method}, args: ${call.arguments}');
+    logger.log('call: ${call.method}, args: ${call.arguments}');
     switch (call.method) {
       case 'onDropdownMenuSelected':
         DropdownManager.handleMethodCall(call);
       default:
-        print('unknown method: ${call.method}');
+        logger.log('unknown method: ${call.method}');
     }
   }
 
@@ -46,7 +47,7 @@ class DropdownChannel {
         'dropdownId': dropdownId,
       });
     } catch (e) {
-      debugPrint('Error showing dropdown menu: $e');
+      logger.log('Error showing dropdown menu: $e');
       return null;
     }
   }
@@ -249,10 +250,10 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
                                 end: Alignment.bottomCenter,
                                 colors: brightness == Brightness.light
                                     ? [
-                                        MacosColor.fromRGBO(
-                                            255, 255, 255, 1.0 * isEnabledFactor),
-                                        MacosColor.fromRGBO(
-                                            255, 255, 255, 1.0 * isEnabledFactor),
+                                        MacosColor.fromRGBO(255, 255, 255,
+                                            1.0 * isEnabledFactor),
+                                        MacosColor.fromRGBO(255, 255, 255,
+                                            1.0 * isEnabledFactor),
                                       ]
                                     : [
                                         MacosColor.fromRGBO(255, 255, 255,
@@ -291,7 +292,8 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
                                   colors: [
                                     MacosColor.fromRGBO(
                                         255, 255, 255, 0.25 * isEnabledFactor),
-                                    const MacosColor.fromRGBO(255, 255, 255, 0.0),
+                                    const MacosColor.fromRGBO(
+                                        255, 255, 255, 0.0),
                                   ],
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,

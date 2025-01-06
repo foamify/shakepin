@@ -9,6 +9,7 @@ import 'package:flutter/gestures.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/analytics.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_hover_widget.dart';
 import 'package:shakepin/utils/drop_channel.dart';
@@ -53,13 +54,13 @@ class _PinAppState extends State<PinApp> with DragDropListener {
     try {
       await dropChannel.shareXFiles(xFiles);
     } catch (e) {
-      print('Error sharing files: $e');
+      logger.log('Error sharing files: $e');
     }
   }
 
   @override
   void onDragSessionEnded(DropOperation operation) {
-    // print('onDragSessionEnded $operation');
+    // logger.log('onDragSessionEnded $operation');
     switch (operation) {
       case DropOperation.move:
         setState(() {
@@ -144,7 +145,7 @@ class _PinAppState extends State<PinApp> with DragDropListener {
                                         throw Exception(result.stderr);
                                       }
                                     } catch (e) {
-                                      print('Error opening file: $e');
+                                      logger.log('Error opening file: $e');
                                     }
                                   },
                                 ),
@@ -363,9 +364,9 @@ class _CustomDragGestureState extends State<CustomDragGesture> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onPanStart: (details) {
-        print('onPanStart session ${details.kind}');
+        logger.log('onPanStart session ${details.kind}');
         if (details.kind == PointerDeviceKind.mouse) {
-          // print('onPanStartdragfiles');
+          // logger.log('onPanStartdragfiles');
           widget.onDragStart();
         }
       },

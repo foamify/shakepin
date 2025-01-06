@@ -9,6 +9,7 @@ import 'package:shakepin/app/main_drop/dropped_item.dart';
 import 'package:shakepin/app/main_drop/minify_section/file_hover_widget.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_target.dart';
 import 'package:shakepin/widgets/file_image_widget.dart';
@@ -43,28 +44,28 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
     try {
       await dropChannel.shareXFiles(xFiles);
     } catch (e) {
-      print('Error sharing files: $e');
+      logger.log('Error sharing files: $e');
     }
   }
 
   @override
   void onDragSessionEnded(DropOperation operation) {
-    // print('onDragSessionEnded $operation');
+    // logger.log('onDragSessionEnded $operation');
     switch (operation) {
       case DropOperation.move:
         setState(() {
           if (draggedItem != null) {
-            debugPrint('Removing dragged item: $draggedItem');
+            logger.log('Removing dragged item: $draggedItem');
             _selectedItems.remove(draggedItem!);
             items.remove(draggedItem!);
             draggedItem = null;
           } else {
-            debugPrint('Moving selected items: ${_selectedItems.length}');
+            logger.log('Moving selected items: ${_selectedItems.length}');
             items.value = items().difference(_selectedItems);
             _selectedItems.clear();
           }
         });
-        debugPrint('Items after move: ${items().length}');
+        logger.log('Items after move: ${items().length}');
       default:
         break;
     }
