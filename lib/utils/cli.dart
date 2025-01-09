@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_pty/flutter_pty.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 
 final carriageReturn = Platform.isWindows ? '\r\n' : '\n';
@@ -70,6 +71,23 @@ class Cli {
     if (_currentProcess != null) {
       _currentProcess!.kill();
       logger.log('Process canceled');
+    }
+  }
+
+  Future<ProcessResult> executeNativeProcess(
+      String command, List<String> arguments) async {
+    try {
+      logger.log('[Native Process] Starting: $command ${arguments.join(' ')}');
+      final result = await dropChannel.startProcess(command, arguments);
+      logger
+          .log('[Native Process] Completed with exit code: ${result.exitCode}');
+      if (result.exitCode != 0) {
+        logger.log('[Native Process] Error output: ${result.stderr}');
+      }
+      return result;
+    } catch (e) {
+      logger.log('[Native Process] Error: $e');
+      rethrow;
     }
   }
 
@@ -216,53 +234,35 @@ class Cli {
     ];
     logger.log('ImageMagick command arguments: $args');
 
+    final result = await executeNativeProcess('magick', args.map((e) => "'$e'").toList());
+    logger.log('Process completed with exit code: ${result.exitCode}');
+    logger.log('Output: ${result.stdout}');
+    logger.log('Error: ${result.stderr}');
+    return;
+
     try {
       logger.log('🚀 Launching ImageMagick process...');
-      _currentProcess = await Process.start('magick', args);
-      logger.log('Process started with PID: ${_currentProcess!.pid}');
+      final result = await executeNativeProcess('magick', args);
+      logger.log('Process completed with exit code: ${result.exitCode}');
 
-      // Handle stdout
-      _currentProcess!.stdout.transform(utf8.decoder).listen(
-        (data) {
-          logger.log('[ImageMagick stdout] $data');
-        },
-        onError: (error) {
-          logger.log('❌ Error on stdout stream: $error');
-        },
-        onDone: () {
-          logger.log('stdout stream completed');
-        },
-      );
-
-      // Handle stderr
-      _currentProcess!.stderr.transform(utf8.decoder).listen(
-        (data) {
-          // Parse progress
-          if (onProgress != null) {
-            final match =
-                RegExp(r'(\d+) of (\d+), (\d+)% complete').firstMatch(data);
-            if (match != null) {
-              final current = int.parse(match.group(1)!);
-              final total = int.parse(match.group(2)!);
-              final progress = current / total;
-              logger.log(
-                  'Processing frame $current of $total (${(progress * 100).toStringAsFixed(1)}%)');
-              onProgress(progress);
-            } else {
-              logger.log('[ImageMagick stderr] $data');
-            }
+      // Parse progress from stderr
+      if (onProgress != null) {
+        final lines = result.stderr.split('\n');
+        for (final line in lines) {
+          final match =
+              RegExp(r'(\d+) of (\d+), (\d+)% complete').firstMatch(line);
+          if (match != null) {
+            final current = int.parse(match.group(1)!);
+            final total = int.parse(match.group(2)!);
+            final progress = current / total;
+            logger.log(
+                'Processing frame $current of $total (${(progress * 100).toStringAsFixed(1)}%)');
+            onProgress(progress);
           }
-        },
-        onError: (error) {
-          logger.log('❌ Error on stderr stream: $error');
-        },
-        onDone: () {
-          logger.log('stderr stream completed');
-        },
-      );
+        }
+      }
 
-      logger.log('Waiting for process completion...');
-      final exitCode = await _currentProcess!.exitCode;
+      final exitCode = result.exitCode;
       logger.log('Process exited with code: $exitCode');
 
       if (exitCode != 0) {
@@ -485,8 +485,11 @@ class Cli {
     int counter = 0;
     String newPath;
     do {
+      final String extensionToUse = fileExtension.startsWith('.')
+          ? fileExtension.substring(1)
+          : fileExtension;
       newPath =
-          '$pathWithoutExt${suffix ?? ''}${counter > 0 ? ' ($counter)' : ''}.$fileExtension';
+          '$pathWithoutExt${suffix ?? ''}${counter > 0 ? ' ($counter)' : ''}.${extensionToUse}';
       counter++;
     } while (File(newPath).existsSync());
 

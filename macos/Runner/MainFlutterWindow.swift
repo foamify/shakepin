@@ -94,10 +94,11 @@ class MainFlutterWindow: NSWindow {
         let enabled = args["enabled"] as? Bool,
         let remove = args["remove"] as? Bool
       else {
-        result(FlutterError(
-          code: "INVALID_ARGUMENTS",
-          message: "Invalid arguments for updateNativeDropdown",
-          details: nil))
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENTS",
+            message: "Invalid arguments for updateNativeDropdown",
+            details: nil))
         return
       }
 
@@ -128,12 +129,13 @@ class MainFlutterWindow: NSWindow {
       let flutterViewHeight = flutterViewController.view.frame.height
       let buttonFrame = NSRect(x: x, y: flutterViewHeight - y - 24, width: 200, height: 24)
       button.frame = buttonFrame
-      
+
       // Update items
       button.removeAllItems()
       for item in items {
         guard let title = item["title"] as? String,
-              let enabled = item["enabled"] as? Bool else { continue }
+          let enabled = item["enabled"] as? Bool
+        else { continue }
         button.menu?.addItem(withTitle: title, action: nil, keyEquivalent: "")
         button.menu?.items.last?.isEnabled = enabled
       }
@@ -151,11 +153,15 @@ class MainFlutterWindow: NSWindow {
   }
 
   @objc private func handlePopUpButtonAction(_ sender: NSPopUpButton) {
-    guard let dropdownId = dropdownButtons.first(where: { $0.value === sender })?.key else { return }
-    dropdownChannel.invokeMethod("onDropdownMenuSelected", arguments: [
-      "id": dropdownId,
-      "index": sender.indexOfSelectedItem
-    ])
+    guard let dropdownId = dropdownButtons.first(where: { $0.value === sender })?.key else {
+      return
+    }
+    dropdownChannel.invokeMethod(
+      "onDropdownMenuSelected",
+      arguments: [
+        "id": dropdownId,
+        "index": sender.indexOfSelectedItem,
+      ])
   }
 
   @objc private func handleMenuSelection(_ sender: NSMenuItem) {
@@ -402,22 +408,26 @@ class MainFlutterWindow: NSWindow {
 
     case "showPopover":
       guard let args = call.arguments as? [Any],
-            let content = args[0] as? String,
-            let edgeIndex = args[1] as? Int else {
-        result(FlutterError(code: "INVALID_ARGUMENTS",
-                           message: "Invalid arguments for showPopover",
-                           details: nil))
+        let content = args[0] as? String,
+        let edgeIndex = args[1] as? Int
+      else {
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENTS",
+            message: "Invalid arguments for showPopover",
+            details: nil))
         return
       }
-      
-      let edge: NSRectEdge = switch edgeIndex {
+
+      let edge: NSRectEdge =
+        switch edgeIndex {
         case 0: .minX  // left
         case 1: .maxX  // right
         case 2: .maxY  // top
         case 3: .minY  // bottom
-        default: .minX // default to left
-      }
-      
+        default: .minX  // default to left
+        }
+
       showPopover(content: content, edge: edge)
       result(nil)
 
@@ -436,9 +446,134 @@ class MainFlutterWindow: NSWindow {
           FlutterError(
             code: "INVALID_ARGUMENT", message: "Invalid arguments for shareXFiles", details: nil))
       }
+    case "startProcess":
+      if let args = call.arguments as? [String: Any],
+        let command = args["command"] as? String,
+        let arguments = args["arguments"] as? [String]
+      {
+        startProcess(command: command, arguments: arguments, result: result)
+      } else {
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT",
+            message: "Invalid arguments for startProcess. Expected command and arguments",
+            details: nil))
+      }
 
     default:
       result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private func startProcess(command: String, arguments: [String], result: @escaping FlutterResult) {
+    // TODO: add callback for process output and error
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+
+    // Source profile files and run command with login shell
+    let shellCommand = """
+      source ~/.zshrc 2>/dev/null || true
+      source ~/.profile 2>/dev/null || true
+      source ~/.bash_profile 2>/dev/null || true
+      source ~/.bashrc 2>/dev/null || true
+      \(([command] + arguments).map { $0.replacingOccurrences(of: "\"", with: "\\\"") }.joined(separator: " "))
+      """
+
+    process.arguments = ["-l", "-c", shellCommand]
+    process.environment = ProcessInfo.processInfo.environment
+
+    let outputPipe = Pipe()
+    let errorPipe = Pipe()
+    process.standardOutput = outputPipe
+    process.standardError = errorPipe
+
+    // Variables to collect output
+    var outputData = Data()
+    var errorData = Data()
+
+    // Set up async reading of pipes
+    outputPipe.fileHandleForReading.readabilityHandler = { handle in
+      let data = handle.availableData
+      if !data.isEmpty {
+        outputData.append(data)
+      }
+    }
+
+    errorPipe.fileHandleForReading.readabilityHandler = { handle in
+      let data = handle.availableData
+      if !data.isEmpty {
+        errorData.append(data)
+      }
+    }
+
+    // Create a timer for timeout - increased to 120 seconds for image processing
+    let timeoutTimer = DispatchSource.makeTimerSource(queue: .global())
+    timeoutTimer.schedule(deadline: .now() + .seconds(120))
+
+    do {
+      try process.run()
+
+      timeoutTimer.setEventHandler {
+        if process.isRunning {
+          process.terminate()
+
+          // Clean up pipe handlers
+          outputPipe.fileHandleForReading.readabilityHandler = nil
+          errorPipe.fileHandleForReading.readabilityHandler = nil
+
+          DispatchQueue.main.async {
+            result(
+              FlutterError(
+                code: "PROCESS_TIMEOUT",
+                message: "Process timed out after 120 seconds",
+                details: nil
+              ))
+          }
+        }
+      }
+      timeoutTimer.resume()
+
+      // Wait for process in background
+      DispatchQueue.global(qos: .userInitiated).async {
+        process.waitUntilExit()
+
+        timeoutTimer.cancel()
+
+        // Clean up pipe handlers
+        outputPipe.fileHandleForReading.readabilityHandler = nil
+        errorPipe.fileHandleForReading.readabilityHandler = nil
+
+        let output = String(data: outputData, encoding: .utf8) ?? ""
+        let error = String(data: errorData, encoding: .utf8) ?? ""
+
+        DispatchQueue.main.async {
+          if process.terminationStatus == 0 || !output.isEmpty {
+            result([
+              "exitCode": process.terminationStatus,
+              "output": output,
+              "error": error,
+            ])
+          } else {
+            result(
+              FlutterError(
+                code: "PROCESS_ERROR",
+                message: "Process failed: \(error)",
+                details: nil
+              ))
+          }
+        }
+      }
+    } catch {
+      timeoutTimer.cancel()
+      outputPipe.fileHandleForReading.readabilityHandler = nil
+      errorPipe.fileHandleForReading.readabilityHandler = nil
+
+      result(
+        FlutterError(
+          code: "PROCESS_ERROR",
+          message: "Failed to start process: \(error.localizedDescription)",
+          details: nil
+        ))
     }
   }
 
@@ -818,7 +953,9 @@ class MainFlutterWindow: NSWindow {
       let windowPoint = self.convertPoint(fromScreen: mouseLocation)
       let viewPoint = self.contentView?.convert(windowPoint, from: nil) ?? windowPoint
 
-      popover?.show(relativeTo: NSRect(origin: mouseLocation, size: .zero), of: self.contentView!, preferredEdge: edge)
+      popover?.show(
+        relativeTo: NSRect(origin: mouseLocation, size: .zero), of: self.contentView!,
+        preferredEdge: edge)
     }
   }
 

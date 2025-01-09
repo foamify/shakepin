@@ -1,6 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
-import 'package:shakepin/app/minify_app_common.dart';
 import 'package:shakepin/utils/handle_menu_item.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_selector/file_selector.dart';
@@ -208,6 +209,26 @@ class DropChannel {
       throw FlutterError('Error sharing files: ${e.message}');
     } catch (e) {
       throw FlutterError('Unexpected error sharing files: $e');
+    }
+  }
+
+  Future<ProcessResult> startProcess(String command, List<String> arguments) async {
+    try {
+      final result = await _channel.invokeMethod('startProcess', {
+        'command': command,
+        'arguments': arguments,
+      });
+      
+      return ProcessResult(
+        0, // pid (not available from native side)
+        int.parse(result['exitCode'].toString()),
+        result['output'] as String,
+        result['error'] as String,
+      );
+    } on PlatformException catch (e) {
+      throw FlutterError('Error starting process: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error starting process: $e');
     }
   }
 
