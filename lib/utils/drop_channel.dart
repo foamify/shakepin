@@ -5,22 +5,20 @@ import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
 import 'package:shakepin/utils/handle_menu_item.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:shakepin/utils/logger.dart';
 
 typedef ShakeDetectedCallback = void Function(double x, double y);
 typedef DraggingSessionEndedCallback = void Function(int operation);
 typedef MenuItemClickedCallback = void Function(int tag);
 typedef ConcludeCallback = void Function();
+typedef CliOutputCallback = void Function(String output);
+typedef CliErrorCallback = void Function(String error);
 
 const MethodChannel _channel = MethodChannel('click.shakepin.macos/drop');
 
 final dropChannel = DropChannel._();
 
-enum PopoverEdge {
-  left,
-  right,
-  top,
-  bottom
-}
+enum PopoverEdge { left, right, top, bottom }
 
 class DropChannel {
   DropChannel._() {
@@ -79,12 +77,48 @@ class DropChannel {
               .firstWhere((element) => element.label == args[0])
               .onDraggingUpdated(Offset(args[1] as double, args[2] as double));
 
+        case 'cliOutput':
+          logger.log('CLI output: ${call.arguments}');
+          for (final callback in _cliOutputCallbacks) {
+            callback(call.arguments);
+          }
+
+        case 'cliError':
+          logger.log('CLI error: ${call.arguments}');
+          for (final callback in _cliErrorCallbacks) {
+            callback(call.arguments);
+          }
+
         default:
-        // logger.log('DropChannel: unknown method ${call.method}');
+          logger.log('DropChannel: unknown method ${call.method}');
       }
     });
   }
   final listeners = <DragDropListener>[];
+
+  final List<CliOutputCallback> _cliOutputCallbacks = [];
+  final List<CliErrorCallback> _cliErrorCallbacks = [];
+
+  void addCliOutputCallback(CliOutputCallback callback) {
+    _cliOutputCallbacks.add(callback);
+  }
+
+  void addCliErrorCallback(CliErrorCallback callback) {
+    _cliErrorCallbacks.add(callback);
+  }
+
+  void removeCliOutputCallback(CliOutputCallback callback) {
+    _cliOutputCallbacks.remove(callback);
+  }
+
+  void removeCliErrorCallback(CliErrorCallback callback) {
+    _cliErrorCallbacks.remove(callback);
+  }
+
+  void clearCliCallbacks() {
+    _cliOutputCallbacks.clear();
+    _cliErrorCallbacks.clear();
+  }
 
   Future<void> cleanup() async {
     try {
@@ -182,7 +216,8 @@ class DropChannel {
     }
   }
 
-  Future<void> showPopover(String content, {PopoverEdge edge = PopoverEdge.bottom}) async {
+  Future<void> showPopover(String content,
+      {PopoverEdge edge = PopoverEdge.bottom}) async {
     await _channel.invokeMethod('showPopover', [content, edge.index]);
   }
 
@@ -212,13 +247,14 @@ class DropChannel {
     }
   }
 
-  Future<ProcessResult> startProcess(String command, List<String> arguments) async {
+  Future<ProcessResult> startProcess(
+      String command, List<String> arguments) async {
     try {
       final result = await _channel.invokeMethod('startProcess', {
         'command': command,
         'arguments': arguments,
       });
-      
+
       return ProcessResult(
         0, // pid (not available from native side)
         int.parse(result['exitCode'].toString()),

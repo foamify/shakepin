@@ -496,6 +496,7 @@ class MainFlutterWindow: NSWindow {
       let data = handle.availableData
       if !data.isEmpty {
         outputData.append(data)
+        self.channel.invokeMethod("cliOutput", arguments: String(data: data, encoding: .utf8))
       }
     }
 
@@ -503,6 +504,7 @@ class MainFlutterWindow: NSWindow {
       let data = handle.availableData
       if !data.isEmpty {
         errorData.append(data)
+        self.channel.invokeMethod("cliError", arguments: String(data: data, encoding: .utf8))
       }
     }
 

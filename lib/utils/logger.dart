@@ -10,6 +10,7 @@ final logger = Logger._();
 
 class Logger {
   late File _logFile;
+  IOSink? _logSink;
   bool _initialized = false;
   static const maxLogSizeBytes = 5 * 1024 * 1024; // 5MB limit
   static const maxLogRetentionDays = 7;
@@ -46,7 +47,10 @@ class Logger {
 
       if (!await _logFile.exists()) {
         await _logFile.create(recursive: true);
+        _logSink = _logFile.openWrite(mode: FileMode.append);
         await _writeHeader();
+      } else {
+        _logSink = _logFile.openWrite(mode: FileMode.append);
       }
 
       await _rotateLogsIfNeeded();
@@ -80,26 +84,27 @@ class Logger {
   Future<bool> _checkStorageSpace() async {
     try {
       final stat = await _logsDirectory.stat();
-      // Ensure at least 100MB free space
-      return stat.size < await _getAvailableSpace() - (100 * 1024 * 1024);
+      final totalSize = await _calculateDirectorySize(_logsDirectory);
+      // Limit total logs to 100MB
+      return totalSize < 100 * 1024 * 1024;
     } catch (e) {
       _logError('Failed to check storage space', e);
       return false;
     }
   }
 
-  Future<int> _getAvailableSpace() async {
+  Future<int> _calculateDirectorySize(Directory dir) async {
+    int totalSize = 0;
     try {
-      final result = await Process.run('df', ['-k', _logsDirectory.path]);
-      final lines = result.stdout.toString().split('\n');
-      if (lines.length >= 2) {
-        final values = lines[1].split(RegExp(r'\s+'));
-        return int.parse(values[3]) * 1024; // Convert KB to bytes
+      await for (final entity in dir.list(recursive: true)) {
+        if (entity is File) {
+          totalSize += await entity.length();
+        }
       }
     } catch (e) {
-      _logError('Failed to get available space', e);
+      _logError('Failed to calculate directory size', e);
     }
-    return 0;
+    return totalSize;
   }
 
   Future<void> _writeHeader() async {
@@ -112,7 +117,8 @@ Started: ${_formatDateTime(DateTime.now())}
 ===========================================
 
 ''';
-    await _logFile.writeAsString(header);
+    _logSink?.write(header);
+    await _logSink?.flush();
   }
 
   String _formatDateTime(DateTime dt) {
@@ -135,12 +141,12 @@ Started: ${_formatDateTime(DateTime.now())}
 
   Future<void> log(String message, {LogLevel level = LogLevel.info}) async {
     debugPrint(message);
-    if (!_initialized) {
-      await _init();
+    if (!_initialized || _logSink == null) {
+      return;
     }
 
     if (!await _checkStorageSpace()) {
-      _logError('Insufficient storage space', 'Unable to write logs');
+      debugPrint('Storage space exceeded limits');
       return;
     }
 
@@ -149,23 +155,34 @@ Started: ${_formatDateTime(DateTime.now())}
       final caller = _getCallerLocation();
       final logEntry =
           '$timestamp | ${level.name.toUpperCase().padRight(7)} | $caller | $message\n';
-      await _logFile.writeAsString(logEntry, mode: FileMode.append);
-      await _rotateLogsIfNeeded();
+
+      _logSink?.write(logEntry);
+      await _logSink?.flush();
     } catch (e) {
       _logError('Failed to write log', e);
     }
+
+    await _rotateLogsIfNeeded();
   }
 
   Future<void> _rotateLogsIfNeeded() async {
     try {
       final stats = await _logFile.stat();
       if (stats.size > maxLogSizeBytes) {
+        // Close current sink
+        await _logSink?.flush();
+        await _logSink?.close();
+        _logSink = null;
+
         final backupFile = File('${_logFile.path}.bak');
         if (await backupFile.exists()) {
           await backupFile.delete();
         }
         await _logFile.copy('${_logFile.path}.bak');
         await _logFile.writeAsString('');
+
+        // Reopen sink
+        _logSink = _logFile.openWrite(mode: FileMode.append);
       }
     } catch (e) {
       _logError('Failed to rotate logs', e);
@@ -173,9 +190,21 @@ Started: ${_formatDateTime(DateTime.now())}
   }
 
   void _logError(String message, dynamic error) {
-    // Use print only as last resort for logger errors
     final timestamp = DateTime.now().toIso8601String();
-    logger.log('$timestamp [ERROR] $message: $error');
+    try {
+      _logSink?.write('$timestamp | ERROR   | Logger | $message: $error\n');
+      _logSink?.flush();
+    } catch (_) {
+      // If we can't write to the log file, print to console as last resort
+      debugPrint('Logger error: $message: $error');
+    }
+  }
+
+  Future<void> dispose() async {
+    await _logSink?.flush();
+    await _logSink?.close();
+    _logSink = null;
+    _initialized = false;
   }
 
   Future<void> clearLogs() async {

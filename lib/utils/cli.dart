@@ -234,33 +234,36 @@ class Cli {
     ];
     logger.log('ImageMagick command arguments: $args');
 
-    final result = await executeNativeProcess('magick', args.map((e) => "'$e'").toList());
-    logger.log('Process completed with exit code: ${result.exitCode}');
-    logger.log('Output: ${result.stdout}');
-    logger.log('Error: ${result.stderr}');
-    return;
-
     try {
       logger.log('🚀 Launching ImageMagick process...');
-      final result = await executeNativeProcess('magick', args);
-      logger.log('Process completed with exit code: ${result.exitCode}');
 
-      // Parse progress from stderr
-      if (onProgress != null) {
-        final lines = result.stderr.split('\n');
-        for (final line in lines) {
+      callback(line) {
+        if (onProgress != null) {
           final match =
               RegExp(r'(\d+) of (\d+), (\d+)% complete').firstMatch(line);
           if (match != null) {
             final current = int.parse(match.group(1)!);
             final total = int.parse(match.group(2)!);
-            final progress = current / total;
+            final progress = int.parse(match.group(3)!);
             logger.log(
-                'Processing frame $current of $total (${(progress * 100).toStringAsFixed(1)}%)');
-            onProgress(progress);
+                'Processing frame $current of $total (${(progress).toStringAsFixed(1)}%)');
+            onProgress(progress/100);
           }
         }
       }
+
+      dropChannel.addCliErrorCallback(callback);
+
+      final result = await executeNativeProcess(
+          'magick', args.map((e) => "'$e'").toList());
+      logger.log('Process completed with exit code: ${result.exitCode}');
+      logger.log('Output: ${result.stdout}');
+      logger.log('Error: ${result.stderr}');
+      logger.log('Process completed with exit code: ${result.exitCode}');
+
+      dropChannel.removeCliErrorCallback(callback);
+
+      // Parse progress from stderr
 
       final exitCode = result.exitCode;
       logger.log('Process exited with code: $exitCode');
