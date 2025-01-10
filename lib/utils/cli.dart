@@ -247,7 +247,7 @@ class Cli {
             final progress = int.parse(match.group(3)!);
             logger.log(
                 'Processing frame $current of $total (${(progress).toStringAsFixed(1)}%)');
-            onProgress(progress/100);
+            onProgress(progress / 100);
           }
         }
       }
