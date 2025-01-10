@@ -10,7 +10,7 @@ final logger = Logger._();
 
 class Logger {
   late File _logFile;
-  IOSink? _logSink;
+  RandomAccessFile? _fileHandle;
   bool _initialized = false;
   static const maxLogSizeBytes = 5 * 1024 * 1024; // 5MB limit
   static const maxLogRetentionDays = 7;
@@ -47,10 +47,10 @@ class Logger {
 
       if (!await _logFile.exists()) {
         await _logFile.create(recursive: true);
-        _logSink = _logFile.openWrite(mode: FileMode.append);
+        _fileHandle = await _logFile.open(mode: FileMode.append);
         await _writeHeader();
       } else {
-        _logSink = _logFile.openWrite(mode: FileMode.append);
+        _fileHandle = await _logFile.open(mode: FileMode.append);
       }
 
       await _rotateLogsIfNeeded();
@@ -117,8 +117,7 @@ Started: ${_formatDateTime(DateTime.now())}
 ===========================================
 
 ''';
-    _logSink?.write(header);
-    await _logSink?.flush();
+    await _fileHandle?.writeString(header);
   }
 
   String _formatDateTime(DateTime dt) {
@@ -141,7 +140,7 @@ Started: ${_formatDateTime(DateTime.now())}
 
   Future<void> log(String message, {LogLevel level = LogLevel.info}) async {
     debugPrint(message);
-    if (!_initialized || _logSink == null) {
+    if (!_initialized || _fileHandle == null) {
       return;
     }
 
@@ -156,8 +155,8 @@ Started: ${_formatDateTime(DateTime.now())}
       final logEntry =
           '$timestamp | ${level.name.toUpperCase().padRight(7)} | $caller | $message\n';
 
-      _logSink?.write(logEntry);
-      await _logSink?.flush();
+      await _fileHandle?.writeString(logEntry);
+      await _fileHandle?.flush();
     } catch (e) {
       _logError('Failed to write log', e);
     }
@@ -169,10 +168,10 @@ Started: ${_formatDateTime(DateTime.now())}
     try {
       final stats = await _logFile.stat();
       if (stats.size > maxLogSizeBytes) {
-        // Close current sink
-        await _logSink?.flush();
-        await _logSink?.close();
-        _logSink = null;
+        // Close current handle
+        await _fileHandle?.flush();
+        await _fileHandle?.close();
+        _fileHandle = null;
 
         final backupFile = File('${_logFile.path}.bak');
         if (await backupFile.exists()) {
@@ -181,8 +180,8 @@ Started: ${_formatDateTime(DateTime.now())}
         await _logFile.copy('${_logFile.path}.bak');
         await _logFile.writeAsString('');
 
-        // Reopen sink
-        _logSink = _logFile.openWrite(mode: FileMode.append);
+        // Reopen handle
+        _fileHandle = await _logFile.open(mode: FileMode.append);
       }
     } catch (e) {
       _logError('Failed to rotate logs', e);
@@ -192,8 +191,8 @@ Started: ${_formatDateTime(DateTime.now())}
   void _logError(String message, dynamic error) {
     final timestamp = DateTime.now().toIso8601String();
     try {
-      _logSink?.write('$timestamp | ERROR   | Logger | $message: $error\n');
-      _logSink?.flush();
+      _fileHandle?.writeStringSync('$timestamp | ERROR   | Logger | $message: $error\n');
+      _fileHandle?.flushSync();
     } catch (_) {
       // If we can't write to the log file, print to console as last resort
       debugPrint('Logger error: $message: $error');
@@ -201,9 +200,9 @@ Started: ${_formatDateTime(DateTime.now())}
   }
 
   Future<void> dispose() async {
-    await _logSink?.flush();
-    await _logSink?.close();
-    _logSink = null;
+    await _fileHandle?.flush();
+    await _fileHandle?.close();
+    _fileHandle = null;
     _initialized = false;
   }
 
