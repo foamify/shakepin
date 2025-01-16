@@ -105,3 +105,30 @@ enum ImageFormat {
         ImageFormat.tiff => 'TIFF',
       };
 }
+
+enum ImageDownscale {
+  sameAsInput,
+  seventyFive,
+  fifty,
+  twentyFive,
+}
+
+extension ImageDownscaleExtension on ImageDownscale {
+  String get name {
+    return switch (this) {
+      ImageDownscale.sameAsInput => 'Same as Input',
+      ImageDownscale.seventyFive => '75%',
+      ImageDownscale.fifty => '50%',
+      ImageDownscale.twentyFive => '25%',
+    };
+  }
+
+  int get value {
+    return switch (this) {
+      ImageDownscale.sameAsInput => 100,
+      ImageDownscale.seventyFive => 75,
+      ImageDownscale.fifty => 50,
+      ImageDownscale.twentyFive => 25,
+    };
+  }
+}

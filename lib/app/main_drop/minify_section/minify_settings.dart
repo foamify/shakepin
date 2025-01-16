@@ -23,6 +23,7 @@ class _MinifySettingsState extends State<MinifySettings> {
   var _videoFormat = VideoFormat.sameAsInput;
   var _imageQuality = ImageQuality.normal;
   var _imageFormat = ImageFormat.sameAsInput;
+  var _imageDownscale = ImageDownscale.sameAsInput; // Add this line
 
   @override
   Widget build(BuildContext context) {
@@ -142,6 +143,24 @@ class _MinifySettingsState extends State<MinifySettings> {
                                 onChanged: (format) =>
                                     setState(() => _imageFormat = format!),
                                 child: Text(_imageFormat.name),
+                              ),
+                            ],
+                          ),
+                          const Divider(color: MacosColors.gridColor),
+                          Row(
+                            children: [
+                              const Text('Image size'),
+                              const Spacer(),
+                              NativeDropdownButton(
+                                value: _imageDownscale,
+                                items: ImageDownscale.values
+                                    .map((scale) =>
+                                        NativeDropdownItem<ImageDownscale>(
+                                            value: scale, label: scale.name))
+                                    .toList(),
+                                onChanged: (scale) =>
+                                    setState(() => _imageDownscale = scale!),
+                                child: Text(_imageDownscale.name),
                               ),
                             ],
                           ),
@@ -460,6 +479,7 @@ class _MinifySettingsState extends State<MinifySettings> {
         fileExtension:
             _imageFormat == ImageFormat.sameAsInput ? null : _imageFormat.name,
         quality: _imageQuality.value,
+        downScale: _imageDownscale.value, // Add this line
         onProgress: onProgress,
       );
 

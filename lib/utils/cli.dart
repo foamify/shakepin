@@ -197,6 +197,7 @@ class Cli {
   Future<void> minifyImage(String inputPath,
       {String? fileExtension,
       int quality = 95,
+      required int downScale,
       void Function(double)? onProgress}) async {
     logger.log('=== Starting Image Minification Process ===');
     logger.log('Input path: $inputPath');
@@ -227,11 +228,21 @@ class Cli {
 
     final args = [
       inputPath,
+    ];
+    
+    // Add downscaling if needed
+    if (downScale > 1) {
+      args.addAll(['-resize', '${downScale}%']);
+      logger.log('Applying downscale factor: $downScale (${downScale}% of original size)');
+    }
+
+    args.addAll([
       '-quality',
       quality.toString(),
       '-monitor',
       outputPath
-    ];
+    ]);
+    
     logger.log('ImageMagick command arguments: $args');
 
     try {
