@@ -26,14 +26,14 @@ Future<void> _showApp() async {
 
   if (isAboutApp()) {
     appSize = AppSizes.about;
-  } else if (isMinifyApp()) {
-    appSize = AppSizes.minify;
-  } else if (archiveProgress() >= 0) {
-    appSize = AppSizes.archive;
-  } else if (items().isNotEmpty) {
-    appSize = AppSizes.pin;
   } else {
-    appSize = AppSizes.panel;
+    switch (appMode()) {
+      case AppMode.minify:
+        appSize = AppSizes.minify;
+
+      default:
+        appSize = AppSizes.main;
+    }
   }
 
   await dropChannel.setFrame(
@@ -48,39 +48,5 @@ Future<void> _showApp() async {
 }
 
 Future<void> _hideApp() async {
-  final center = await dropChannel.center();
-  Size appSize;
-
-  if (isAboutApp()) {
-    appSize = AppSizes.about;
-  } else if (isMinifyApp()) {
-    appSize = AppSizes.minify;
-  } else if (archiveProgress() >= 0) {
-    appSize = AppSizes.archive;
-  } else if (items().isNotEmpty) {
-    appSize = AppSizes.pin;
-  } else {
-    appSize = AppSizes.panel;
-  }
-
-  await dropChannel.setFrame(
-    Rect.fromCenter(
-      center: center,
-      width: appSize.width,
-      height: appSize.height,
-    ),
-    animate: true,
-  );
-  await Future.delayed(Durations.short4);
-  await dropChannel.setFrame(
-    Rect.fromCenter(
-      center: center,
-      width: appSize.width,
-      height: 1,
-    ),
-    animate: true,
-  );
-  await Future.delayed(Durations.short4);
-  await dropChannel.setVisible(false);
-  isAboutApp.value = false;
+  resetFrameAndHide();
 }
