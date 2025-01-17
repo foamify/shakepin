@@ -15,7 +15,8 @@ dependencies:
   macos_haptic_feedback: ^1.0.0
   cupertino_icons: ^1.0.8
   libcaesium_dart:
-    path: ../libcaesium_dart
+    git:
+      url: https://github.com/foamify/libcaesium_dart.git
   path: any
   extended_text: ^14.1.0
   super_sliver_list: ^0.4.1

@@ -387,9 +387,11 @@ packages:
   libcaesium_dart:
     dependency: "direct main"
     description:
-      path: "../libcaesium_dart"
-      relative: true
-    source: path
+      path: "."
+      ref: HEAD
+      resolved-ref: "3de79065af852fd1ec6fe7aadaec370d2d5a778a"
+      url: "https://github.com/foamify/libcaesium_dart.git"
+    source: git
     version: "0.1.0"
   lints:
     dependency: transitive
