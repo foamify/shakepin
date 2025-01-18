@@ -61,8 +61,8 @@ class DropChannel {
               .onDragExited();
 
         case 'dragConclude':
-          for (var element in listeners) {
-            element.onDragConclude();
+          for (var listener in listeners) {
+            listener.onDragConclude();
           }
 
         case 'dragPerform':

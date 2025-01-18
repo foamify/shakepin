@@ -5,6 +5,7 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/app/main_drop/drop_section.dart';
 import 'package:shakepin/app/main_drop/main_sidebar.dart';
 import 'package:shakepin/app/main_drop/minify_section/minify_section.dart';
+import 'package:shakepin/app/main_drop/misc_section/misc_section.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
@@ -171,6 +172,13 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                                 key: ValueKey('minify_section'),
                               ),
                             ),
+                          AppMode.misc => SizedBox(
+                              width: MediaQuery.sizeOf(context).width - 48 - 8,
+                              height: MediaQuery.sizeOf(context).height - 16,
+                              child: const MiscSection(
+                                key: ValueKey('misc_section'),
+                              ),
+                            ),
                           _ => const Padding(
                               padding: EdgeInsets.only(bottom: 8.0),
                               child: DropSection(
@@ -187,11 +195,11 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                                 AppMode.pin => AppSizes.main,
                                 AppMode.minify => AppSizes.minify,
                                 AppMode.archive => AppSizes.main,
-                                AppMode.misc => AppSizes.main,
+                                AppMode.misc => AppSizes.minify,
                               };
-                    
+
                               appMode.value = mode;
-                    
+
                               dropChannel.setMinimumSize(appSize);
                               final rect = Rect.fromCenter(
                                 center: await dropChannel.center(),
@@ -206,7 +214,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                         )
                       ],
                     );
-                  }
+                  },
                 ),
               ],
             ),

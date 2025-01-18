@@ -15,7 +15,8 @@ sealed class AppSizes {
   static const pin = Size(180, 180);
   static const minify = Size(360, 468);
   static const about = Size(360, 360);
-  static const misc = Size(300, 300); // Adjust size as needed
+  static const misc = Size(360, 468);
+  // static const misc = Size(300, 300); // Adjust size as needed
 
   static const main = Size(240 + 48 + 12, 240);
 }
@@ -150,7 +151,7 @@ void resetFrameAndHide() async {
     AppMode.pin => AppSizes.main,
     AppMode.minify => AppSizes.minify,
     AppMode.archive => AppSizes.main,
-    AppMode.misc => AppSizes.main,
+    AppMode.misc => AppSizes.misc,
   };
 
   logger.log('Starting resetFrameAndHide');

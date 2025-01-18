@@ -27,13 +27,11 @@ Future<void> _showApp() async {
   if (isAboutApp()) {
     appSize = AppSizes.about;
   } else {
-    switch (appMode()) {
-      case AppMode.minify:
-        appSize = AppSizes.minify;
-
-      default:
-        appSize = AppSizes.main;
-    }
+    appSize = switch (appMode()) {
+      AppMode.minify => AppSizes.minify,
+      AppMode.misc => AppSizes.misc,
+      _ => AppSizes.main,
+    };
   }
 
   await dropChannel.setFrame(
