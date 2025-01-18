@@ -95,12 +95,31 @@ class Cli {
 
   // MARK: - Convert to WAV
 
-  Future<void> convertToWav(String inputPath, String outputPath,
-      {Duration? startTime, Duration? endTime}) async {
+  Future<void> convertToWav(String inputPath,
+      {Duration? startTime, Duration? endTime, void Function(double)? onProgress}) async {
+    logger.log('=== Starting WAV Conversion Process ===');
+    logger.log('Input path: $inputPath');
+    
+    if (startTime != null) logger.log('Start time: ${_formatDuration(startTime)}');
+    if (endTime != null) logger.log('End time: ${_formatDuration(endTime)}');
+
     if (_currentProcess != null) {
-      logger.log('A process is already running. Please cancel it first.');
+      logger.log('⚠️ Process conflict: Another conversion process is running');
+      logger.log('Current process PID: ${_currentProcess!.pid}');
+      logger.log('Aborting new conversion request');
       return;
     }
+
+    final inputFile = File(inputPath);
+    if (!inputFile.existsSync()) {
+      logger.log('❌ Error: Input file does not exist at path: $inputPath');
+      throw FileSystemException('Input file not found', inputPath);
+    }
+
+    final outputPath = _getUniqueFilePath(inputPath,
+        suffix: '_converted', inputExtension: 'wav');
+    logger.log('Generated output path: $outputPath');
+
     List<String> ffmpegArgs = ['-i', inputPath];
 
     if (startTime != null) {
@@ -118,34 +137,64 @@ class Cli {
       '-ac',
       '1',
       '-y',
+      '-progress',
+      'pipe:1',
       outputPath,
     ]);
 
+    logger.log('FFmpeg command arguments: ${ffmpegArgs.join(" ")}');
+
     try {
+      logger.log('🚀 Launching FFmpeg process...');
       _currentProcess = await Process.start('ffmpeg', ffmpegArgs);
 
       // Handle stdout
       _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
-        logger.log('[Process.convertToWav] Output: $data');
+        logger.log('[FFmpeg Output] $data');
+        
+        if (onProgress != null) {
+          final timeMatch = RegExp(r'out_time=(\d{2}):(\d{2}):(\d{2}\.\d{2})').firstMatch(data);
+          if (timeMatch != null) {
+            final hours = int.parse(timeMatch.group(1)!);
+            final minutes = int.parse(timeMatch.group(2)!);
+            final seconds = double.parse(timeMatch.group(3)!);
+            final currentTime = hours * 3600 + minutes * 60 + seconds;
+            onProgress(currentTime / (endTime?.inSeconds ?? 100).toDouble());
+            logger.log('Processing time: ${_formatDuration(Duration(seconds: currentTime.round()))}');
+          }
+        }
       });
 
       // Handle stderr
       _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
-        logger.log('[Process.convertToWav] Error: $data');
+        logger.log('[FFmpeg Error] $data');
       });
 
       // Wait for the process to complete
       final exitCode = await _currentProcess!.exitCode;
-      logger.log('[Process.convertToWav] Process exited with code: $exitCode');
+      logger.log('Process exited with code: $exitCode');
 
       if (exitCode != 0) {
+        logger.log('❌ Process failed with exit code: $exitCode');
         throw Exception('FFmpeg process failed with exit code: $exitCode');
       }
+
+      final outputFile = File(outputPath);
+      if (outputFile.existsSync()) {
+        final outputFileSize = await outputFile.length();
+        logger.log('Output file size: ${(outputFileSize / 1024).toStringAsFixed(2)} KB');
+      } else {
+        logger.log('❌ Warning: Output file was not created');
+      }
+
     } catch (e) {
-      logger.log('[Process.convertToWav] Error: $e');
+      logger.log('❌ Critical error during conversion: $e');
+      logger.log('Stack trace: ${StackTrace.current}');
       rethrow;
     } finally {
+      logger.log('Cleaning up process resources');
       _currentProcess = null;
+      logger.log('=== WAV Conversion Process Completed ===');
     }
   }
 
