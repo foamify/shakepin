@@ -1,10 +1,8 @@
-import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_haptic_feedback/macos_haptic_feedback.dart';
-import 'package:path/path.dart' as path;
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void handleMenuItemClicked(int tag) async {
   switch (tag) {

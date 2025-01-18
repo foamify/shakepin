@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
-import 'package:shakepin/app/main_drop/drop_section.dart';
-import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/widgets/glass_button.dart';
