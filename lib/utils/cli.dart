@@ -96,11 +96,15 @@ class Cli {
   // MARK: - Convert to WAV
 
   Future<void> convertToWav(String inputPath,
-      {Duration? startTime, Duration? endTime, void Function(double)? onProgress}) async {
+      {Duration? startTime,
+      Duration? endTime,
+      void Function(double)? onProgress}) async {
     logger.log('=== Starting WAV Conversion Process ===');
     logger.log('Input path: $inputPath');
-    
-    if (startTime != null) logger.log('Start time: ${_formatDuration(startTime)}');
+
+    if (startTime != null) {
+      logger.log('Start time: ${_formatDuration(startTime)}');
+    }
     if (endTime != null) logger.log('End time: ${_formatDuration(endTime)}');
 
     if (_currentProcess != null) {
@@ -151,16 +155,18 @@ class Cli {
       // Handle stdout
       _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
         logger.log('[FFmpeg Output] $data');
-        
+
         if (onProgress != null) {
-          final timeMatch = RegExp(r'out_time=(\d{2}):(\d{2}):(\d{2}\.\d{2})').firstMatch(data);
+          final timeMatch = RegExp(r'out_time=(\d{2}):(\d{2}):(\d{2}\.\d{2})')
+              .firstMatch(data);
           if (timeMatch != null) {
             final hours = int.parse(timeMatch.group(1)!);
             final minutes = int.parse(timeMatch.group(2)!);
             final seconds = double.parse(timeMatch.group(3)!);
             final currentTime = hours * 3600 + minutes * 60 + seconds;
             onProgress(currentTime / (endTime?.inSeconds ?? 100).toDouble());
-            logger.log('Processing time: ${_formatDuration(Duration(seconds: currentTime.round()))}');
+            logger.log(
+                'Processing time: ${_formatDuration(Duration(seconds: currentTime.round()))}');
           }
         }
       });
@@ -182,11 +188,11 @@ class Cli {
       final outputFile = File(outputPath);
       if (outputFile.existsSync()) {
         final outputFileSize = await outputFile.length();
-        logger.log('Output file size: ${(outputFileSize / 1024).toStringAsFixed(2)} KB');
+        logger.log(
+            'Output file size: ${(outputFileSize / 1024).toStringAsFixed(2)} KB');
       } else {
         logger.log('❌ Warning: Output file was not created');
       }
-
     } catch (e) {
       logger.log('❌ Critical error during conversion: $e');
       logger.log('Stack trace: ${StackTrace.current}');
@@ -278,20 +284,16 @@ class Cli {
     final args = [
       inputPath,
     ];
-    
+
     // Add downscaling if needed
     if (downScale > 1) {
-      args.addAll(['-resize', '${downScale}%']);
-      logger.log('Applying downscale factor: $downScale (${downScale}% of original size)');
+      args.addAll(['-resize', '$downScale%']);
+      logger.log(
+          'Applying downscale factor: $downScale ($downScale% of original size)');
     }
 
-    args.addAll([
-      '-quality',
-      quality.toString(),
-      '-monitor',
-      outputPath
-    ]);
-    
+    args.addAll(['-quality', quality.toString(), '-monitor', outputPath]);
+
     logger.log('ImageMagick command arguments: $args');
 
     try {
@@ -552,7 +554,7 @@ class Cli {
           ? fileExtension.substring(1)
           : fileExtension;
       newPath =
-          '$pathWithoutExt${suffix ?? ''}${counter > 0 ? ' ($counter)' : ''}.${extensionToUse}';
+          '$pathWithoutExt${suffix ?? ''}${counter > 0 ? ' ($counter)' : ''}.$extensionToUse';
       counter++;
     } while (File(newPath).existsSync());
 
@@ -608,7 +610,7 @@ class Cli {
       });
 
       // Wait for the process to complete
-      final exitCode = await process.exitCode;
+      final exitCode = process.exitCode;
       logger.log(
           '[Process.getMediaDuration] Process exited with code: $exitCode');
 

@@ -40,7 +40,7 @@ class _DropMiscState extends State<DropMisc> {
       },
       onDragPerform: (paths) async {
         items.value = paths.toSet();
-        
+
         isMiscApp.value = true;
         dropChannel.setFrame(
           Rect.fromCenter(

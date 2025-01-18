@@ -70,7 +70,9 @@ class _FileHoverWidgetState extends State<FileHoverWidget> {
                 widget.fileSize,
                 style: TextStyle(
                   fontSize: 12,
-                  color: MacosColors.labelColor.resolvedColor(context).withOpacity(.5),
+                  color: MacosColors.labelColor
+                      .resolvedColor(context)
+                      .withOpacity(.5),
                 ),
               ),
             ],

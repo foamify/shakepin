@@ -191,7 +191,8 @@ Started: ${_formatDateTime(DateTime.now())}
   void _logError(String message, dynamic error) {
     final timestamp = DateTime.now().toIso8601String();
     try {
-      _fileHandle?.writeStringSync('$timestamp | ERROR   | Logger | $message: $error\n');
+      _fileHandle?.writeStringSync(
+          '$timestamp | ERROR   | Logger | $message: $error\n');
       _fileHandle?.flushSync();
     } catch (_) {
       // If we can't write to the log file, print to console as last resort

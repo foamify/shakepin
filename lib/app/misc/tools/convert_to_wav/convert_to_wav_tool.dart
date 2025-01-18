@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:path/path.dart' as path;
@@ -47,12 +45,14 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
     }
 
     try {
-      logger.log('[_getMediaDuration] Getting duration for file: ${items().first}');
+      logger.log(
+          '[_getMediaDuration] Getting duration for file: ${items().first}');
       final duration = await _cli.getMediaDuration(items().first);
       logger.log('[_getMediaDuration] Received duration: $duration');
       if (duration != null) {
         setState(() {
-          logger.log('[_getMediaDuration] Updating state with duration: $duration');
+          logger.log(
+              '[_getMediaDuration] Updating state with duration: $duration');
           _mediaDuration = duration;
           _endTime = _mediaDuration;
         });
@@ -113,7 +113,6 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
 
         await _cli.convertToWav(
           inputPath,
-          outputPath,
           startTime: _enableTrim ? _startTime : null,
           endTime: _enableTrim ? _endTime : null,
         );
