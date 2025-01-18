@@ -28,20 +28,26 @@ class _GlassButtonState extends State<GlassButton> {
 
   @override
   Widget build(BuildContext context) {
-    final buttonColor = widget.secondary
+    final isDisabled = widget.onTap == null;
+
+    final buttonColor = widget.secondary || isDisabled
         ? MacosColors.controlColor.resolvedColor(context)
         : MacosColors.controlAccentColor;
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
+      cursor: isDisabled ? SystemMouseCursors.forbidden : MouseCursor.defer,
+      onEnter: (_) => setState(() => _isHovered = !isDisabled && true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
-        onTapUp: (_) => setState(() {
-          _isPressed = false;
-          widget.onTap?.call();
-        }),
-        onTapCancel: () => setState(() => _isPressed = false),
+        onTapDown: isDisabled ? null : (_) => setState(() => _isPressed = true),
+        onTapUp: isDisabled
+            ? null
+            : (_) => setState(() {
+                  _isPressed = false;
+                  widget.onTap?.call();
+                }),
+        onTapCancel:
+            isDisabled ? null : () => setState(() => _isPressed = false),
         child: AnimatedScale(
           scale: _isPressed ? .97 : 1,
           duration: Durations.short2,
@@ -52,21 +58,15 @@ class _GlassButtonState extends State<GlassButton> {
                     .where((value) => value.isFinite && value > 0)
                     .fold<double>(0.0, (a, b) => a > b ? a : b);
             return AnimatedContainer(
-              // width: 48,
-              // height: 48,
               duration: Durations.medium4,
               curve: Curves.fastEaseInToSlowEaseOut,
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(radius),
-                  color: buttonColor),
+                  color: isDisabled
+                      ? buttonColor.withOpacity(0.375)
+                      : buttonColor),
               foregroundDecoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(radius),
-                  // border: Border.all(
-                  //   strokeAlign: -2.0,
-                  //   color: _isHovered
-                  //       ? Colors.transparent
-                  //       : MacosColors.controlColor.resolvedColor(context),
-                  // ),
                   color: _isHovered
                       ? MacosColors.controlColor.resolvedColor(context)
                       : null),
@@ -77,7 +77,7 @@ class _GlassButtonState extends State<GlassButton> {
                 child: IconTheme(
                   data: IconThemeData(
                     color: MacosColors.labelColor.resolveFrom(context),
-                    opacity: _isHovered ? 1 : 0.8,
+                    opacity: isDisabled ? 0.5 : (_isHovered ? 1 : 0.8),
                   ),
                   child: Center(
                       child: Padding(
