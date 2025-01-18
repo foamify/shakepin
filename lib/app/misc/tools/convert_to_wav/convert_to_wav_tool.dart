@@ -235,7 +235,7 @@ class _ConvertToWavToolState extends State<ConvertToWavTool> {
                 value: _enableTrim,
                 onChanged: (value) {
                   setState(() {
-                    _enableTrim = value ?? false;
+                    _enableTrim = value;
                   });
                 },
               ),
