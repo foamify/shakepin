@@ -739,150 +739,118 @@ class MainFlutterWindow: NSWindow {
     return nil
   }
 
+  private func getPasteboardCount(completion: @escaping (Int) -> Void) {
+    DispatchQueue.main.async {
+      let pasteboard = NSPasteboard(name: .drag)
+      let count = pasteboard.pasteboardItems?.count ?? 0
+      completion(count)
+    }
+  }
+
   private func setupShakeDetector() {
+    var globalMonitor: Any?
+    var mouseDownMonitor: Any?
+    var mouseUpMonitor: Any?
+    var initialChangeCount = 0
+    var isDragging = false
     var positions: [CGPoint] = []
     var timestamps: [Date] = []
-    let shakeThreshold = 10
-    var isDragging = false
-    var shakeDetected = false
+    let shakeThreshold = 4  // Changed from 6 to 4 direction changes
+    let timeWindow: TimeInterval = 0.5  // Time window to detect shake
+    let minVelocity: CGFloat = 400  // Pixels per second
 
-    // TODO: change to use global monitor
-    func watch(using closure: @escaping () -> Void) {
-      var changeCount = 0
-
-      Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-        let pasteboard = NSPasteboard(name: .drag)
-        if pasteboard.changeCount == changeCount { return }
-
-        defer {
-          changeCount = pasteboard.changeCount
-        }
-
-        closure()
-      }
-    }
-
-    func checkMouseMovement() {
-      let isLeftButtonDown = NSEvent.pressedMouseButtons & (1 << 0) != 0
-
-      if !isLeftButtonDown || !isDragging {
-        if shakeDetected {
-          channel.invokeMethod("conclude", arguments: nil)
-          shakeDetected = false
-        }
-        positions = []
-        timestamps = []
-        isDragging = false
-        return
-      }
-
-      let currentPosition = NSEvent.mouseLocation
-      let currentTimestamp = Date()
-
-      if let lastTimestamp = timestamps.last,
-        currentTimestamp.timeIntervalSince(lastTimestamp) > 1.0
-      {
-        positions.removeAll()
-        timestamps.removeAll()
-      }
-
-      positions.append(currentPosition)
-      timestamps.append(currentTimestamp)
-
-      if positions.count > shakeThreshold {
-        positions.removeFirst()
-        timestamps.removeFirst()
-      }
-
-      // NSLog("positions: \(positions)")
-
-      if detectShake() {
-        handleShake(at: currentPosition)
-      }
-    }
-
-    func detectShake() -> Bool {
-
-      var directionChangesX = 0
-      var directionChangesY = 0
-      var isSpeedThresholdMet = false
-
-      var lastDirectionX = 0
-      var lastDirectionY = 0
-
-      for i in 1..<positions.count {
-        let dx = positions[i].x - positions[i - 1].x
-        let dy = positions[i].y - positions[i - 1].y
-
-        let currentDirectionX = dx == 0 ? 0 : (dx > 0 ? 1 : -1)
-        let currentDirectionY = dy == 0 ? 0 : (dy > 0 ? 1 : -1)
-
-        // Check for direction changes
-        if i > 1 && currentDirectionX != 0 && currentDirectionX != lastDirectionX {
-          directionChangesX += 1
-        }
-
-        if i > 1 && currentDirectionY != 0 && currentDirectionY != lastDirectionY {
-          directionChangesY += 1
-        }
-
-        lastDirectionX = currentDirectionX != 0 ? currentDirectionX : lastDirectionX
-        lastDirectionY = currentDirectionY != 0 ? currentDirectionY : lastDirectionY
-      }
-
-      // Check duration between first and final segment
-      if positions.count >= 4 {
-        let duration = CGFloat(timestamps.last!.timeIntervalSince(timestamps.first!))
-        // NSLog("duration: \(duration)")
-        if duration <= 1.0 {
-          isSpeedThresholdMet = true
-        } else {
-          isSpeedThresholdMet = false
-        }
-      }
-
-      // Detect shake if there are at least 5 direction changes in either axis and speed threshold is met
-      return (directionChangesX >= 4 || directionChangesY >= 4) && isSpeedThresholdMet
-    }
-
-    func handleShake(at position: CGPoint) {
-      shakeDetected = true
-      channel.invokeMethod("shakeDetected", arguments: [position.x, position.y])
-      // let wndWidth = self.frame.width
-      // let wndHeight = self.frame.height
-
-      // if self.isVisible {
-      //   return
-      // }
-      // NSLog("Shake detected")
-      // self.setIsVisible(true)
-      // if let screen = getCurrentScreen() {
-      //   let x = min(max(position.x - wndWidth / 2, screen.frame.minX), screen.frame.maxX - wndWidth)
-      //   let cursorDistanceFromBottom = position.y - screen.frame.minY
-      //   if cursorDistanceFromBottom < wndHeight + 24 {  // Adjust this value as needed
-      //     self.setFrameOrigin(NSPoint(x: x, y: position.y + 24))
-      //   } else {
-      //     self.setFrameTopLeftPoint(NSPoint(x: x, y: position.y - 24))
-      //   }
-      // } else {
-      //   self.setFrameTopLeftPoint(NSPoint(x: position.x - wndWidth / 2, y: position.y - 24))
-      // }
-      // self.makeKeyAndOrderFront(nil)
-    }
-
-    func getPasteboardCount(completion: @escaping (Int) -> Void) {
-      DispatchQueue.main.async {
-        let count = NSPasteboard(name: .drag).pasteboardItems?.count ?? 0
-        completion(count)
-      }
-    }
-
-    watch {
+    // Monitor mouse down
+    mouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { _ in
+      let pasteboard = NSPasteboard(name: .drag)
+      initialChangeCount = pasteboard.changeCount
+      positions.removeAll()
+      timestamps.removeAll()
       isDragging = true
+      // NSLog("MouseDown - Initial drag pasteboard changeCount: \(initialChangeCount)")
     }
-    Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-      checkMouseMovement()
+
+    // Monitor drag movement
+    globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDragged]) { event in
+      guard isDragging else { return }
+
+      let pasteboard = NSPasteboard(name: .drag)
+      let currentChangeCount = pasteboard.changeCount
+
+      // Only process if we're actually dragging something
+      if currentChangeCount != initialChangeCount {
+        let currentPos = NSEvent.mouseLocation
+        let currentTime = Date()
+
+        positions.append(currentPos)
+        timestamps.append(currentTime)
+
+        // Keep only recent movements
+        while timestamps.count > 1 && currentTime.timeIntervalSince(timestamps[0]) > timeWindow {
+          positions.removeFirst()
+          timestamps.removeFirst()
+        }
+
+        // Check for shake pattern
+        if self.detectShake(
+          positions: positions, timestamps: timestamps,
+          threshold: shakeThreshold, minVelocity: minVelocity)
+        {
+          self.handleShake(at: currentPos)
+        }
+      }
     }
+
+    // Monitor mouse up
+    mouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { _ in
+      isDragging = false
+      positions.removeAll()
+      timestamps.removeAll()
+      // NSLog("MouseUp - Drag ended")
+      self.channel.invokeMethod("dragConclude", arguments: nil)
+    }
+  }
+
+  private func detectShake(
+    positions: [CGPoint], timestamps: [Date],
+    threshold: Int, minVelocity: CGFloat
+  ) -> Bool {
+    guard positions.count > 2 else { return false }
+
+    var directionChanges = 0
+    var lastDirection: CGPoint = .zero
+    var totalDistance: CGFloat = 0
+
+    // Calculate direction changes and velocity
+    for i in 1..<positions.count {
+      let dx = positions[i].x - positions[i - 1].x
+      let dy = positions[i].y - positions[i - 1].y
+      let currentDirection = CGPoint(
+        x: dx == 0 ? 0 : dx > 0 ? 1 : -1,
+        y: dy == 0 ? 0 : dy > 0 ? 1 : -1
+      )
+
+      totalDistance += sqrt(dx * dx + dy * dy)
+
+      if lastDirection != .zero
+        && (currentDirection.x != lastDirection.x || currentDirection.y != lastDirection.y)
+      {
+        directionChanges += 1
+      }
+
+      lastDirection = currentDirection
+    }
+
+    // Calculate velocity
+    let duration = timestamps.last!.timeIntervalSince(timestamps.first!)
+    let velocity = CGFloat(totalDistance) / CGFloat(duration)
+
+    // NSLog("Shake detection: changes=\(directionChanges), velocity=\(velocity)")
+
+    return directionChanges >= threshold && velocity >= minVelocity
+  }
+
+  private func handleShake(at position: CGPoint) {
+    channel.invokeMethod("shakeDetected", arguments: [position.x, position.y])
   }
 
   private func setupMenuBar() {
