@@ -1,7 +1,6 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:macos_ui/macos_ui.dart';
-import 'package:shakepin/app/main_drop_app.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/side_button.dart';
