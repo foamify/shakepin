@@ -805,7 +805,7 @@ class MainFlutterWindow: NSWindow {
       isDragging = false
       positions.removeAll()
       timestamps.removeAll()
-      // NSLog("MouseUp - Drag ended")
+      NSLog("MouseUp - Drag ended")
       self.channel.invokeMethod("dragConclude", arguments: nil)
     }
   }
@@ -816,37 +816,46 @@ class MainFlutterWindow: NSWindow {
   ) -> Bool {
     guard positions.count > 2 else { return false }
 
-    var directionChanges = 0
-    var lastDirection: CGPoint = .zero
+    var horizontalChanges = 0
+    var verticalChanges = 0
+    var lastHorizontalDirection: Int = 0  // -1 for left, 1 for right
+    var lastVerticalDirection: Int = 0    // -1 for down, 1 for up
     var totalDistance: CGFloat = 0
 
     // Calculate direction changes and velocity
     for i in 1..<positions.count {
       let dx = positions[i].x - positions[i - 1].x
       let dy = positions[i].y - positions[i - 1].y
-      let currentDirection = CGPoint(
-        x: dx == 0 ? 0 : dx > 0 ? 1 : -1,
-        y: dy == 0 ? 0 : dy > 0 ? 1 : -1
-      )
+      
+      let currentHorizontalDirection = dx == 0 ? 0 : dx > 0 ? 1 : -1
+      let currentVerticalDirection = dy == 0 ? 0 : dy > 0 ? 1 : -1
 
       totalDistance += sqrt(dx * dx + dy * dy)
 
-      if lastDirection != .zero
-        && (currentDirection.x != lastDirection.x || currentDirection.y != lastDirection.y)
-      {
-        directionChanges += 1
+      if lastHorizontalDirection != 0 && currentHorizontalDirection != 0 
+        && currentHorizontalDirection != lastHorizontalDirection {
+        horizontalChanges += 1
       }
 
-      lastDirection = currentDirection
+      if lastVerticalDirection != 0 && currentVerticalDirection != 0 
+        && currentVerticalDirection != lastVerticalDirection {
+        verticalChanges += 1
+      }
+
+      if currentHorizontalDirection != 0 {
+        lastHorizontalDirection = currentHorizontalDirection
+      }
+      if currentVerticalDirection != 0 {
+        lastVerticalDirection = currentVerticalDirection
+      }
     }
 
     // Calculate velocity
     let duration = timestamps.last!.timeIntervalSince(timestamps.first!)
     let velocity = CGFloat(totalDistance) / CGFloat(duration)
 
-    // NSLog("Shake detection: changes=\(directionChanges), velocity=\(velocity)")
-
-    return directionChanges >= threshold && velocity >= minVelocity
+    // Consider shake detected if either horizontal or vertical changes exceed threshold
+    return (horizontalChanges >= threshold || verticalChanges >= threshold) && velocity >= minVelocity
   }
 
   private func handleShake(at position: CGPoint) {

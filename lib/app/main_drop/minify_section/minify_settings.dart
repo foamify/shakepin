@@ -24,6 +24,8 @@ class _MinifySettingsState extends State<MinifySettings> {
   var _imageFormat = ImageFormat.sameAsInput;
   var _imageDownscale = ImageDownscale.sameAsInput; // Add this line
 
+  bool get disabled => !items().containsImage || !items().containsVideo;
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -216,79 +218,83 @@ class _MinifySettingsState extends State<MinifySettings> {
                                 )
                               : GlassButton(
                                   radius: 12,
-                                  onTap: () async {
-                                    // await cli.setup(
-                                    //   onProgress: (step, progress) {
-                                    //     logger.log(
-                                    //         '[Cli.setup] $step: ${(progress * 100).toStringAsFixed(1)}%');
-                                    //   },
-                                    //   onError: (error) {
-                                    //     logger.log('[Cli.setup] $error');
-                                    //   },
-                                    //   onSuccess: () async {
-                                    //     logger
-                                    //         .log('[Cli.setup] Setup completed');
+                                  onTap: disabled
+                                      ? null
+                                      : () async {
+                                          // await cli.setup(
+                                          //   onProgress: (step, progress) {
+                                          //     logger.log(
+                                          //         '[Cli.setup] $step: ${(progress * 100).toStringAsFixed(1)}%');
+                                          //   },
+                                          //   onError: (error) {
+                                          //     logger.log('[Cli.setup] $error');
+                                          //   },
+                                          //   onSuccess: () async {
+                                          //     logger
+                                          //         .log('[Cli.setup] Setup completed');
 
-                                    //     await logger
-                                    //         .log('Minify button pressed');
-                                    //     if (items().isEmpty) {
-                                    //       await logger.log(
-                                    //           'Minify button pressed but items list is empty');
-                                    //       await logger.log(
-                                    //           'Action aborted - no files to process');
-                                    //       return;
-                                    //     }
-                                    //     await logger.log(
-                                    //         'Minify button pressed with ${items().length} items');
-                                    //     await logger.log('Files breakdown:');
-                                    //     await logger.log(
-                                    //         '- Video files: ${items().videoPaths.length}');
-                                    //     await logger.log(
-                                    //         '- Image files: ${items().imagePaths.length}');
-                                    //     await logger.log('Selected settings:');
-                                    //     await logger.log(
-                                    //         '- Video quality: ${_videoQuality.name}');
-                                    //     await logger.log(
-                                    //         '- Video format: ${_videoFormat.name}');
-                                    //     await logger.log(
-                                    //         '- Image quality: ${_imageQuality.name}');
-                                    //     await logger.log(
-                                    //         '- Image format: ${_imageFormat.name}');
-                                    //     await logger.log(
-                                    //         'Starting minification process...');
-                                    //     minifyFiles();
-                                    //   },
-                                    // );
-                                    // return;
+                                          //     await logger
+                                          //         .log('Minify button pressed');
+                                          //     if (items().isEmpty) {
+                                          //       await logger.log(
+                                          //           'Minify button pressed but items list is empty');
+                                          //       await logger.log(
+                                          //           'Action aborted - no files to process');
+                                          //       return;
+                                          //     }
+                                          //     await logger.log(
+                                          //         'Minify button pressed with ${items().length} items');
+                                          //     await logger.log('Files breakdown:');
+                                          //     await logger.log(
+                                          //         '- Video files: ${items().videoPaths.length}');
+                                          //     await logger.log(
+                                          //         '- Image files: ${items().imagePaths.length}');
+                                          //     await logger.log('Selected settings:');
+                                          //     await logger.log(
+                                          //         '- Video quality: ${_videoQuality.name}');
+                                          //     await logger.log(
+                                          //         '- Video format: ${_videoFormat.name}');
+                                          //     await logger.log(
+                                          //         '- Image quality: ${_imageQuality.name}');
+                                          //     await logger.log(
+                                          //         '- Image format: ${_imageFormat.name}');
+                                          //     await logger.log(
+                                          //         'Starting minification process...');
+                                          //     minifyFiles();
+                                          //   },
+                                          // );
+                                          // return;
 
-                                    await logger.log('Minify button pressed');
-                                    if (items().isEmpty) {
-                                      await logger.log(
-                                          'Minify button pressed but items list is empty');
-                                      await logger.log(
-                                          'Action aborted - no files to process');
-                                      return;
-                                    }
-                                    await logger.log(
-                                        'Minify button pressed with ${items().length} items');
-                                    await logger.log('Files breakdown:');
-                                    await logger.log(
-                                        '- Video files: ${items().videoPaths.length}');
-                                    await logger.log(
-                                        '- Image files: ${items().imagePaths.length}');
-                                    await logger.log('Selected settings:');
-                                    await logger.log(
-                                        '- Video quality: ${_videoQuality.name}');
-                                    await logger.log(
-                                        '- Video format: ${_videoFormat.name}');
-                                    await logger.log(
-                                        '- Image quality: ${_imageQuality.name}');
-                                    await logger.log(
-                                        '- Image format: ${_imageFormat.name}');
-                                    await logger.log(
-                                        'Starting minification process...');
-                                    minifyFiles();
-                                  },
+                                          await logger
+                                              .log('Minify button pressed');
+                                          if (items().isEmpty) {
+                                            await logger.log(
+                                                'Minify button pressed but items list is empty');
+                                            await logger.log(
+                                                'Action aborted - no files to process');
+                                            return;
+                                          }
+                                          await logger.log(
+                                              'Minify button pressed with ${items().length} items');
+                                          await logger.log('Files breakdown:');
+                                          await logger.log(
+                                              '- Video files: ${items().videoPaths.length}');
+                                          await logger.log(
+                                              '- Image files: ${items().imagePaths.length}');
+                                          await logger
+                                              .log('Selected settings:');
+                                          await logger.log(
+                                              '- Video quality: ${_videoQuality.name}');
+                                          await logger.log(
+                                              '- Video format: ${_videoFormat.name}');
+                                          await logger.log(
+                                              '- Image quality: ${_imageQuality.name}');
+                                          await logger.log(
+                                              '- Image format: ${_imageFormat.name}');
+                                          await logger.log(
+                                              'Starting minification process...');
+                                          minifyFiles();
+                                        },
                                   child: const Text('Minify',
                                       style: TextStyle(fontSize: 14)),
                                 ),

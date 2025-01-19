@@ -32,15 +32,25 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
     logger.log('_MainDropAppState: initState');
     dropChannel.addListener(this);
 
-    items.addListener(() {
-      logger.log('Items changed: ${items().length} items');
-      if (items().isEmpty) {
-        logger.log('Items empty, resetting frame and hiding');
-        resetFrameAndHide();
-      }
-    });
+    items.addListener(itemListener);
 
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    logger.log('Disposing _MainDropAppState');
+    dropChannel.removeListener(this);
+    items.removeListener(itemListener);
+    super.dispose();
+  }
+
+  void itemListener() {
+    // logger.log('Items changed: ${items().length} items');
+    // if (items().isEmpty) {
+    //   logger.log('Items empty, resetting frame and hiding');
+    //   resetFrameAndHide();
+    // }
   }
 
   @override
@@ -75,7 +85,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
     logger.log('Drag concluded');
     isShakeDetected = false;
 
-    SchedulerBinding.instance.addPostFrameCallback((_) async {
+    Future.delayed(const Duration(milliseconds: 100), () {
       logger.log('Post-frame callback: checking items');
       if (items().isEmpty) {
         logger.log('No items, resetting frame');
@@ -86,13 +96,6 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
     // Forces addPostFrameCallback to run
     setState(() {});
     super.onDragConclude();
-  }
-
-  @override
-  void dispose() {
-    logger.log('Disposing _MainDropAppState');
-    dropChannel.removeListener(this);
-    super.dispose();
   }
 
   void _handleShowTooltip(String tooltip) {

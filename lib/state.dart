@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:shakepin/utils/utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final items = ValueNotifier<Set<String>>({});
@@ -59,4 +60,11 @@ enum AppMode {
   minify,
   archive,
   misc,
+}
+
+extension AppModeEx on AppMode {
+  bool isFileCompatible(String path) => switch (this) {
+        AppMode.minify => isImageFile(path) || isVideoFile(path),
+        _ => true,
+      };
 }
