@@ -802,11 +802,14 @@ class MainFlutterWindow: NSWindow {
 
     // Monitor mouse up
     mouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { _ in
-      isDragging = false
-      positions.removeAll()
-      timestamps.removeAll()
-      NSLog("MouseUp - Drag ended")
-      self.channel.invokeMethod("dragConclude", arguments: nil)
+      let pasteboard = NSPasteboard(name: .drag)
+      let currentChangeCount = pasteboard.changeCount
+      if currentChangeCount != initialChangeCount {
+        isDragging = false
+        positions.removeAll()
+        timestamps.removeAll()
+        self.channel.invokeMethod("dragConclude", arguments: nil)
+      }
     }
   }
 
@@ -819,26 +822,28 @@ class MainFlutterWindow: NSWindow {
     var horizontalChanges = 0
     var verticalChanges = 0
     var lastHorizontalDirection: Int = 0  // -1 for left, 1 for right
-    var lastVerticalDirection: Int = 0    // -1 for down, 1 for up
+    var lastVerticalDirection: Int = 0  // -1 for down, 1 for up
     var totalDistance: CGFloat = 0
 
     // Calculate direction changes and velocity
     for i in 1..<positions.count {
       let dx = positions[i].x - positions[i - 1].x
       let dy = positions[i].y - positions[i - 1].y
-      
+
       let currentHorizontalDirection = dx == 0 ? 0 : dx > 0 ? 1 : -1
       let currentVerticalDirection = dy == 0 ? 0 : dy > 0 ? 1 : -1
 
       totalDistance += sqrt(dx * dx + dy * dy)
 
-      if lastHorizontalDirection != 0 && currentHorizontalDirection != 0 
-        && currentHorizontalDirection != lastHorizontalDirection {
+      if lastHorizontalDirection != 0 && currentHorizontalDirection != 0
+        && currentHorizontalDirection != lastHorizontalDirection
+      {
         horizontalChanges += 1
       }
 
-      if lastVerticalDirection != 0 && currentVerticalDirection != 0 
-        && currentVerticalDirection != lastVerticalDirection {
+      if lastVerticalDirection != 0 && currentVerticalDirection != 0
+        && currentVerticalDirection != lastVerticalDirection
+      {
         verticalChanges += 1
       }
 
@@ -855,7 +860,8 @@ class MainFlutterWindow: NSWindow {
     let velocity = CGFloat(totalDistance) / CGFloat(duration)
 
     // Consider shake detected if either horizontal or vertical changes exceed threshold
-    return (horizontalChanges >= threshold || verticalChanges >= threshold) && velocity >= minVelocity
+    return (horizontalChanges >= threshold || verticalChanges >= threshold)
+      && velocity >= minVelocity
   }
 
   private func handleShake(at position: CGPoint) {

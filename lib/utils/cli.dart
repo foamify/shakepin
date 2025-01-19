@@ -533,6 +533,96 @@ class Cli {
     }
   }
 
+  Future<String?> archiveFiles(List<String> paths, String outputFolder,
+      {void Function(double)? onProgress,
+      void Function(String)? onFileProgress}) async {
+    if (_currentProcess != null) {
+      logger.log('A process is already running. Please cancel it first.');
+      return null;
+    }
+
+    final outputArchive = await _getUniqueArchiveName(outputFolder);
+    final tempDir = await Directory(outputFolder).createTemp('archived');
+
+    try {
+      // Total number of paths
+      int totalPaths = paths.length;
+
+      // Copy files to temporary directory
+      for (int i = 0; i < totalPaths; i++) {
+        final path = paths[i];
+        final destPath = '${tempDir.path}/';
+
+        if (onFileProgress != null) {
+          onFileProgress(path);
+        }
+
+        // Use cp because ditto won't work for some reason
+        await Process.run('cp', [path, destPath]);
+
+        // Calculate and update progress
+        if (onProgress != null) {
+          double progress = ((i + 1) / totalPaths) * 80; // First 80% for copying
+          onProgress(progress);
+        }
+      }
+
+      if (onFileProgress != null) {
+        onFileProgress('Compressing...');
+      }
+
+      // Compress the temporary directory
+      _currentProcess = await Process.start('ditto', [
+        '-c',
+        '-k',
+        '--sequesterRsrc',
+        '--zlibCompressionLevel=9',
+        tempDir.path,
+        outputArchive
+      ]);
+
+      final exitCode = await _currentProcess!.exitCode;
+
+      if (exitCode != 0) {
+        logger.log('Error compressing files: Exit code $exitCode');
+        throw Exception('Archive process failed with exit code: $exitCode');
+      }
+
+      if (onProgress != null) {
+        onProgress(100);
+      }
+
+      // Open Finder and reveal the archive
+      await Process.run('open', ['-R', outputArchive]);
+
+      return outputArchive;
+    } catch (e) {
+      logger.log('Error during compression: $e');
+      rethrow;
+    } finally {
+      _currentProcess = null;
+      // Clean up: remove the temporary directory
+      try {
+        await tempDir.delete(recursive: true);
+      } catch (e) {
+        logger.log('Error deleting temporary directory: $e');
+      }
+    }
+  }
+
+  Future<String> _getUniqueArchiveName(String folder) async {
+    String baseName = 'archive';
+    String extension = '.zip';
+    String fullPath = '$folder/$baseName$extension';
+    int counter = 1;
+
+    while (await File(fullPath).exists()) {
+      fullPath = '$folder/$baseName (${counter++})$extension';
+    }
+
+    return fullPath;
+  }
+
   String _getUniqueFilePath(String filePath,
       {String? suffix, String? inputExtension}) {
     if (!File(filePath).existsSync()) {

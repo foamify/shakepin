@@ -24,7 +24,7 @@ class _MinifySettingsState extends State<MinifySettings> {
   var _imageFormat = ImageFormat.sameAsInput;
   var _imageDownscale = ImageDownscale.sameAsInput; // Add this line
 
-  bool get disabled => !items().containsImage || !items().containsVideo;
+  bool get disabled => !items().containsImage && !items().containsVideo;
 
   @override
   Widget build(BuildContext context) {

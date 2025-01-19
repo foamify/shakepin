@@ -24,8 +24,8 @@ void main() async {
   dropChannel.setFrame(
     Rect.fromCenter(
       center: await dropChannel.center(),
-      width: AppSizes.main.width,
-      height: AppSizes.main.height,
+      width: AppSizes.pin.width,
+      height: AppSizes.pin.height,
     ),
     animate: false,
   );

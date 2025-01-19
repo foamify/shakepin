@@ -8,15 +8,12 @@ import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 
 sealed class AppSizes {
-  static const archive = Size(300, 200);
-  static const panel = Size(64 * 4, 72); // width is 64 * [amount of apps]
-  static const pin = Size(180, 180);
-  static const minify = Size(360, 468);
+  static const archive = Size(240 + 48 + 12 + 12, 240 + 32);
+  static const minify = Size(240 + 48 + 12 + 12, 468);
   static const about = Size(360, 360);
-  static const misc = Size(360, 468);
-  // static const misc = Size(300, 300); // Adjust size as needed
+  static const misc = Size(240 + 48 + 12 + 12, 468);
 
-  static const main = Size(240 + 48 + 12, 240);
+  static const pin = Size(240 + 48 + 12 + 12, 240);
 }
 
 final haptic = MacosHapticFeedback();
@@ -146,9 +143,9 @@ extension IterableExtension<T> on Iterable<String> {
 
 void resetFrameAndHide() async {
   final appSize = switch (appMode()) {
-    AppMode.pin => AppSizes.main,
+    AppMode.pin => AppSizes.pin,
     AppMode.minify => AppSizes.minify,
-    AppMode.archive => AppSizes.main,
+    AppMode.archive => AppSizes.pin,
     AppMode.misc => AppSizes.misc,
   };
 
@@ -167,7 +164,7 @@ void resetFrameAndHide() async {
   await dropChannel.setFrame(
     Rect.fromCenter(
       center: await dropChannel.center(),
-      width: AppSizes.main.width,
+      width: AppSizes.pin.width,
       height: max(appSize.height / 4, 48),
     ),
     animate: true,

@@ -1,7 +1,7 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:macos_ui/macos_ui.dart';
+import 'package:shakepin/app/main_drop/archive_section/archive_section.dart';
 import 'package:shakepin/app/main_drop/drop_section.dart';
 import 'package:shakepin/app/main_drop/main_sidebar.dart';
 import 'package:shakepin/app/main_drop/minify_section/minify_section.dart';
@@ -11,6 +11,8 @@ import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 
 import '../state.dart';
+
+final dropSectionKey = GlobalKey();
 
 class MainDropApp extends StatefulWidget {
   const MainDropApp({super.key});
@@ -46,11 +48,12 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
   }
 
   void itemListener() {
-    // logger.log('Items changed: ${items().length} items');
-    // if (items().isEmpty) {
-    //   logger.log('Items empty, resetting frame and hiding');
-    //   resetFrameAndHide();
-    // }
+    logger.log('Items changed: ${items().length} items');
+    if (items().isEmpty) {
+      logger.log('Items empty, resetting frame and hiding');
+      resetFrameAndHide();
+      handleModeChanged(AppMode.pin);
+    }
   }
 
   @override
@@ -60,10 +63,10 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
       logger.log('Processing first shake detection');
       isShakeDetected = true;
       final appSize = switch (appMode()) {
-        AppMode.pin => AppSizes.main,
+        AppMode.pin => AppSizes.pin,
         AppMode.minify => AppSizes.minify,
-        AppMode.archive => AppSizes.main,
-        AppMode.misc => AppSizes.main,
+        AppMode.archive => AppSizes.archive,
+        AppMode.misc => AppSizes.misc,
       };
 
       logger.log('Setting frame with size: ${appSize.width}x${appSize.height}');
@@ -82,7 +85,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
 
   @override
   void onDragConclude() async {
-    logger.log('Drag concluded');
+    // logger.log('Drag concluded');
     isShakeDetected = false;
 
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -163,29 +166,44 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                 ListenableBuilder(
                   listenable: appMode,
                   builder: (context, _) {
+                    final dropSection = DropSection(
+                      key: dropSectionKey,
+                    );
                     return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         switch (appMode()) {
                           AppMode.minify => SizedBox(
                               width: MediaQuery.sizeOf(context).width - 48 - 8,
-                              height: MediaQuery.sizeOf(context).height - 16,
-                              child: const MinifySection(
-                                key: ValueKey('minify_section'),
+                              height: MediaQuery.sizeOf(context).height - 8,
+                              child: MinifySection(
+                                dropSection: dropSection,
                               ),
                             ),
                           AppMode.misc => SizedBox(
                               width: MediaQuery.sizeOf(context).width - 48 - 8,
                               height: MediaQuery.sizeOf(context).height - 16,
-                              child: const MiscSection(
-                                key: ValueKey('misc_section'),
+                              child: MiscSection(
+                                dropSection: dropSection,
                               ),
                             ),
-                          _ => const Padding(
-                              padding: EdgeInsets.only(bottom: 8.0),
-                              child: DropSection(
-                                key: ValueKey('drop_section'),
+                          AppMode.archive => SizedBox(
+                              width: MediaQuery.sizeOf(context).width - 48 - 8,
+                              height: MediaQuery.sizeOf(context).height - 8,
+                              child: ArchiveSection(
+                                dropSection: dropSection,
+                              ),
+                            ),
+                          _ => SizedBox(
+                              width: MediaQuery.sizeOf(context).width - 48 - 8,
+                              height: MediaQuery.sizeOf(context).height - 8,
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 8.0,
+                                  left: 4.0,
+                                  right: 8.0,
+                                ),
+                                child: dropSection,
                               ),
                             )
                         },
@@ -193,24 +211,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                           height: MediaQuery.sizeOf(context).height - 16,
                           child: MainSidebar(
                             selectedMode: appMode(),
-                            onModeChanged: (mode) async {
-                              final appSize = switch (mode) {
-                                AppMode.pin => AppSizes.main,
-                                AppMode.minify => AppSizes.minify,
-                                AppMode.archive => AppSizes.main,
-                                AppMode.misc => AppSizes.minify,
-                              };
-
-                              appMode.value = mode;
-
-                              dropChannel.setMinimumSize(appSize);
-                              final rect = Rect.fromCenter(
-                                center: await dropChannel.center(),
-                                width: appSize.width,
-                                height: appSize.height,
-                              );
-                              dropChannel.setFrame(rect, animate: true);
-                            },
+                            onModeChanged: handleModeChanged,
                             onShowTooltip: _handleShowTooltip,
                             onHideTooltip: _handleHideTooltip,
                           ),
@@ -225,5 +226,24 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
         ),
       ),
     );
+  }
+
+  void handleModeChanged(AppMode mode) async {
+    final appSize = switch (mode) {
+      AppMode.pin => AppSizes.pin,
+      AppMode.minify => AppSizes.minify,
+      AppMode.archive => AppSizes.archive,
+      AppMode.misc => AppSizes.misc,
+    };
+
+    appMode.value = mode;
+
+    dropChannel.setMinimumSize(appSize);
+    final rect = Rect.fromCenter(
+      center: await dropChannel.center(),
+      width: appSize.width,
+      height: appSize.height,
+    );
+    dropChannel.setFrame(rect, animate: true);
   }
 }

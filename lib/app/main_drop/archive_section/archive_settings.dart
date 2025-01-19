@@ -3,20 +3,22 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/widgets/glass_button.dart';
+import 'package:path/path.dart' as path;
 
-class MiscSettings extends StatefulWidget {
-  const MiscSettings({super.key});
+class ArchiveSettings extends StatefulWidget {
+  const ArchiveSettings({super.key});
 
   @override
-  State<MiscSettings> createState() => _MiscSettingsState();
+  State<ArchiveSettings> createState() => _ArchiveSettingsState();
 }
 
-class _MiscSettingsState extends State<MiscSettings> {
-  final progressNotifier = ValueNotifier(0.0);
+class _ArchiveSettingsState extends State<ArchiveSettings> {
+  final progressNotifier = ValueNotifier(-1.0);
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      spacing: 8,
       children: [
         ValueListenableBuilder<double>(
           valueListenable: progressNotifier,
@@ -29,7 +31,7 @@ class _MiscSettingsState extends State<MiscSettings> {
           },
         ),
         ValueListenableBuilder(
-            valueListenable: items,
+            valueListenable: selectedItems,
             builder: (context, items, _) {
               return GlassButton(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -37,8 +39,9 @@ class _MiscSettingsState extends State<MiscSettings> {
                     ? null
                     : () async {
                         progressNotifier.value = 0;
-                        await cli.convertToWav(
-                          items.first,
+                        await cli.archiveFiles(
+                          items.toList(),
+                          path.dirname(items.first),
                           onProgress: (progress) {
                             progressNotifier.value = progress;
                           },
@@ -46,7 +49,7 @@ class _MiscSettingsState extends State<MiscSettings> {
                         progressNotifier.value = -1;
                       },
                 radius: 8,
-                child: const Text('Extract Audio'),
+                child: const Text('Archive Files'),
               );
             }),
       ],

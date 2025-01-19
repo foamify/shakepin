@@ -28,7 +28,6 @@ class DropSection extends StatefulWidget {
 class _DropSectionState extends State<DropSection> with DragDropListener {
   bool _isDraggingItemIn = false;
   bool _isHoveredItem = false;
-  Set<String> _selectedItems = {};
   var _displayMode = DisplayMode.grid;
   String? draggedItem;
 
@@ -39,7 +38,8 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
   }
 
   void _shareSelectedFiles() async {
-    final filesToShare = _selectedItems.isNotEmpty ? _selectedItems : items();
+    final filesToShare =
+        selectedItems().isNotEmpty ? selectedItems() : items();
     final xFiles = filesToShare.map((path) => XFile(path)).toList();
     try {
       await dropChannel.shareXFiles(xFiles);
@@ -56,13 +56,14 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
         setState(() {
           if (draggedItem != null) {
             logger.log('Removing dragged item: $draggedItem');
-            _selectedItems.remove(draggedItem!);
+            selectedItems.value = Set.from(selectedItems())
+              ..remove(draggedItem!);
             items.remove(draggedItem!);
             draggedItem = null;
           } else {
-            logger.log('Moving selected items: ${_selectedItems.length}');
-            items.value = items().difference(_selectedItems);
-            _selectedItems.clear();
+            logger.log('Moving selected items: ${selectedItems().length}');
+            items.value = items().difference(selectedItems());
+            selectedItems.value = {};
           }
         });
         logger.log('Items after move: ${items().length}');
@@ -75,10 +76,6 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
   @override
   Widget build(BuildContext context) {
     const maxRowItemLength = 3;
-
-    final containsVideoOnly = items().containsVideo && !items().containsImage;
-    final containsImageOnly = items().containsImage && !items().containsVideo;
-    final containsBoth = items().containsVideo && items().containsImage;
 
     return DropTarget(
       label: 'main-drop-app',
@@ -142,8 +139,22 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                         .withOpacity(.1),
           ),
           child: ListenableBuilder(
-              listenable: items,
+              listenable: Listenable.merge([items, selectedItems]),
               builder: (context, child) {
+                final checkboxValue = selectedItems().length == items().length
+                    ? true
+                    : selectedItems().isEmpty
+                        ? false
+                        : null;
+
+                void onCheckboxChanged(bool? value) {
+                  if (value == true) {
+                    selectedItems.value = Set.from(items());
+                  } else {
+                    selectedItems.value = {};
+                  }
+                }
+
                 return Column(
                   children: [
                     SizedBox(
@@ -164,7 +175,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                       radius: 3,
                                       onTap: () {
                                         setState(() {
-                                          _selectedItems.clear();
+                                          selectedItems().clear();
                                         });
                                         items.clear();
                                         resetFrameAndHide();
@@ -211,21 +222,8 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   MacosCheckbox(
-                                    value:
-                                        _selectedItems.length == items().length
-                                            ? true
-                                            : _selectedItems.isEmpty
-                                                ? false
-                                                : null,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        if (value == true) {
-                                          _selectedItems = Set.from(items());
-                                        } else {
-                                          _selectedItems.clear();
-                                        }
-                                      });
-                                    },
+                                    value: checkboxValue,
+                                    onChanged: onCheckboxChanged,
                                   ),
                                   SizedBox.square(
                                     dimension: 16,
@@ -312,13 +310,14 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                   //         : FluentIcons.document_24_regular;
                                   return CustomDragGesture(
                                     onDragStart: () {
-                                      if (!_selectedItems.contains(filePath)) {
+                                      if (!selectedItems()
+                                          .contains(filePath)) {
                                         draggedItem = filePath;
                                         dropChannel
                                             .performDragSession([filePath]);
                                       } else {
                                         dropChannel.performDragSession(
-                                            _selectedItems.toList());
+                                            selectedItems().toList());
                                       }
                                     },
                                     child: ContextMenuWidget(
@@ -331,22 +330,26 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                             },
                                             title: 'Show in Finder',
                                           ),
-                                          if (_selectedItems.contains(filePath))
-                                            MenuAction(
-                                              callback: () {
-                                                setState(() {
-                                                  _selectedItems
-                                                      .remove(filePath);
-                                                });
-                                              },
-                                              title: 'Deselect',
-                                            ),
-                                          if (!_selectedItems
+                                          if (selectedItems()
                                               .contains(filePath))
                                             MenuAction(
                                               callback: () {
                                                 setState(() {
-                                                  _selectedItems.add(filePath);
+                                                  selectedItems.value =
+                                                      Set.from(selectedItems())
+                                                        ..remove(filePath);
+                                                });
+                                              },
+                                              title: 'Deselect',
+                                            ),
+                                          if (!selectedItems()
+                                              .contains(filePath))
+                                            MenuAction(
+                                              callback: () {
+                                                setState(() {
+                                                  selectedItems.value =
+                                                      Set.from(selectedItems())
+                                                        ..add(filePath);
                                                 });
                                               },
                                               title: 'Select',
@@ -354,7 +357,9 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                           MenuAction(
                                             callback: () {
                                               items.remove(filePath);
-                                              _selectedItems.remove(filePath);
+                                              selectedItems.value =
+                                                  Set.from(selectedItems())
+                                                    ..remove(filePath);
                                             },
                                             title: 'Remove',
                                           ),
@@ -365,16 +370,20 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                         fileSize: fileSize,
                                         onTap: () {
                                           setState(() {
-                                            if (_selectedItems
+                                            if (selectedItems()
                                                 .contains(filePath)) {
-                                              _selectedItems.remove(filePath);
+                                              selectedItems.value =
+                                                  Set.from(selectedItems())
+                                                    ..remove(filePath);
                                             } else {
-                                              _selectedItems.add(filePath);
+                                              selectedItems.value =
+                                                  Set.from(selectedItems())
+                                                    ..add(filePath);
                                             }
                                           });
                                         },
                                         selected:
-                                            _selectedItems.contains(filePath),
+                                            selectedItems().contains(filePath),
                                         // icon: icon,
                                         child: SizedBox.square(
                                           dimension: 16,
@@ -406,11 +415,11 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                           final path =
                                               items().elementAt(itemIndex);
                                           final isSelected =
-                                              _selectedItems.contains(path);
+                                              selectedItems().contains(path);
                                           return Expanded(
                                             child: CustomDragGesture(
                                               onDragStart: () {
-                                                if (!_selectedItems
+                                                if (!selectedItems()
                                                     .contains(path)) {
                                                   draggedItem = path;
                                                   dropChannel
@@ -419,7 +428,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                                 } else {
                                                   dropChannel
                                                       .performDragSession(
-                                                          _selectedItems
+                                                          selectedItems()
                                                               .toList());
                                                 }
                                               },
@@ -436,17 +445,24 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                                 },
                                                 onRemove: () {
                                                   items.remove(path);
-                                                  _selectedItems.remove(path);
+                                                  selectedItems.value =
+                                                      Set.from(selectedItems())
+                                                        ..remove(path);
                                                 },
                                                 path: path,
                                                 isSelected: isSelected,
                                                 onToggleSelection: () {
                                                   setState(() {
                                                     if (isSelected) {
-                                                      _selectedItems
-                                                          .remove(path);
+                                                      selectedItems.value =
+                                                          Set.from(
+                                                              selectedItems())
+                                                            ..remove(path);
                                                     } else {
-                                                      _selectedItems.add(path);
+                                                      selectedItems.value =
+                                                          Set.from(
+                                                              selectedItems())
+                                                            ..add(path);
                                                     }
                                                   });
                                                 },
@@ -491,6 +507,12 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    selectedItems.dispose();
+    super.dispose();
   }
 }
 

@@ -28,7 +28,14 @@ class MainSidebar extends StatelessWidget {
           label: 'pin',
           selected: selectedMode == AppMode.pin,
           tooltip: 'Drop files here to pin them',
-          onDragPerform: (paths) {},
+          onDragPerform: (paths) {
+            items.value = {
+              ...items(),
+              ...paths.videoPaths,
+              ...paths.imagePaths
+            };
+            onModeChanged(AppMode.pin);
+          },
           onShowTooltip: onShowTooltip,
           onHideTooltip: onHideTooltip,
           onTap: () {

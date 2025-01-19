@@ -5,6 +5,7 @@ import 'package:shakepin/utils/utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final items = ValueNotifier<Set<String>>({});
+final selectedItems = ValueNotifier<Set<String>>({});
 final archiveProgress = ValueNotifier<double>(-1);
 final isMinifyApp = ValueNotifier<bool>(false);
 final isAboutApp = ValueNotifier<bool>(false);

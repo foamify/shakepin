@@ -7,7 +7,9 @@ import 'package:shakepin/state.dart';
 import 'package:shakepin/widgets/glass_button.dart';
 
 class MinifySection extends StatelessWidget {
-  const MinifySection({super.key});
+  const MinifySection({super.key, required this.dropSection});
+
+  final DropSection dropSection;
 
   @override
   Widget build(BuildContext context) {
@@ -21,12 +23,12 @@ class MinifySection extends StatelessWidget {
         children: [
           SizedBox(
             height: MediaQuery.sizeOf(context).height - 20,
-            child: const Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               spacing: 8,
               children: [
-                Expanded(child: DropSection()),
-                MinifySettings(),
+                Expanded(child: dropSection),
+                const MinifySettings(),
               ],
             ),
           ),
