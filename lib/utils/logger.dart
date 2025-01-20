@@ -36,7 +36,7 @@ class Logger {
       if (!await _logsDirectory.exists()) {
         await _logsDirectory.create(recursive: true);
       }
-      print('Logs directory: ${_logsDirectory.path}');
+      debugPrint('Logs directory: ${_logsDirectory.path}');
 
       await _cleanOldLogs();
 
