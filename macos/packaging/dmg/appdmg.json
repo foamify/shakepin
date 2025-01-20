@@ -1,0 +1,11 @@
+{
+    "title": "ShakePin",
+    "contents": [
+      { "x": 192, "y": 150, "type": "file", "path": "ShakePin.app" },
+      { "x": 448, "y": 150, "type": "link", "path": "/Applications" }
+    ],
+    "code-sign": {
+      "signing-identity": "Developer ID Application: Ahmad Arif Aulia Sutarman (43286Q56QB)",
+      "identifier": "click.shakepin.macos"
+    }
+  }

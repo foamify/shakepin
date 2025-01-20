@@ -12,6 +12,10 @@ const allDependencies = <Package>[
   _archive,
   _args,
   _async,
+  _auto_updater,
+  _auto_updater_macos,
+  _auto_updater_platform_interface,
+  _auto_updater_windows,
   _boolean_selector,
   _build_cli_annotations,
   _characters,
@@ -120,6 +124,7 @@ const allDependencies = <Package>[
 
 /// Direct `dependencies`.
 const dependencies = <Package>[
+  _auto_updater,
   _cupertino_icons,
   _extended_text,
   _file_selector,
@@ -335,6 +340,138 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     isMarkdown: false,
     isSdk: false,
     dependencies: [PackageRef('collection'), PackageRef('meta')]
+  );
+
+/// auto_updater 1.0.0
+const _auto_updater = Package(
+    name: 'auto_updater',
+    description: 'This plugin allows Flutter desktop apps to automatically update themselves (based on sparkle and winsparkle).',
+    homepage: 'https://github.com/leanflutter/auto_updater',
+    authors: [],
+    version: '1.0.0',
+    license: '''MIT License
+
+Copyright (c) 2022-2024 LiJianying <lijy91@foxmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.''',
+    isMarkdown: false,
+    isSdk: false,
+    dependencies: [PackageRef('auto_updater_macos'), PackageRef('auto_updater_platform_interface'), PackageRef('auto_updater_windows'), PackageRef('flutter'), PackageRef('json_annotation'), PackageRef('path')]
+  );
+
+/// auto_updater_macos 1.0.0
+const _auto_updater_macos = Package(
+    name: 'auto_updater_macos',
+    description: 'macOS implementation of the auto_updater plugin.',
+    repository: 'https://github.com/leanflutter/auto_updater/tree/main/packages/auto_updater_macos',
+    authors: [],
+    version: '1.0.0',
+    license: '''MIT License
+
+Copyright (c) 2022-2024 LiJianying <lijy91@foxmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.''',
+    isMarkdown: false,
+    isSdk: false,
+    dependencies: [PackageRef('flutter'), PackageRef('plugin_platform_interface')]
+  );
+
+/// auto_updater_platform_interface 1.0.0
+const _auto_updater_platform_interface = Package(
+    name: 'auto_updater_platform_interface',
+    description: 'A common platform interface for the auto_updater plugin.',
+    homepage: 'https://github.com/leanflutter/auto_updater/blob/main/packages/auto_updater_platform_interface',
+    authors: [],
+    version: '1.0.0',
+    license: '''MIT License
+
+Copyright (c) 2022-2024 LiJianying <lijy91@foxmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.''',
+    isMarkdown: false,
+    isSdk: false,
+    dependencies: [PackageRef('flutter'), PackageRef('plugin_platform_interface')]
+  );
+
+/// auto_updater_windows 1.0.0
+const _auto_updater_windows = Package(
+    name: 'auto_updater_windows',
+    description: 'Windows implementation of the auto_updater plugin.',
+    repository: 'https://github.com/leanflutter/auto_updater/tree/main/packages/auto_updater_windows',
+    authors: [],
+    version: '1.0.0',
+    license: '''MIT License
+
+Copyright (c) 2022-2024 LiJianying <lijy91@foxmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.''',
+    isMarkdown: false,
+    isSdk: false,
+    dependencies: [PackageRef('flutter'), PackageRef('plugin_platform_interface')]
   );
 
 /// boolean_selector 2.1.1
