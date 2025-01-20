@@ -24,6 +24,8 @@ class MainFlutterWindow: NSWindow {
   var dropdownButtons: [String: NSPopUpButton] = [:]
   var dropdownMenu: NSMenu?
 
+  var dragStarted = false
+
   override func awakeFromNib() {
     cleanup()
     flutterViewController = FlutterViewController()
@@ -778,6 +780,11 @@ class MainFlutterWindow: NSWindow {
 
       // Only process if we're actually dragging something
       if currentChangeCount != initialChangeCount {
+        if !self.dragStarted {
+          self.channel.invokeMethod("dragStart", arguments: nil)
+          self.dragStarted = true
+        }
+
         let currentPos = NSEvent.mouseLocation
         let currentTime = Date()
 
@@ -802,6 +809,7 @@ class MainFlutterWindow: NSWindow {
 
     // Monitor mouse up
     mouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { _ in
+      self.dragStarted = false
       let pasteboard = NSPasteboard(name: .drag)
       let currentChangeCount = pasteboard.changeCount
       if currentChangeCount != initialChangeCount {
