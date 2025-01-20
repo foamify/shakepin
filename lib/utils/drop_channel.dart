@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
+import 'package:shakepin/app/sections/minify_section/minify_state.dart';
 import 'package:shakepin/utils/handle_menu_item.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_selector/file_selector.dart';

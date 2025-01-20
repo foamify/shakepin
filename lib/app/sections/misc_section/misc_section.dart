@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
-import 'package:shakepin/app/main_drop/archive_section/archive_settings.dart';
 import 'package:shakepin/app/main_drop/drop_section.dart';
-import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
+import 'package:shakepin/app/sections/minify_section/minify_state.dart';
+import 'package:shakepin/app/sections/misc_section/misc_settings.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/widgets/glass_button.dart';
 
-class ArchiveSection extends StatelessWidget {
-  const ArchiveSection({super.key, required this.dropSection});
+class MiscSection extends StatelessWidget {
+  const MiscSection({super.key, required this.dropSection});
 
   final DropSection dropSection;
 
@@ -28,7 +28,7 @@ class ArchiveSection extends StatelessWidget {
               spacing: 8,
               children: [
                 Expanded(child: dropSection),
-                const ArchiveSettings(),
+                const MiscSettings(),
               ],
             ),
           ),

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/app/main_drop/custom_drag_gesture.dart';
 import 'package:shakepin/app/main_drop/dropped_item.dart';
-import 'package:shakepin/app/main_drop/minify_section/file_hover_widget.dart';
+import 'package:shakepin/app/sections/minify_section/file_hover_widget.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';

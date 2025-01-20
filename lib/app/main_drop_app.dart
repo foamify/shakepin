@@ -1,11 +1,11 @@
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
-import 'package:shakepin/app/main_drop/archive_section/archive_section.dart';
+import 'package:shakepin/app/sections/archive_section/archive_section.dart';
 import 'package:shakepin/app/main_drop/drop_section.dart';
 import 'package:shakepin/app/main_drop/main_sidebar.dart';
-import 'package:shakepin/app/main_drop/minify_section/minify_section.dart';
-import 'package:shakepin/app/main_drop/misc_section/misc_section.dart';
+import 'package:shakepin/app/sections/minify_section/minify_section.dart';
+import 'package:shakepin/app/sections/misc_section/misc_section.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';

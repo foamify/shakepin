@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
-import 'package:shakepin/app/main_drop/minify_section/minify_state.dart';
+import 'package:shakepin/app/sections/minify_section/minify_state.dart';
 import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/utils/cli.dart';
