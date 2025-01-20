@@ -27,7 +27,6 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
   var isShakeDetected = false;
 
   bool _isHoveredTop = false;
-  final bool _isShowingTooltip = false;
 
   @override
   void initState() {
