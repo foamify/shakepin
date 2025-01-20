@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -57,15 +58,46 @@ late final SharedPreferences prefs;
 final appMode = ValueNotifier<AppMode>(AppMode.pin);
 
 enum AppMode {
-  pin,
-  minify,
-  archive,
-  misc,
+  pin._(),
+  minify._(),
+  archive._(),
+  // Start of misc apps
+  convertToWav._('Extract Audio'),
+  convertToIco._('Convert to ICO'),
+  ;
+
+  /// The label of misc apps. Returns null for non-misc apps.
+  final String? label;
+
+  const AppMode._([this.label]);
 }
 
 extension AppModeEx on AppMode {
   bool isFileCompatible(String path) => switch (this) {
-        AppMode.minify => isImageFile(path) || isVideoFile(path),
+        AppMode.minify =>
+          (isImageFile(path) || isVideoFile(path)) && !isUrl(path),
+        AppMode.archive when isUrl(path) => false,
+        AppMode.convertToIco => isImageFile(path),
+        AppMode.convertToWav => isVideoFile(path) || isAudioFile(path),
         _ => true,
       };
+}
+
+void handleModeChanged(AppMode mode) async {
+  final appSize = switch (mode) {
+    AppMode.pin => AppSizes.pin,
+    AppMode.minify => AppSizes.minify,
+    AppMode.archive => AppSizes.archive,
+    _ => AppSizes.misc,
+  };
+
+  appMode.value = mode;
+
+  dropChannel.setMinimumSize(appSize);
+  final rect = Rect.fromCenter(
+    center: await dropChannel.center(),
+    width: appSize.width,
+    height: appSize.height,
+  );
+  dropChannel.setFrame(rect, animate: true);
 }

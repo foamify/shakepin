@@ -206,13 +206,22 @@ class Cli {
 
   // MARK: - Convert to ICO
 
-  Future<void> convertToIco(String inputPath, String outputPath) async {
+  Future<void> convertToIco(String inputPath) async {
+    logger.log('=== Starting ICO Conversion Process ===');
+    logger.log('Input path: $inputPath');
+
     if (_currentProcess != null) {
-      logger.log('A process is already running. Please cancel it first.');
+      logger.log('⚠️ Process conflict: Another conversion process is running');
+      logger.log('Current process PID: ${_currentProcess!.pid}');
+      logger.log('Aborting new conversion request');
       return;
     }
+
+    final outputPath =
+        _getUniqueFilePath(inputPath, suffix: '', inputExtension: 'ico');
+    logger.log('Generated output path: $outputPath');
+
     final args = [
-      'magick',
       inputPath,
       '-define',
       'icon:auto-resize=16,32,48,64,128,256,512',
@@ -220,30 +229,28 @@ class Cli {
     ];
 
     try {
-      _currentProcess = await Process.start('magick', args);
+      logger.log('🚀 Launching ImageMagick process...');
+      logger.log('ImageMagick command arguments: ${args.join(" ")}');
 
-      // Handle stdout
-      _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
-        logger.log('[Process.convertToIco] Output: $data');
-      });
+      final result = await executeNativeProcess(
+          'magick', args.map((e) => "'$e'").toList());
+      logger.log('Process completed with exit code: ${result.exitCode}');
+      logger.log('Output: ${result.stdout}');
+      logger.log('Error: ${result.stderr}');
 
-      // Handle stderr
-      _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
-        logger.log('[Process.convertToIco] Error: $data');
-      });
-
-      // Wait for the process to complete
-      final exitCode = await _currentProcess!.exitCode;
-      logger.log('[Process.convertToIco] Process exited with code: $exitCode');
-
-      if (exitCode != 0) {
-        throw Exception('ImageMagick process failed with exit code: $exitCode');
+      if (result.exitCode != 0) {
+        logger.log('❌ Process failed with exit code: ${result.exitCode}');
+        throw Exception(
+            'ImageMagick process failed with exit code: ${result.exitCode}');
       }
     } catch (e) {
-      logger.log('[Process.convertToIco] Error: $e');
+      logger.log('❌ Critical error during ICO conversion: $e');
+      logger.log('Stack trace: ${StackTrace.current}');
       rethrow;
     } finally {
+      logger.log('Cleaning up process resources');
       _currentProcess = null;
+      logger.log('=== ICO Conversion Process Completed ===');
     }
   }
 
@@ -562,7 +569,8 @@ class Cli {
 
         // Calculate and update progress
         if (onProgress != null) {
-          double progress = ((i + 1) / totalPaths) * 80; // First 80% for copying
+          double progress =
+              ((i + 1) / totalPaths) * 80; // First 80% for copying
           onProgress(progress);
         }
       }

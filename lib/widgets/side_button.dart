@@ -36,6 +36,7 @@ class _SideButtonState extends State<SideButton> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
+      cursor: MouseCursor.defer,
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
       child: GestureDetector(
@@ -103,7 +104,7 @@ class _SideButtonState extends State<SideButton> {
                         ? 1.1
                         : 1,
                 duration: Durations.long4,
-                curve: Curves.elasticOut,
+                curve: Curves.fastEaseInToSlowEaseOut,
                 child: IconTheme(
                   data: IconThemeData(
                     color: widget.selected

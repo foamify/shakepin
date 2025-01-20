@@ -65,7 +65,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
         AppMode.pin => AppSizes.pin,
         AppMode.minify => AppSizes.minify,
         AppMode.archive => AppSizes.archive,
-        AppMode.misc => AppSizes.misc,
+        _ => AppSizes.misc,
       };
 
       logger.log('Setting frame with size: ${appSize.width}x${appSize.height}');
@@ -179,11 +179,16 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                                 dropSection: dropSection,
                               ),
                             ),
-                          AppMode.misc => SizedBox(
+                          AppMode.pin => SizedBox(
                               width: MediaQuery.sizeOf(context).width - 48 - 8,
-                              height: MediaQuery.sizeOf(context).height - 16,
-                              child: MiscSection(
-                                dropSection: dropSection,
+                              height: MediaQuery.sizeOf(context).height - 8,
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 8.0,
+                                  left: 4.0,
+                                  right: 8.0,
+                                ),
+                                child: dropSection,
                               ),
                             ),
                           AppMode.archive => SizedBox(
@@ -196,15 +201,10 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                           _ => SizedBox(
                               width: MediaQuery.sizeOf(context).width - 48 - 8,
                               height: MediaQuery.sizeOf(context).height - 8,
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: 8.0,
-                                  left: 4.0,
-                                  right: 8.0,
-                                ),
-                                child: dropSection,
+                              child: MiscSection(
+                                dropSection: dropSection,
                               ),
-                            )
+                            ),
                         },
                         SizedBox(
                           height: MediaQuery.sizeOf(context).height - 16,
@@ -225,24 +225,5 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
         ),
       ),
     );
-  }
-
-  void handleModeChanged(AppMode mode) async {
-    final appSize = switch (mode) {
-      AppMode.pin => AppSizes.pin,
-      AppMode.minify => AppSizes.minify,
-      AppMode.archive => AppSizes.archive,
-      AppMode.misc => AppSizes.misc,
-    };
-
-    appMode.value = mode;
-
-    dropChannel.setMinimumSize(appSize);
-    final rect = Rect.fromCenter(
-      center: await dropChannel.center(),
-      width: appSize.width,
-      height: appSize.height,
-    );
-    dropChannel.setFrame(rect, animate: true);
   }
 }

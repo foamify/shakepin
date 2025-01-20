@@ -85,13 +85,16 @@ class MainSidebar extends StatelessWidget {
         ),
         SideButton(
           label: 'misc',
-          selected: selectedMode == AppMode.misc,
+          selected: switch (selectedMode) {
+            AppMode.pin || AppMode.minify || AppMode.archive => false,
+            _ => true,
+          },
           tooltip: 'Drop files here to open other tools',
           onDragPerform: (paths) {},
           onShowTooltip: onShowTooltip,
           onHideTooltip: onHideTooltip,
           onTap: () {
-            onModeChanged(AppMode.misc);
+            onModeChanged(AppMode.convertToWav);
           },
           child: MacosIcon(
             FluentIcons.apps_24_regular,

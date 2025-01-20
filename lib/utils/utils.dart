@@ -1,14 +1,12 @@
-import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_haptic_feedback/macos_haptic_feedback.dart';
-import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 
 sealed class AppSizes {
-  static const archive = Size(240 + 48 + 12 + 12, 240 + 32);
+  static const archive = Size(240 + 48 + 12 + 12, 240 + 64);
   static const minify = Size(240 + 48 + 12 + 12, 468);
   static const about = Size(360, 360);
   static const misc = Size(240 + 48 + 12 + 12, 468);
@@ -29,6 +27,18 @@ bool isVideoFile(String filePath) {
     // '.rm', '.rmvb', '.swf', '.y4m',
   ];
   return videoExtensions.any((ext) => filePath.toLowerCase().endsWith(ext));
+}
+
+bool isAudioFile(String filePath) {
+  final audioExtensions = [
+    '.aac',
+    '.ac3',
+    '.eac3',
+    '.m4a',
+    '.mp3',
+    '.wav',
+  ];
+  return audioExtensions.any((ext) => filePath.toLowerCase().endsWith(ext));
 }
 
 bool isImageFile(String filePath) {
@@ -110,8 +120,8 @@ bool isImageFile(String filePath) {
   return imageExtensions.any((ext) => filePath.toLowerCase().endsWith(ext));
 }
 
-bool isSupportedFile(String filePath) {
-  return isVideoFile(filePath) || isImageFile(filePath);
+bool isUrl(String path) {
+  return path.startsWith('http://') || path.startsWith('https://');
 }
 
 String formatFileSize(int size) {
@@ -142,36 +152,17 @@ extension IterableExtension<T> on Iterable<String> {
 }
 
 void resetFrameAndHide() async {
-  final appSize = switch (appMode()) {
-    AppMode.pin => AppSizes.pin,
-    AppMode.minify => AppSizes.minify,
-    AppMode.archive => AppSizes.pin,
-    AppMode.misc => AppSizes.misc,
-  };
-
-  logger.log('Starting resetFrameAndHide');
-  await dropChannel.setFrame(
-    Rect.fromCenter(
-      center: await dropChannel.center(),
-      width: appSize.width,
-      height: appSize.height,
-    ),
-    animate: true,
-  );
-  logger.log('First frame adjustment complete');
-
-  await Future.delayed(Durations.short4);
   await dropChannel.setFrame(
     Rect.fromCenter(
       center: await dropChannel.center(),
       width: AppSizes.pin.width,
-      height: max(appSize.height / 4, 48),
+      height: 48,
     ),
     animate: true,
   );
-  logger.log('Second frame adjustment complete');
+  logger.log('frame adjustment complete');
 
   await Future.delayed(Durations.short4);
   await dropChannel.setVisible(false);
-  logger.log('Frame hidden');
+  logger.log('Window hidden successfully');
 }

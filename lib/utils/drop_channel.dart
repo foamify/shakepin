@@ -49,6 +49,11 @@ class DropChannel {
             listener.onDragConclude();
           }
 
+        case 'dragStart':
+          listeners
+              .firstWhere((element) => element.label == call.arguments)
+              .onDragStart();
+
         case 'dragEnter':
           final args = call.arguments;
           listeners
@@ -286,6 +291,7 @@ enum DropOperation {
 mixin class DragDropListener {
   String label = '';
 
+  void onDragStart() {}
   void onDragEnter(Offset position) {}
   void onDragExited() {}
   void onDragConclude() {}

@@ -24,13 +24,14 @@ class _MinifySettingsState extends State<MinifySettings> {
   var _imageFormat = ImageFormat.sameAsInput;
   var _imageDownscale = ImageDownscale.sameAsInput; // Add this line
 
-  bool get disabled => !items().containsImage && !items().containsVideo;
+  bool get disabled => !selectedItems().containsImage && !selectedItems().containsVideo;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
         listenable: Listenable.merge([
           items,
+          selectedItems,
           minifyInProgress,
           minifyOneFileProgress,
           processedFiles,
@@ -44,7 +45,7 @@ class _MinifySettingsState extends State<MinifySettings> {
             children: [
               Column(
                 children: [
-                  if (items().containsVideo)
+                  if (selectedItems().containsVideo)
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(
@@ -97,7 +98,7 @@ class _MinifySettingsState extends State<MinifySettings> {
                         ],
                       ),
                     ),
-                  if (items().containsImage)
+                  if (selectedItems().containsImage)
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(
@@ -295,7 +296,7 @@ class _MinifySettingsState extends State<MinifySettings> {
                                               'Starting minification process...');
                                           minifyFiles();
                                         },
-                                  child: const Text('Minify',
+                                  child: const Text('Compress',
                                       style: TextStyle(fontSize: 14)),
                                 ),
                         ),

@@ -28,8 +28,9 @@ Future<void> _showApp() async {
   } else {
     appSize = switch (appMode()) {
       AppMode.minify => AppSizes.minify,
-      AppMode.misc => AppSizes.misc,
-      _ => AppSizes.pin,
+      AppMode.pin => AppSizes.pin,
+      AppMode.archive => AppSizes.archive,
+      _ => AppSizes.misc,
     };
   }
 

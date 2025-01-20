@@ -38,8 +38,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
   }
 
   void _shareSelectedFiles() async {
-    final filesToShare =
-        selectedItems().isNotEmpty ? selectedItems() : items();
+    final filesToShare = selectedItems().isNotEmpty ? selectedItems() : items();
     final xFiles = filesToShare.map((path) => XFile(path)).toList();
     try {
       await dropChannel.shareXFiles(xFiles);
@@ -122,7 +121,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                   : items().isNotEmpty
                       ? MacosColors.controlColor.resolvedColor(context)
                       : MacosColors.transparent,
-              width: _isDraggingItemIn ? 2.0 : 1.0,
+              width: _isDraggingItemIn ? 3.0 : .3,
             ),
             borderRadius: BorderRadius.circular(6),
           ),
@@ -133,10 +132,18 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                 : items().isNotEmpty
                     ? MacosColors.controlColor
                         .resolvedColor(context)
-                        .withOpacity(.05)
+                        .withOpacity(.02)
                     : MacosColors.controlColor
                         .resolvedColor(context)
                         .withOpacity(.1),
+            // boxShadow: [
+            //   BoxShadow(
+            //       color: MacosTheme.brightnessOf(context).isDark
+            //           ? MacosColors.black.withOpacity(.5)
+            //           : Colors.black.withOpacity(.2),
+            //       blurRadius: 8,
+            //       blurStyle: BlurStyle.outer),
+            // ],
           ),
           child: ListenableBuilder(
               listenable: Listenable.merge([items, selectedItems]),
@@ -172,7 +179,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                     child: GlassButton(
                                       secondary: true,
                                       padding: EdgeInsets.zero,
-                                      radius: 3,
+                                      radius: 4,
                                       onTap: () {
                                         setState(() {
                                           selectedItems().clear();
@@ -193,7 +200,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                     child: GlassButton(
                                       secondary: true,
                                       padding: EdgeInsets.zero,
-                                      radius: 3,
+                                      radius: 4,
                                       onTap: () {
                                         resetFrameAndHide();
                                       },
@@ -230,7 +237,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                     child: GlassButton(
                                       secondary: true,
                                       padding: EdgeInsets.zero,
-                                      radius: 3,
+                                      radius: 4,
                                       onTap: _shareSelectedFiles,
                                       child: MacosIcon(
                                         FluentIcons.share_16_regular,
@@ -253,7 +260,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                         });
                                       },
                                       padding: EdgeInsets.zero,
-                                      radius: 3,
+                                      radius: 4,
                                       child: MacosIcon(
                                         _displayMode == DisplayMode.grid
                                             ? FluentIcons
@@ -310,8 +317,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                   //         : FluentIcons.document_24_regular;
                                   return CustomDragGesture(
                                     onDragStart: () {
-                                      if (!selectedItems()
-                                          .contains(filePath)) {
+                                      if (!selectedItems().contains(filePath)) {
                                         draggedItem = filePath;
                                         dropChannel
                                             .performDragSession([filePath]);
@@ -454,15 +460,13 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                                 onToggleSelection: () {
                                                   setState(() {
                                                     if (isSelected) {
-                                                      selectedItems.value =
-                                                          Set.from(
-                                                              selectedItems())
-                                                            ..remove(path);
+                                                      selectedItems.value = Set
+                                                          .from(selectedItems())
+                                                        ..remove(path);
                                                     } else {
-                                                      selectedItems.value =
-                                                          Set.from(
-                                                              selectedItems())
-                                                            ..add(path);
+                                                      selectedItems.value = Set
+                                                          .from(selectedItems())
+                                                        ..add(path);
                                                     }
                                                   });
                                                 },
