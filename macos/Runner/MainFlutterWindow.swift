@@ -876,7 +876,6 @@ class MainFlutterWindow: NSWindow {
       ("Show", 1),
       ("Hide", 2),
       ("About Shakepin", 3),
-      ("Reset Settings", 4),
       ("Quit", -1),
     ]
 
