@@ -83,7 +83,6 @@ class Logger {
 
   Future<bool> _checkStorageSpace() async {
     try {
-      final stat = await _logsDirectory.stat();
       final totalSize = await _calculateDirectorySize(_logsDirectory);
       // Limit total logs to 100MB
       return totalSize < 100 * 1024 * 1024;
