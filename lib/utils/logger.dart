@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async'; // Add this import
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -17,6 +18,9 @@ class Logger {
   late String _appName;
   late String _appVersion;
   late Directory _logsDirectory;
+  static const _bufferDuration = Duration(milliseconds: 100);
+  final List<String> _logBuffer = [];
+  Timer? _bufferTimer;
 
   // Private constructor
   Logger._() {
@@ -154,10 +158,28 @@ Started: ${_formatDateTime(DateTime.now())}
       final logEntry =
           '$timestamp | ${level.name.toUpperCase().padRight(7)} | $caller | $message\n';
 
-      await _fileHandle?.writeString(logEntry);
-      await _fileHandle?.flush();
+      _logBuffer.add(logEntry);
+      _scheduleBufferFlush();
     } catch (e) {
       _logError('Failed to write log', e);
+    }
+  }
+
+  void _scheduleBufferFlush() {
+    _bufferTimer?.cancel();
+    _bufferTimer = Timer(_bufferDuration, _flushBuffer);
+  }
+
+  Future<void> _flushBuffer() async {
+    if (_logBuffer.isEmpty || _fileHandle == null) return;
+
+    try {
+      final buffer = _logBuffer.join('');
+      await _fileHandle?.writeString(buffer);
+      await _fileHandle?.flush();
+      _logBuffer.clear();
+    } catch (e) {
+      _logError('Failed to flush log buffer', e);
     }
 
     await _rotateLogsIfNeeded();
@@ -200,6 +222,8 @@ Started: ${_formatDateTime(DateTime.now())}
   }
 
   Future<void> dispose() async {
+    _bufferTimer?.cancel();
+    await _flushBuffer();
     await _fileHandle?.flush();
     await _fileHandle?.close();
     _fileHandle = null;

@@ -5,7 +5,6 @@ import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/glass_button.dart';
 import 'package:shakepin/widgets/native_dropdown_button.dart';
-import 'package:path/path.dart' as path;
 
 //TODO: set output path
 
@@ -73,7 +72,10 @@ class _MiscSettingsState extends State<MiscSettings> {
           decoration: BoxDecoration(
             border:
                 Border.all(color: MacosColors.systemGrayColor.withOpacity(.2)),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(6),
+              bottom: Radius.circular(24),
+            ),
             color: MacosColors.controlColor
                 .resolvedColor(context)
                 .withOpacity(.03),
@@ -129,7 +131,7 @@ class _MiscSettingsState extends State<MiscSettings> {
                           default:
                         }
                       },
-                radius: 12,
+                radius: 16,
                 child: Text(appMode().label!),
               );
             },

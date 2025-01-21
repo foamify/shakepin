@@ -31,8 +31,7 @@ class MainSidebar extends StatelessWidget {
           onDragPerform: (paths) {
             items.value = {
               ...items(),
-              ...paths.videoPaths,
-              ...paths.imagePaths
+              ...paths,
             };
             onModeChanged(AppMode.pin);
           },
@@ -72,7 +71,13 @@ class MainSidebar extends StatelessWidget {
           label: 'archive',
           selected: selectedMode == AppMode.archive,
           tooltip: 'Drop files here to archive them into a .zip',
-          onDragPerform: (paths) {},
+          onDragPerform: (paths) {
+            items.value = {
+              ...items(),
+              ...paths,
+            };
+            onModeChanged(AppMode.archive);
+          },
           onShowTooltip: onShowTooltip,
           onHideTooltip: onHideTooltip,
           onTap: () {
@@ -90,7 +95,13 @@ class MainSidebar extends StatelessWidget {
             _ => true,
           },
           tooltip: 'Drop files here to open other tools',
-          onDragPerform: (paths) {},
+          onDragPerform: (paths) {
+            items.value = {
+              ...items(),
+              ...paths,
+            };
+            onModeChanged(AppMode.convertToWav);
+          },
           onShowTooltip: onShowTooltip,
           onHideTooltip: onHideTooltip,
           onTap: () {

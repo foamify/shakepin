@@ -50,9 +50,9 @@ class DropChannel {
           }
 
         case 'dragStart':
-          listeners
-              .firstWhere((element) => element.label == call.arguments)
-              .onDragStart();
+          for (final e in listeners) {
+            e.onDragStart();
+          }
 
         case 'dragEnter':
           final args = call.arguments;
@@ -271,6 +271,10 @@ class DropChannel {
     } catch (e) {
       throw FlutterError('Unexpected error starting process: $e');
     }
+  }
+
+  void startDragging() async {
+    _channel.invokeMethod('startDragging');
   }
 
   void addListener(DragDropListener listener) {

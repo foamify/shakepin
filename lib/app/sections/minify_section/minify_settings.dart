@@ -24,7 +24,8 @@ class _MinifySettingsState extends State<MinifySettings> {
   var _imageFormat = ImageFormat.sameAsInput;
   var _imageDownscale = ImageDownscale.sameAsInput; // Add this line
 
-  bool get disabled => !selectedItems().containsImage && !selectedItems().containsVideo;
+  bool get disabled =>
+      !selectedItems().containsImage && !selectedItems().containsVideo;
 
   @override
   Widget build(BuildContext context) {
@@ -173,13 +174,17 @@ class _MinifySettingsState extends State<MinifySettings> {
                     decoration: BoxDecoration(
                       border: Border.all(
                           color: MacosColors.systemGrayColor.withOpacity(.2)),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(6),
+                        bottom: Radius.circular(24),
+                      ),
                       color: MacosColors.controlColor
                           .resolvedColor(context)
                           .withOpacity(.03),
                     ),
                     padding: const EdgeInsets.all(8),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         SizedBox(
                           width: 300,
@@ -218,7 +223,7 @@ class _MinifySettingsState extends State<MinifySettings> {
                                   ],
                                 )
                               : GlassButton(
-                                  radius: 12,
+                                  radius: 16,
                                   onTap: disabled
                                       ? null
                                       : () async {

@@ -121,12 +121,18 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                   : items().isNotEmpty
                       ? MacosColors.controlColor.resolvedColor(context)
                       : MacosColors.transparent,
-              width: _isDraggingItemIn ? 3.0 : .3,
+              width: _isDraggingItemIn ? 1.5 : 1,
             ),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.vertical(
+              top: const Radius.circular(24),
+              bottom: Radius.circular(appMode() == AppMode.pin ? 24 : 6),
+            ),
           ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.vertical(
+              top: const Radius.circular(24),
+              bottom: Radius.circular(appMode() == AppMode.pin ? 24 : 6),
+            ),
             color: _isDraggingItemIn
                 ? MacosColors.controlAccentColor.withOpacity(0.1)
                 : items().isNotEmpty
@@ -165,118 +171,158 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                 return Column(
                   children: [
                     SizedBox(
-                      height: 24,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                        child: Row(
-                          children: [
-                            Expanded(
+                      height: 28,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Listener(
+                              onPointerMove: (event) {
+                                dropChannel.startDragging();
+                              },
+                              child: const ColoredBox(
+                                color: Colors.transparent,
+                              ),
+                            ),
+                          ),
+                          Positioned.fill(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
                               child: Row(
-                                spacing: 4,
                                 children: [
-                                  SizedBox.square(
-                                    dimension: 16,
-                                    child: GlassButton(
-                                      secondary: true,
-                                      padding: EdgeInsets.zero,
-                                      radius: 4,
-                                      onTap: () {
-                                        setState(() {
-                                          selectedItems().clear();
-                                        });
-                                        items.clear();
-                                        resetFrameAndHide();
-                                      },
-                                      child: MacosIcon(
-                                        FluentIcons.dismiss_16_regular,
-                                        color: MacosColors.labelColor
-                                            .resolvedColor(context),
-                                        size: 12,
-                                      ),
+                                  Expanded(
+                                    child: Row(
+                                      spacing: 4,
+                                      children: [
+                                        SizedBox(
+                                          width: 22,
+                                          height: 16,
+                                          child: GlassButton(
+                                            secondary: true,
+                                            padding: EdgeInsets.zero,
+                                            borderRadius: const BorderRadius
+                                                    .all(Radius.circular(8))
+                                                .copyWith(
+                                                    topLeft:
+                                                        const Radius.circular(
+                                                            24)),
+                                            onTap: () {
+                                              setState(() {
+                                                selectedItems().clear();
+                                              });
+                                              items.clear();
+                                              resetFrameAndHide();
+                                            },
+                                            child: Transform.translate(
+                                              offset: const Offset(1, .5),
+                                              child: MacosIcon(
+                                                FluentIcons.dismiss_16_regular,
+                                                color: MacosColors.labelColor
+                                                    .resolvedColor(context),
+                                                size: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: GlassButton(
+                                            secondary: true,
+                                            padding: EdgeInsets.zero,
+                                            radius: 4,
+                                            onTap: () {
+                                              resetFrameAndHide();
+                                            },
+                                            child: MacosIcon(
+                                              FluentIcons
+                                                  .arrow_minimize_16_regular,
+                                              color: MacosColors.labelColor
+                                                  .resolvedColor(context),
+                                              size: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  SizedBox.square(
-                                    dimension: 16,
-                                    child: GlassButton(
-                                      secondary: true,
-                                      padding: EdgeInsets.zero,
-                                      radius: 4,
-                                      onTap: () {
-                                        resetFrameAndHide();
-                                      },
-                                      child: MacosIcon(
-                                        FluentIcons.arrow_minimize_16_regular,
-                                        color: MacosColors.labelColor
-                                            .resolvedColor(context),
-                                        size: 12,
-                                      ),
+                                  IgnorePointer(
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          '${items().length} Files',
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Row(
+                                      spacing: 4,
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        MacosCheckbox(
+                                          value: checkboxValue,
+                                          onChanged: onCheckboxChanged,
+                                        ),
+                                        SizedBox.square(
+                                          dimension: 16,
+                                          child: GlassButton(
+                                            secondary: true,
+                                            padding: EdgeInsets.zero,
+                                            radius: 4,
+                                            onTap: _shareSelectedFiles,
+                                            child: MacosIcon(
+                                              FluentIcons.share_16_regular,
+                                              color: MacosColors.labelColor
+                                                  .resolvedColor(context),
+                                              size: 12,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 22,
+                                          height: 16,
+                                          child: GlassButton(
+                                            secondary: true,
+                                            onTap: () {
+                                              setState(() {
+                                                _displayMode = _displayMode ==
+                                                        DisplayMode.grid
+                                                    ? DisplayMode.list
+                                                    : DisplayMode.grid;
+                                              });
+                                            },
+                                            padding: EdgeInsets.zero,
+                                            borderRadius: const BorderRadius
+                                                    .all(Radius.circular(8))
+                                                .copyWith(
+                                                    topRight:
+                                                        const Radius.circular(
+                                                            24)),
+                                            child: Transform.translate(
+                                              offset: const Offset(-1, .5),
+                                              child: MacosIcon(
+                                                _displayMode == DisplayMode.grid
+                                                    ? FluentIcons
+                                                        .text_bullet_list_ltr_16_regular
+                                                    : FluentIcons
+                                                        .grid_16_regular,
+                                                color: MacosColors.labelColor
+                                                    .resolvedColor(context),
+                                                size: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            Row(
-                              children: [
-                                Text(
-                                  '${items().length} Files',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                            Expanded(
-                              child: Row(
-                                spacing: 4,
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  MacosCheckbox(
-                                    value: checkboxValue,
-                                    onChanged: onCheckboxChanged,
-                                  ),
-                                  SizedBox.square(
-                                    dimension: 16,
-                                    child: GlassButton(
-                                      secondary: true,
-                                      padding: EdgeInsets.zero,
-                                      radius: 4,
-                                      onTap: _shareSelectedFiles,
-                                      child: MacosIcon(
-                                        FluentIcons.share_16_regular,
-                                        color: MacosColors.labelColor
-                                            .resolvedColor(context),
-                                        size: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox.square(
-                                    dimension: 16,
-                                    child: GlassButton(
-                                      secondary: true,
-                                      onTap: () {
-                                        setState(() {
-                                          _displayMode =
-                                              _displayMode == DisplayMode.grid
-                                                  ? DisplayMode.list
-                                                  : DisplayMode.grid;
-                                        });
-                                      },
-                                      padding: EdgeInsets.zero,
-                                      radius: 4,
-                                      child: MacosIcon(
-                                        _displayMode == DisplayMode.grid
-                                            ? FluentIcons
-                                                .text_bullet_list_ltr_16_regular
-                                            : FluentIcons.grid_16_regular,
-                                        color: MacosColors.labelColor
-                                            .resolvedColor(context),
-                                        size: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                     Divider(

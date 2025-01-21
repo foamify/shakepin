@@ -8,6 +8,7 @@ class GlassButton extends StatefulWidget {
     required this.child,
     required this.onTap,
     this.radius,
+    this.borderRadius,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     this.secondary = false,
   });
@@ -15,6 +16,7 @@ class GlassButton extends StatefulWidget {
   final Widget child;
   final void Function()? onTap;
   final double? radius;
+  final BorderRadius? borderRadius;
   final EdgeInsets padding;
   final bool secondary;
 
@@ -61,12 +63,14 @@ class _GlassButtonState extends State<GlassButton> {
               duration: Durations.medium4,
               curve: Curves.fastEaseInToSlowEaseOut,
               decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(radius),
+                  borderRadius:
+                      widget.borderRadius ?? BorderRadius.circular(radius),
                   color: isDisabled
                       ? buttonColor.withOpacity(0.375)
                       : buttonColor),
               foregroundDecoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(radius),
+                  borderRadius:
+                      widget.borderRadius ?? BorderRadius.circular(radius),
                   color: _isHovered
                       ? MacosColors.controlColor.resolvedColor(context)
                       : null),

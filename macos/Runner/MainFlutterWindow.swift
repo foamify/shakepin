@@ -185,12 +185,18 @@ class MainFlutterWindow: NSWindow {
     self.contentViewController = flutterViewController
     flutterViewController.backgroundColor = .clear
 
-    // self.isOpaque = false
+    self.isOpaque = false
     self.backgroundColor = .clear
 
+    // Remove title bar and make it transparent
     self.titleVisibility = .hidden
     self.titlebarAppearsTransparent = true
+    
+    // Remove the top border/highlight
+    self.styleMask.remove(.titled)
+    // self.appearance = NSAppearance(named: .vibrantDark)
 
+    // Hide standard window buttons
     self.standardWindowButton(.closeButton)?.isHidden = true
     self.standardWindowButton(.miniaturizeButton)?.isHidden = true
     self.standardWindowButton(.zoomButton)?.isHidden = true
@@ -202,13 +208,21 @@ class MainFlutterWindow: NSWindow {
 
     // self.contentView?.layer?.cornerRadius = 12
     // self.contentView?.layer?.masksToBounds = true
-
+    // Add corner radius to the window
+    self.contentView?.wantsLayer = true
+    self.contentView?.layer?.cornerRadius = 32
+    self.contentView?.layer?.masksToBounds = true
+    
     let effectView = NSVisualEffectView()
     effectView.autoresizingMask = [.width, .height]
     effectView.blendingMode = .behindWindow
     effectView.material = .menu
     effectView.state = .active
     effectView.frame = flutterViewController.view.bounds
+    effectView.wantsLayer = true
+    effectView.layer?.cornerRadius = 16
+    effectView.layer?.masksToBounds = true
+
     self.contentView?.addSubview(
       effectView, positioned: .below, relativeTo: flutterViewController.view)
 
@@ -461,9 +475,20 @@ class MainFlutterWindow: NSWindow {
             message: "Invalid arguments for startProcess. Expected command and arguments",
             details: nil))
       }
+    case "startDragging":
+      startDragging()
+      result(nil)
 
     default:
       result(FlutterMethodNotImplemented)
+    }
+  }
+
+  func startDragging() {
+    DispatchQueue.main.async {
+      if let currentEvent = self.currentEvent {
+        self.performDrag(with: currentEvent)
+      }
     }
   }
 
@@ -758,8 +783,8 @@ class MainFlutterWindow: NSWindow {
     var positions: [CGPoint] = []
     var timestamps: [Date] = []
     let shakeThreshold = 4  // Changed from 6 to 4 direction changes
-    let timeWindow: TimeInterval = 0.5  // Time window to detect shake
-    let minVelocity: CGFloat = 400  // Pixels per second
+    let timeWindow: TimeInterval = 1  // Time window to detect shake
+    let minVelocity: CGFloat = 200  // Pixels per second
 
     // Monitor mouse down
     mouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { _ in
@@ -768,6 +793,7 @@ class MainFlutterWindow: NSWindow {
       positions.removeAll()
       timestamps.removeAll()
       isDragging = true
+      self.dragStarted = false;
       // NSLog("MouseDown - Initial drag pasteboard changeCount: \(initialChangeCount)")
     }
 

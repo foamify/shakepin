@@ -68,9 +68,18 @@ class _DropTargetState extends State<DropTarget> implements DragDropListener {
   }
 
   @override
-  void onDragStart() {
-    final renderObject = context.findRenderObject() as RenderBox?;
+  void onDragStart() async {
+    final startTime = DateTime.now();
+    RenderBox? renderObject;
+    
+    while (DateTime.now().difference(startTime).inSeconds < 1) {
+      renderObject = context.findRenderObject() as RenderBox?;
+      if (renderObject != null) break;
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    
     if (renderObject == null) return;
+    
     final offset = renderObject.localToGlobal(Offset.zero);
     final size = renderObject.size;
     dropChannel.setDropTarget(offset & size, widget.label);
