@@ -139,24 +139,30 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
             child: Column(
               children: [
                 SizedBox(
-                  height: 8,
+                  height: 9,
                   child: Center(
-                    child: Transform.translate(
-                      offset: const Offset(-24, -1.5),
-                      child: AnimatedScale(
-                        duration: Durations.short4,
-                        scale: _isHoveredTop ? 1 : .9,
-                        child: AnimatedSwitcher(
-                          duration: Durations.short4,
-                          child: Icon(
-                            FluentIcons.re_order_dots_horizontal_24_filled,
-                            size: 12,
+                    child: AnimatedContainer(
+                      duration: Durations.long4,
+                      curve: Curves.fastEaseInToSlowEaseOut,
+                      transform: (Matrix4.identity())
+                        ..setTranslationRaw(_isHoveredTop ? -29 : -24,
+                            _isHoveredTop ? -7.0 : -7, 0)
+                        ..scale(_isHoveredTop ? 1.0 : 0.5, 1.0),
+                      child: AnimatedTheme(
+                        data: Theme.of(context).copyWith(
+                          iconTheme: IconThemeData(
                             color: _isHoveredTop
                                 ? MacosColors.labelColor.resolvedColor(context)
                                 : MacosColors.labelColor
                                     .resolvedColor(context)
-                                    .withValues(alpha: 0.5),
+                                    .withValues(alpha: 0.1),
                           ),
+                        ),
+                        duration: Durations.long4,
+                        curve: Curves.fastEaseInToSlowEaseOut,
+                        child: const Icon(
+                          FluentIcons.line_horizontal_1_16_filled,
+                          size: 24,
                         ),
                       ),
                     ),
@@ -172,35 +178,35 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         switch (appMode()) {
-                          AppMode.minify => SizedBox(
-                              width: MediaQuery.sizeOf(context).width - 48 - 8,
-                              height: MediaQuery.sizeOf(context).height - 8,
-                              child: MinifySection(
-                                dropSection: dropSection,
-                              ),
-                            ),
                           AppMode.pin => SizedBox(
                               width: MediaQuery.sizeOf(context).width - 48 - 8,
-                              height: MediaQuery.sizeOf(context).height - 8,
+                              height: MediaQuery.sizeOf(context).height - 9,
                               child: Padding(
                                 padding: const EdgeInsets.only(
                                   bottom: 8.0,
-                                  left: 4.0,
+                                  left: 8.0,
                                   right: 8.0,
                                 ),
                                 child: dropSection,
                               ),
                             ),
+                          AppMode.minify => SizedBox(
+                              width: MediaQuery.sizeOf(context).width - 48 - 8,
+                              height: MediaQuery.sizeOf(context).height - 9,
+                              child: MinifySection(
+                                dropSection: dropSection,
+                              ),
+                            ),
                           AppMode.archive => SizedBox(
                               width: MediaQuery.sizeOf(context).width - 48 - 8,
-                              height: MediaQuery.sizeOf(context).height - 8,
+                              height: MediaQuery.sizeOf(context).height - 9,
                               child: ArchiveSection(
                                 dropSection: dropSection,
                               ),
                             ),
                           _ => SizedBox(
                               width: MediaQuery.sizeOf(context).width - 48 - 8,
-                              height: MediaQuery.sizeOf(context).height - 8,
+                              height: MediaQuery.sizeOf(context).height - 9,
                               child: MiscSection(
                                 dropSection: dropSection,
                               ),

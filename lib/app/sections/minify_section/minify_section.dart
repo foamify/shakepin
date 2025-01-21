@@ -15,7 +15,7 @@ class MinifySection extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.only(
-        left: 4.0,
+        left: 8.0,
         right: 8.0,
       ),
       child: Column(
