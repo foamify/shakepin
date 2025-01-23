@@ -64,6 +64,7 @@ enum AppMode {
   // Start of misc apps
   convertToWav._('Extract Audio'),
   convertToIco._('Convert to ICO'),
+  downloadMedia._('Download Media'),
   ;
 
   /// The label of misc apps. Returns null for non-misc apps.
@@ -79,7 +80,9 @@ extension AppModeEx on AppMode {
         AppMode.archive when isUrl(path) => false,
         AppMode.convertToIco => isImageFile(path),
         AppMode.convertToWav => isVideoFile(path) || isAudioFile(path),
-        _ => true,
+        AppMode.downloadMedia => isUrl(path),
+        AppMode.pin => true,
+        _ => false,
       };
 }
 

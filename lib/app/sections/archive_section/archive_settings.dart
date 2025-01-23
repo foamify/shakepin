@@ -28,12 +28,12 @@ class _ArchiveSettingsState extends State<ArchiveSettings> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: MacosColors.systemGrayColor.withOpacity(.2)),
+        border: Border.all(color: MacosColors.systemGrayColor.withValues(alpha:.2)),
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(6),
           bottom: Radius.circular(24),
         ),
-        color: MacosColors.controlColor.resolvedColor(context).withOpacity(.03),
+        color: MacosColors.controlColor.resolvedColor(context).withValues(alpha:.03),
       ),
       padding: const EdgeInsets.all(8),
       child: Column(

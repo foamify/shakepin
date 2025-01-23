@@ -125,6 +125,11 @@ class DropChannel {
     _cliErrorCallbacks.clear();
   }
 
+  void removeAllCallbacks() {
+    _cliOutputCallbacks.clear();
+    _cliErrorCallbacks.clear();
+  }
+
   Future<void> cleanup() async {
     try {
       await _channel.invokeMethod('cleanup');
@@ -257,7 +262,7 @@ class DropChannel {
     try {
       final result = await _channel.invokeMethod('startProcess', {
         'command': command,
-        'arguments': arguments,
+        'arguments': arguments.map((e) => "'$e'").toList(),
       });
 
       return ProcessResult(
@@ -270,6 +275,26 @@ class DropChannel {
       throw FlutterError('Error starting process: ${e.message}');
     } catch (e) {
       throw FlutterError('Unexpected error starting process: $e');
+    }
+  }
+
+  Future<bool> cancelProcess() async {
+    try {
+      final result = await _channel.invokeMethod('cancelProcess');
+      return result as bool;
+    } on PlatformException catch (e) {
+      throw FlutterError('Error canceling process: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error canceling process: $e');
+    }
+  }
+
+  Future<bool> isProcessRunning() async {
+    try {
+      final result = await _channel.invokeMethod('isProcessRunning');
+      return result as bool;
+    } on PlatformException {
+      return false;
     }
   }
 

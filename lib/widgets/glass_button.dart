@@ -66,7 +66,7 @@ class _GlassButtonState extends State<GlassButton> {
                   borderRadius:
                       widget.borderRadius ?? BorderRadius.circular(radius),
                   color: isDisabled
-                      ? buttonColor.withOpacity(0.375)
+                      ? buttonColor.withValues(alpha:0.375)
                       : buttonColor),
               foregroundDecoration: BoxDecoration(
                   borderRadius:

@@ -26,6 +26,13 @@ class MainFlutterWindow: NSWindow {
 
   var dragStarted = false
 
+  private var currentProcess: Process?
+  private var currentOutputPipe: Pipe?
+  private var currentErrorPipe: Pipe?
+  private var currentTimeoutTimer: DispatchSourceTimer?
+
+  private var processHandler: ProcessHandler!
+
   override func awakeFromNib() {
     cleanup()
     flutterViewController = FlutterViewController()
@@ -47,6 +54,8 @@ class MainFlutterWindow: NSWindow {
     setupShakeDetector()
 
     setupMenuBar()
+
+    processHandler = ProcessHandler(channel: channel)
 
     super.awakeFromNib()
   }
@@ -191,7 +200,7 @@ class MainFlutterWindow: NSWindow {
     // Remove title bar and make it transparent
     self.titleVisibility = .hidden
     self.titlebarAppearsTransparent = true
-    
+
     // Remove the top border/highlight
     self.styleMask.remove(.titled)
     // self.appearance = NSAppearance(named: .vibrantDark)
@@ -212,7 +221,7 @@ class MainFlutterWindow: NSWindow {
     self.contentView?.wantsLayer = true
     self.contentView?.layer?.cornerRadius = 32
     self.contentView?.layer?.masksToBounds = true
-    
+
     let effectView = NSVisualEffectView()
     effectView.autoresizingMask = [.width, .height]
     effectView.blendingMode = .behindWindow
@@ -479,6 +488,14 @@ class MainFlutterWindow: NSWindow {
       startDragging()
       result(nil)
 
+    case "cancelProcess":
+      NSLog("Received cancelProcess")
+      cleanupProcess()
+      result(true)
+
+    case "isProcessRunning":
+      result(processHandler.isProcessRunning())
+
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -493,117 +510,11 @@ class MainFlutterWindow: NSWindow {
   }
 
   private func startProcess(command: String, arguments: [String], result: @escaping FlutterResult) {
-    // TODO: add callback for process output and error
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+    processHandler.startProcess(command: command, arguments: arguments, result: result)
+  }
 
-    // Source profile files and run command with login shell
-    let shellCommand = """
-      source ~/.zshrc 2>/dev/null || true
-      source ~/.profile 2>/dev/null || true
-      source ~/.bash_profile 2>/dev/null || true
-      source ~/.bashrc 2>/dev/null || true
-      \(([command] + arguments).map { $0.replacingOccurrences(of: "\"", with: "\\\"") }.joined(separator: " "))
-      """
-
-    process.arguments = ["-l", "-c", shellCommand]
-    process.environment = ProcessInfo.processInfo.environment
-
-    let outputPipe = Pipe()
-    let errorPipe = Pipe()
-    process.standardOutput = outputPipe
-    process.standardError = errorPipe
-
-    // Variables to collect output
-    var outputData = Data()
-    var errorData = Data()
-
-    // Set up async reading of pipes
-    outputPipe.fileHandleForReading.readabilityHandler = { handle in
-      let data = handle.availableData
-      if !data.isEmpty {
-        outputData.append(data)
-        self.channel.invokeMethod("cliOutput", arguments: String(data: data, encoding: .utf8))
-      }
-    }
-
-    errorPipe.fileHandleForReading.readabilityHandler = { handle in
-      let data = handle.availableData
-      if !data.isEmpty {
-        errorData.append(data)
-        self.channel.invokeMethod("cliError", arguments: String(data: data, encoding: .utf8))
-      }
-    }
-
-    // Create a timer for timeout - increased to 120 seconds for image processing
-    let timeoutTimer = DispatchSource.makeTimerSource(queue: .global())
-    timeoutTimer.schedule(deadline: .now() + .seconds(120))
-
-    do {
-      try process.run()
-
-      timeoutTimer.setEventHandler {
-        if process.isRunning {
-          process.terminate()
-
-          // Clean up pipe handlers
-          outputPipe.fileHandleForReading.readabilityHandler = nil
-          errorPipe.fileHandleForReading.readabilityHandler = nil
-
-          DispatchQueue.main.async {
-            result(
-              FlutterError(
-                code: "PROCESS_TIMEOUT",
-                message: "Process timed out after 120 seconds",
-                details: nil
-              ))
-          }
-        }
-      }
-      timeoutTimer.resume()
-
-      // Wait for process in background
-      DispatchQueue.global(qos: .userInitiated).async {
-        process.waitUntilExit()
-
-        timeoutTimer.cancel()
-
-        // Clean up pipe handlers
-        outputPipe.fileHandleForReading.readabilityHandler = nil
-        errorPipe.fileHandleForReading.readabilityHandler = nil
-
-        let output = String(data: outputData, encoding: .utf8) ?? ""
-        let error = String(data: errorData, encoding: .utf8) ?? ""
-
-        DispatchQueue.main.async {
-          if process.terminationStatus == 0 || !output.isEmpty {
-            result([
-              "exitCode": process.terminationStatus,
-              "output": output,
-              "error": error,
-            ])
-          } else {
-            result(
-              FlutterError(
-                code: "PROCESS_ERROR",
-                message: "Process failed: \(error)",
-                details: nil
-              ))
-          }
-        }
-      }
-    } catch {
-      timeoutTimer.cancel()
-      outputPipe.fileHandleForReading.readabilityHandler = nil
-      errorPipe.fileHandleForReading.readabilityHandler = nil
-
-      result(
-        FlutterError(
-          code: "PROCESS_ERROR",
-          message: "Failed to start process: \(error.localizedDescription)",
-          details: nil
-        ))
-    }
+  private func cleanupProcess() {
+    processHandler.cleanup()
   }
 
   func convertImage(from path: String, to format: ImageFormat) -> String? {
@@ -793,7 +704,7 @@ class MainFlutterWindow: NSWindow {
       positions.removeAll()
       timestamps.removeAll()
       isDragging = true
-      self.dragStarted = false;
+      self.dragStarted = false
       // NSLog("MouseDown - Initial drag pasteboard changeCount: \(initialChangeCount)")
     }
 
@@ -1089,5 +1000,130 @@ class ShareSuccessDelegate: NSObject, NSSharingServicePickerDelegate {
   ) {
     result(service != nil ? service!.title : "")
     self.keepSelf = nil
+  }
+}
+
+class ProcessHandler {
+  private let channel: FlutterMethodChannel
+  private var currentProcess: Process?
+  private var currentOutputPipe: Pipe?
+  private var currentErrorPipe: Pipe?
+
+  init(channel: FlutterMethodChannel) {
+    self.channel = channel
+    NSLog("ProcessHandler initialized")
+  }
+
+  func startProcess(command: String, arguments: [String], result: @escaping FlutterResult) {
+    NSLog("Starting process with command: \(command) and arguments: \(arguments)")
+    cleanup()
+
+    let process = Process()
+    let outputPipe = Pipe()
+    let errorPipe = Pipe()
+
+    self.currentProcess = process
+    self.currentOutputPipe = outputPipe
+    self.currentErrorPipe = errorPipe
+
+    let fullCommand = ([command] + arguments).joined(separator: " ")
+    NSLog("Full command to execute: \(fullCommand)")
+
+    process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+    process.arguments = ["-l", "-c", fullCommand]
+    process.standardOutput = outputPipe
+    process.standardError = errorPipe
+    // Create output storage
+    var collectedOutput = Data()
+    var collectedError = Data()
+
+    // Setup pipe handling
+    outputPipe.fileHandleForReading.readabilityHandler = { [weak channel = self.channel] handle in
+      let data = handle.availableData
+      if !data.isEmpty {
+        collectedOutput.append(data)
+        if let output = String(data: data, encoding: .utf8) {
+          NSLog("Process output: \(output)")
+          DispatchQueue.main.async {
+            channel?.invokeMethod("cliOutput", arguments: output)
+          }
+        }
+      }
+    }
+
+    errorPipe.fileHandleForReading.readabilityHandler = { [weak channel = self.channel] handle in
+      let data = handle.availableData
+      if !data.isEmpty {
+        collectedError.append(data)
+        if let error = String(data: data, encoding: .utf8) {
+          NSLog("Process error: \(error)")
+          DispatchQueue.main.async {
+            channel?.invokeMethod("cliError", arguments: error)
+          }
+        }
+      }
+    }
+
+    process.terminationHandler = { process in
+      NSLog("Process terminated with status: \(process.terminationStatus)")
+      self.cleanup()
+      DispatchQueue.main.async {
+        result([
+          "exitCode": process.terminationStatus,
+          "output": String(data: collectedOutput, encoding: .utf8) ?? "",
+          "error": String(data: collectedError, encoding: .utf8) ?? ""
+        ])
+      }
+    }
+
+    do {
+      NSLog("Attempting to launch process")
+      process.launch()
+
+      let pgid = process.processIdentifier
+      let pgidResult = setpgid(pgid, pgid)
+      NSLog("Process launched - PID: \(pgid), PGID set result: \(pgidResult)")
+
+    } catch {
+      NSLog("Failed to launch process: \(error.localizedDescription)")
+      self.cleanup()
+      result(
+        FlutterError(
+          code: "PROCESS_ERROR",
+          message: error.localizedDescription,
+          details: nil
+        ))
+    }
+  }
+
+  func cleanup() {
+    NSLog("Starting process cleanup")
+
+    if let process = currentProcess {
+      let pgid = process.processIdentifier
+      NSLog("Found active process with PID: \(pgid)")
+
+      // Kill process group
+      let killResult = killpg(pgid, SIGKILL)
+      NSLog("killpg result: \(killResult)")
+
+      process.terminate()
+      NSLog("Process terminate() called")
+
+      // Clean up pipes
+      currentOutputPipe?.fileHandleForReading.readabilityHandler = nil
+      currentErrorPipe?.fileHandleForReading.readabilityHandler = nil
+    } else {
+      NSLog("No active process found during cleanup")
+    }
+
+    currentProcess = nil
+    currentOutputPipe = nil
+    currentErrorPipe = nil
+    NSLog("Process cleanup completed - all references cleared")
+  }
+
+  func isProcessRunning() -> Bool {
+    return currentProcess != nil
   }
 }

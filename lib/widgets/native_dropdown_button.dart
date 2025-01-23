@@ -305,7 +305,7 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
                                 color: widget.enabled
                                     ? brightness == Brightness.light
                                         ? MacosColors.controlColor
-                                            .withOpacity(.05)
+                                            .withValues(alpha:.05)
                                         : const Color(0xFF007AFF)
                                     : buttonStyles.borderColor,
                               ),
@@ -336,7 +336,7 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
                                 : buttonStyles.caretBgColor,
                             borderColor: _isHovered
                                 ? MacosColors.transparent
-                                : buttonStyles.caretColor.withOpacity(.05),
+                                : buttonStyles.caretColor.withValues(alpha:.05),
                           ),
                         ),
                       ),
@@ -383,7 +383,7 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
     );
     Color caretColor = MacosColors.controlTextColor.resolvedColor(context);
     Color caretBgColor =
-        MacosColors.controlColor.resolvedColor(context).withOpacity(.05);
+        MacosColors.controlColor.resolvedColor(context).withValues(alpha:.05);
     if (!enabled) {
       caretBgColor = MacosColors.transparent;
       textColor = caretColor = brightness.resolve(
@@ -404,7 +404,7 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
         const Color(0xff222222),
       );
       caretBgColor =
-          MacosColors.controlColor.resolvedColor(context).withOpacity(.05);
+          MacosColors.controlColor.resolvedColor(context).withValues(alpha:.05);
     }
     return _ButtonStyles(
       textColor: textColor,

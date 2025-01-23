@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' hide Process;
 
 import 'package:flutter/services.dart';
 
@@ -29,7 +29,6 @@ final cli = Cli._();
 class Cli {
   late final Pty pty;
   final listeners = <CliListener>[];
-  Process? _currentProcess;
 
   Cli._() {
     init();
@@ -68,30 +67,183 @@ class Cli {
   }
 
   void cancel() {
-    if (_currentProcess != null) {
-      _currentProcess!.kill();
-      logger.log('Process canceled');
-    }
+    dropChannel.cancelProcess();
+    logger.log('Process canceled');
   }
 
+  // Future<ProcessResult> executeNativeProcess(
+  //     String command, List<String> arguments) async {
+  //   try {
+  //     logger.log('[Native Process] Starting: $command ${arguments.join(' ')}');
+  //     final result = await dropChannel.startProcess(command, arguments);
+  //     logger
+  //         .log('[Native Process] Completed with exit code: ${result.exitCode}');
+  //     if (result.exitCode != 0) {
+  //       logger.log('[Native Process] Error output: ${result.stderr}');
+  //     }
+  //     return result;
+  //   } catch (e) {
+  //     logger.log('[Native Process] Error: $e');
+  //     cancel();
+  //     rethrow;
+  //   }
+  // }
+
+  /// Executes a one-off native process with basic error handling and logging
   Future<ProcessResult> executeNativeProcess(
-      String command, List<String> arguments) async {
+    String command,
+    List<String> arguments,
+  ) async {
+    logger.log('[OneOff Process] Starting: $command ${arguments.join(' ')}');
+
+    // Check if another process is running
+    if (await dropChannel.isProcessRunning()) {
+      const error = 'Another process is already running';
+      logger.log('[OneOff Process] Error: $error');
+      throw ProcessException(command, arguments, error, -1);
+    }
+
     try {
-      logger.log('[Native Process] Starting: $command ${arguments.join(' ')}');
-      final result = await dropChannel.startProcess(command, arguments);
-      logger
-          .log('[Native Process] Completed with exit code: ${result.exitCode}');
+      final result = await dropChannel.startProcess(
+        command,
+        arguments.map((e) => "'$e'").toList(),
+      );
+
       if (result.exitCode != 0) {
-        logger.log('[Native Process] Error output: ${result.stderr}');
+        final error =
+            'Process failed with exit code: ${result.exitCode}\nError: ${result.stderr}';
+        logger.log('[OneOff Process] $error');
+        throw ProcessException(command, arguments, error, result.exitCode);
       }
+
+      logger.log('[OneOff Process] Completed successfully');
       return result;
-    } catch (e) {
-      logger.log('[Native Process] Error: $e');
+    } catch (e, stack) {
+      logger.log('[OneOff Process] Error: $e');
+      logger.log('[OneOff Process] Stack trace: $stack');
+      dropChannel.cancelProcess();
       rethrow;
     }
   }
 
   // MARK: - Process
+
+  // MARK: - Download Media using yt-dlp
+
+  Future<void> downloadMedia(
+    String urlString, {
+    void Function(double)? onProgress,
+  }) async {
+    logger.log('=== Starting Media Download Process ===');
+    logger.log('URL: $urlString');
+
+    if (await dropChannel.isProcessRunning()) {
+      logger.log('⚠️ Process conflict: Another download process is running');
+      logger.log('Aborting new download request');
+      return;
+    }
+
+    var outputDir = (await getDownloadsDirectory())?.path;
+
+    if (outputDir == null) {
+      logger.log(
+          '❌ Error: Downloads directory not found. Using application documents directory');
+
+      final documentsDir = await getApplicationDocumentsDirectory();
+      outputDir = '${documentsDir.path}/Downloads';
+      await Directory(outputDir).create(recursive: true);
+    }
+
+    // Create a template that limits the filename length
+    // %(title).200B truncates title to 200 bytes if longer
+    // %ext:3 limits extension to 3 characters
+    final outputTemplate =
+        path.join(outputDir, '%(uploader).30B - %(title).170B');
+
+    final args = [
+      '--no-mtime',
+      '--progress',
+      '--newline',
+      '--restrict-filenames', // Replace special characters with _
+      '--windows-filenames', // Ensure Windows compatibility
+      '--trim-filenames', '200', // Limit filename length
+      '-o',
+      outputTemplate,
+      urlString,
+    ];
+
+    try {
+      logger.log('🚀 Launching yt-dlp process...');
+
+      callback(String line) {
+        if (onProgress != null) {
+          // Match total fragments info
+          if (line.contains('[hlsnative] Total fragments:')) {
+            return;
+          }
+
+          // Match percentage pattern with fragment info
+          final progressMatch =
+              RegExp(r'\[download\]\s+(\d+\.?\d*)%.*\(frag\s+(\d+)\/(\d+)\)')
+                  .firstMatch(line);
+          if (progressMatch != null) {
+            final percent = double.tryParse(progressMatch.group(1)!);
+            final fragCurrent = int.tryParse(progressMatch.group(2)!);
+            final fragTotal = int.tryParse(progressMatch.group(3)!);
+
+            if (percent != null && fragCurrent != null && fragTotal != null) {
+              // Calculate overall progress considering fragments
+              final fragmentProgress = percent / 100;
+              final overallProgress =
+                  (fragCurrent - 1 + fragmentProgress) / fragTotal;
+
+              onProgress(overallProgress);
+              logger.log(
+                  'Download progress: ${(overallProgress * 100).toStringAsFixed(1)}% (Fragment $fragCurrent/$fragTotal)');
+            }
+            return;
+          }
+
+          // Match for merging progress
+          if (line.contains('[Merger]')) {
+            onProgress(1.0);
+            logger.log('Merging formats...');
+            return;
+          }
+
+          // Match for 100% completion with different format
+          if (line.contains('[download] 100% of')) {
+            onProgress(1.0);
+            logger.log('Download completed');
+            return;
+          }
+        }
+      }
+
+      dropChannel.addCliOutputCallback(callback);
+
+      final result = await dropChannel.startProcess(
+          'yt-dlp', args.map((e) => "'$e'").toList());
+
+      dropChannel.removeCliOutputCallback(callback);
+
+      if (result.exitCode != 0) {
+        throw Exception(
+            'yt-dlp process failed with exit code: ${result.exitCode}');
+      }
+
+      // Open the downloads folder
+      await executeNativeProcess('open', [outputDir]);
+    } catch (e) {
+      logger.log('❌ Critical error during download: $e');
+      logger.log('Stack trace: ${StackTrace.current}');
+      rethrow;
+    } finally {
+      logger.log('Cleaning up process resources');
+      cancel();
+      logger.log('=== Media Download Process Completed ===');
+    }
+  }
 
   // MARK: - Convert to WAV
 
@@ -107,22 +259,36 @@ class Cli {
     }
     if (endTime != null) logger.log('End time: ${_formatDuration(endTime)}');
 
-    if (_currentProcess != null) {
+    if (await dropChannel.isProcessRunning()) {
       logger.log('⚠️ Process conflict: Another conversion process is running');
-      logger.log('Current process PID: ${_currentProcess!.pid}');
       logger.log('Aborting new conversion request');
       return;
     }
 
     final inputFile = File(inputPath);
     if (!inputFile.existsSync()) {
-      logger.log('❌ Error: Input file does not exist at path: $inputPath');
+      logger.log('❌ Error: Input file not found at path: $inputPath');
       throw FileSystemException('Input file not found', inputPath);
     }
 
     final outputPath = _getUniqueFilePath(inputPath,
         suffix: '_converted', inputExtension: 'wav');
     logger.log('Generated output path: $outputPath');
+
+    Duration? duration = Duration.zero;
+
+    try {
+      duration = await getMediaDuration(inputPath);
+      logger.log('Media duration: ${duration.toString()}');
+    } catch (e) {
+      logger.log('❌ Error getting media duration: $e');
+      throw Exception('Failed to get media duration: $e');
+    }
+    if (duration == null) {
+      throw Exception('Could not determine media duration');
+    }
+    final durationInSeconds = duration.inMilliseconds / 1000.0;
+    logger.log('Media duration: ${durationInSeconds}s');
 
     List<String> ffmpegArgs = ['-i', inputPath];
 
@@ -150,39 +316,43 @@ class Cli {
 
     try {
       logger.log('🚀 Launching FFmpeg process...');
-      _currentProcess = await Process.start('ffmpeg', ffmpegArgs);
 
-      // Handle stdout
-      _currentProcess!.stdout.transform(utf8.decoder).listen((data) {
-        logger.log('[FFmpeg Output] $data');
-
+      callback(String line) {
         if (onProgress != null) {
-          final timeMatch = RegExp(r'out_time=(\d{2}):(\d{2}):(\d{2}\.\d{2})')
-              .firstMatch(data);
+          final timeMatch =
+              RegExp(r'out_time=(\d+):(\d+):(\d+)\.(\d+)').firstMatch(line);
           if (timeMatch != null) {
             final hours = int.parse(timeMatch.group(1)!);
             final minutes = int.parse(timeMatch.group(2)!);
-            final seconds = double.parse(timeMatch.group(3)!);
-            final currentTime = hours * 3600 + minutes * 60 + seconds;
-            onProgress(currentTime / (endTime?.inSeconds ?? 100).toDouble());
+            final seconds = int.parse(timeMatch.group(3)!);
+            final milliseconds = int.parse(timeMatch.group(4)!);
+
+            final currentTime =
+                hours * 3600 + minutes * 60 + seconds + milliseconds / 100;
+            final progress = currentTime /
+                durationInSeconds; // Fixed: using durationInSeconds instead of Duration
+
+            onProgress(progress.clamp(0.0, 1.0));
             logger.log(
-                'Processing time: ${_formatDuration(Duration(seconds: currentTime.round()))}');
+                'Conversion progress: ${(progress * 100).toStringAsFixed(1)}%');
           }
         }
-      });
+      }
 
-      // Handle stderr
-      _currentProcess!.stderr.transform(utf8.decoder).listen((data) {
-        logger.log('[FFmpeg Error] $data');
-      });
+      dropChannel.addCliOutputCallback(callback);
 
-      // Wait for the process to complete
-      final exitCode = await _currentProcess!.exitCode;
-      logger.log('Process exited with code: $exitCode');
+      final result = await dropChannel.startProcess('ffmpeg', ffmpegArgs);
 
-      if (exitCode != 0) {
-        logger.log('❌ Process failed with exit code: $exitCode');
-        throw Exception('FFmpeg process failed with exit code: $exitCode');
+      dropChannel.removeCliOutputCallback(callback);
+
+      if (result.exitCode != 0) {
+        logger.log('❌ Process failed with exit code: ${result.exitCode}');
+        throw Exception(
+            'FFmpeg process failed with exit code: ${result.exitCode}');
+      }
+
+      if (onProgress != null) {
+        onProgress(1.0);
       }
 
       final outputFile = File(outputPath);
@@ -199,7 +369,6 @@ class Cli {
       rethrow;
     } finally {
       logger.log('Cleaning up process resources');
-      _currentProcess = null;
       logger.log('=== WAV Conversion Process Completed ===');
     }
   }
@@ -210,9 +379,8 @@ class Cli {
     logger.log('=== Starting ICO Conversion Process ===');
     logger.log('Input path: $inputPath');
 
-    if (_currentProcess != null) {
+    if (await dropChannel.isProcessRunning()) {
       logger.log('⚠️ Process conflict: Another conversion process is running');
-      logger.log('Current process PID: ${_currentProcess!.pid}');
       logger.log('Aborting new conversion request');
       return;
     }
@@ -249,7 +417,6 @@ class Cli {
       rethrow;
     } finally {
       logger.log('Cleaning up process resources');
-      _currentProcess = null;
       logger.log('=== ICO Conversion Process Completed ===');
     }
   }
@@ -266,10 +433,9 @@ class Cli {
     logger.log('Target quality: $quality');
     logger.log('Target format: ${fileExtension ?? "same as input"}');
 
-    if (_currentProcess != null) {
+    if (await dropChannel.isProcessRunning()) {
       logger
           .log('⚠️ Process conflict: Another minification process is running');
-      logger.log('Current process PID: ${_currentProcess!.pid}');
       logger.log('Aborting new minification request');
       return;
     }
@@ -359,7 +525,6 @@ class Cli {
       rethrow;
     } finally {
       logger.log('Cleaning up process resources');
-      _currentProcess = null;
       logger.log('=== Image Minification Process Completed ===');
     }
   }
@@ -372,7 +537,7 @@ class Cli {
       bool enableHardwareAcceleration = true,
       void Function(double)? onProgress}) async {
     await logger.log('[Process.minifyVideo] Starting video minification');
-    if (_currentProcess != null) {
+    if (await dropChannel.isProcessRunning()) {
       await logger.log('A process is already running. Please cancel it first.');
       return;
     }
@@ -398,7 +563,7 @@ class Cli {
     ffmpegArgs.add(inputPath);
 
     // Add format-specific encoding parameters
-    switch (format) {
+    switch (format.toLowerCase()) {
       case 'webm':
         final crf = switch (quality) {
           'lowest' => '51',
@@ -417,12 +582,23 @@ class Cli {
           crf,
           '-b:v',
           '0',
+          // Speed optimizations for VP9 (Not quite noticeable, so it's stilla TODO)
           '-deadline',
-          'good',
+          'realtime', // Changed from 'good' to 'realtime' for faster encoding
           '-cpu-used',
+          '4', // Increased from 2 to 4 for better speed
+          '-row-mt', // Enable row-based multithreading
+          '1',
+          '-tile-columns', // Enable tiling
           '2',
+          '-frame-parallel', // Enable frame parallel processing
+          '1',
+          '-threads', // Use all available CPU threads
+          '0',
           '-c:a',
           'libopus',
+          '-b:a', // Reduced audio bitrate
+          '96k',
         ]);
       case 'gif':
         await logger.log('[Process.minifyVideo] Using GIF encoding');
@@ -471,54 +647,43 @@ class Cli {
 
     try {
       await logger.log('[Process.minifyVideo] Getting video duration...');
-      final probeResult = await Process.run('ffprobe', [
-        '-v',
-        'error',
-        '-show_entries',
-        'format=duration',
-        '-of',
-        'default=noprint_wrappers=1:nokey=1',
-        inputPath
-      ]);
-      final duration = double.parse((probeResult.stdout as String).trim());
-      await logger.log(
-          '[Process.minifyVideo] Video duration: ${duration.toStringAsFixed(2)} seconds');
+      final duration = await getMediaDuration(inputPath);
+      if (duration == null) {
+        throw Exception('Could not determine video duration');
+      }
+      final durationInSeconds = duration.inMilliseconds / 1000.0;
+      await logger.log('[Process.minifyVideo] Duration: ${durationInSeconds}s');
 
       await logger.log('[Process.minifyVideo] Starting FFmpeg process...');
-      _currentProcess = await Process.start('ffmpeg', ffmpegArgs);
 
-      // Handle stdout
-      _currentProcess!.stdout.transform(utf8.decoder).listen((data) async {
-        await logger.log('[Process.minifyVideo] Output: $data');
-      });
+      // Add progress tracking
+      callback(String line) {
+        if (onProgress != null) {
+          final timeMatch =
+              RegExp(r'time=(\d+):(\d+):(\d+)\.(\d+)').firstMatch(line);
+          if (timeMatch != null) {
+            final hours = int.parse(timeMatch.group(1)!);
+            final minutes = int.parse(timeMatch.group(2)!);
+            final seconds = int.parse(timeMatch.group(3)!);
+            final milliseconds = int.parse(timeMatch.group(4)!);
 
-      // Handle stderr
-      _currentProcess!.stderr.transform(utf8.decoder).listen((data) async {
-        await logger.log('[Process.minifyVideo] FFmpeg: $data');
+            final currentTime =
+                hours * 3600 + minutes * 60 + seconds + milliseconds / 100;
+            final progress = currentTime / durationInSeconds;
 
-        // Parse progress
-        final match =
-            RegExp(r'time=(\d{2}):(\d{2}):(\d{2}\.\d{2})').firstMatch(data);
-        if (match != null && onProgress != null) {
-          final hours = int.parse(match.group(1)!);
-          final minutes = int.parse(match.group(2)!);
-          final seconds = double.parse(match.group(3)!);
-          final currentTime = hours * 3600 + minutes * 60 + seconds;
-          final progress = currentTime / duration;
-          await logger.log(
-              '[Process.minifyVideo] Progress: ${(progress * 100).toStringAsFixed(2)}%');
-          onProgress(progress);
+            onProgress(progress.clamp(0.0, 1.0));
+            logger.log(
+                '[Process.minifyVideo] Progress: ${(progress * 100).toStringAsFixed(1)}%');
+          }
         }
-      });
-
-      // Wait for the process to complete
-      final exitCode = await _currentProcess!.exitCode;
-      await logger.log(
-          '[Process.minifyVideo] Process completed with exit code: $exitCode');
-
-      if (exitCode != 0) {
-        throw Exception('FFmpeg process failed with exit code: $exitCode');
       }
+
+      dropChannel.addCliErrorCallback(callback);
+
+      final result = await dropChannel.startProcess('ffmpeg', ffmpegArgs);
+      logger.log('Process completed with exit code: ${result.exitCode}');
+
+      dropChannel.removeCliErrorCallback(callback);
 
       final inputSize = await File(inputPath).length();
       final outputSize = await File(finalOutputPath).length();
@@ -535,7 +700,6 @@ class Cli {
       await logger.log('[Process.minifyVideo] Error: $e');
       rethrow;
     } finally {
-      _currentProcess = null;
       await logger.log('[Process.minifyVideo] Process cleanup completed');
     }
   }
@@ -543,7 +707,7 @@ class Cli {
   Future<String?> archiveFiles(List<String> paths, String outputFolder,
       {void Function(double)? onProgress,
       void Function(String)? onFileProgress}) async {
-    if (_currentProcess != null) {
+    if (await dropChannel.isProcessRunning()) {
       logger.log('A process is already running. Please cancel it first.');
       return null;
     }
@@ -565,7 +729,7 @@ class Cli {
         }
 
         // Use cp because ditto won't work for some reason
-        await Process.run('cp', [path, destPath]);
+        await executeNativeProcess('cp', [path, destPath]);
 
         // Calculate and update progress
         if (onProgress != null) {
@@ -579,8 +743,7 @@ class Cli {
         onFileProgress('Compressing...');
       }
 
-      // Compress the temporary directory
-      _currentProcess = await Process.start('ditto', [
+      final result = await dropChannel.startProcess('ditto', [
         '-c',
         '-k',
         '--sequesterRsrc',
@@ -589,7 +752,7 @@ class Cli {
         outputArchive
       ]);
 
-      final exitCode = await _currentProcess!.exitCode;
+      final exitCode = result.exitCode;
 
       if (exitCode != 0) {
         logger.log('Error compressing files: Exit code $exitCode');
@@ -601,14 +764,13 @@ class Cli {
       }
 
       // Open Finder and reveal the archive
-      await Process.run('open', ['-R', outputArchive]);
+      await executeNativeProcess('open', ['-R', outputArchive]);
 
       return outputArchive;
     } catch (e) {
       logger.log('Error during compression: $e');
       rethrow;
     } finally {
-      _currentProcess = null;
       // Clean up: remove the temporary directory
       try {
         await tempDir.delete(recursive: true);
@@ -621,11 +783,23 @@ class Cli {
   Future<String> _getUniqueArchiveName(String folder) async {
     String baseName = 'archive';
     String extension = '.zip';
-    String fullPath = '$folder/$baseName$extension';
+    const int maxBaseLength = 200;
+
+    // Ensure base name isn't too long
+    if (baseName.length > maxBaseLength) {
+      baseName = baseName.substring(0, maxBaseLength);
+    }
+
+    String fullPath = path.join(folder, '$baseName$extension');
     int counter = 1;
 
     while (await File(fullPath).exists()) {
-      fullPath = '$folder/$baseName (${counter++})$extension';
+      String newName = '$baseName (${counter++})';
+      if (newName.length > maxBaseLength) {
+        // Truncate the base name to make room for counter
+        newName = '${baseName.substring(0, maxBaseLength - 5)} ($counter)';
+      }
+      fullPath = path.join(folder, '$newName$extension');
     }
 
     return fullPath;
@@ -641,9 +815,22 @@ class Cli {
     final String fileExtension = (inputExtension ??
             (hasExtension ? filePath.substring(filePath.lastIndexOf('.')) : ''))
         .toLowerCase();
-    final String pathWithoutExt = hasExtension
+    String pathWithoutExt = hasExtension
         ? filePath.substring(0, filePath.lastIndexOf('.'))
         : filePath;
+
+    // Get directory and base name separately
+    final directory = path.dirname(pathWithoutExt);
+    String baseName = path.basename(pathWithoutExt);
+
+    // Maximum length for the base name (excluding extension)
+    // Windows has a 260 character path limit, using a conservative limit
+    const int maxBaseLength = 200;
+
+    if (baseName.length > maxBaseLength) {
+      baseName = baseName.substring(0, maxBaseLength);
+      pathWithoutExt = path.join(directory, baseName);
+    }
 
     int counter = 0;
     String newPath;
@@ -651,8 +838,18 @@ class Cli {
       final String extensionToUse = fileExtension.startsWith('.')
           ? fileExtension.substring(1)
           : fileExtension;
-      newPath =
-          '$pathWithoutExt${suffix ?? ''}${counter > 0 ? ' ($counter)' : ''}.$extensionToUse';
+      final String suffix0 = suffix ?? '';
+      final String counter0 = counter > 0 ? ' ($counter)' : '';
+      newPath = '$pathWithoutExt$suffix0$counter0.$extensionToUse';
+
+      // If the path is still too long, truncate the base name further
+      if (newPath.length > 250) {
+        final int excess = newPath.length - 250;
+        baseName = baseName.substring(0, baseName.length - excess);
+        pathWithoutExt = path.join(directory, baseName);
+        newPath = '$pathWithoutExt$suffix0$counter0.$extensionToUse';
+      }
+
       counter++;
     } while (File(newPath).existsSync());
 
@@ -677,46 +874,17 @@ class Cli {
     ];
 
     try {
-      final process = await Process.run('ffprobe', args);
-      logger.log('Executing "ffprobe ${args.join(' ')}"');
+      logger.log('Getting media duration for: $filePath');
+      final result = await executeNativeProcess(
+        'ffprobe',
+        args,
+      );
 
-      final completer = Completer<Duration?>();
-      String output = '';
-
-      // Handle stdout
-      process.stdout.transform(utf8.decoder).listen((data) {
-        output += data;
-      }, onDone: () {
-        try {
-          final duration = double.tryParse(output.trim());
-          if (duration != null) {
-            final durationMs =
-                Duration(milliseconds: (duration * 1000).round());
-            completer.complete(durationMs);
-          } else {
-            completer.complete(null);
-          }
-        } catch (e) {
-          logger.log('[Process.getMediaDuration] Error parsing duration: $e');
-          completer.complete(null);
-        }
-      });
-
-      // Handle stderr
-      process.stderr.transform(utf8.decoder).listen((data) {
-        logger.log('[Process.getMediaDuration] Error: $data');
-      });
-
-      // Wait for the process to complete
-      final exitCode = process.exitCode;
-      logger.log(
-          '[Process.getMediaDuration] Process exited with code: $exitCode');
-
-      if (exitCode != 0) {
-        throw Exception('FFprobe process failed with exit code: $exitCode');
+      final duration = double.tryParse(result.stdout.toString().trim());
+      if (duration != null) {
+        return Duration(milliseconds: (duration * 1000).round());
       }
-
-      return await completer.future;
+      return null;
     } catch (e) {
       logger.log('[Process.getMediaDuration] Error: $e');
       return null;
@@ -725,25 +893,10 @@ class Cli {
 
   Future<void> openFileLocation(String filePath) async {
     try {
-      final process = await Process.start('open', ['-R', filePath]);
-
-      // Handle stdout
-      process.stdout.transform(utf8.decoder).listen((data) {
-        logger.log('[Process.openFileLocation] Output: $data');
-      });
-
-      // Handle stderr
-      process.stderr.transform(utf8.decoder).listen((data) {
-        logger.log('[Process.openFileLocation] Error: $data');
-      });
-
-      // Wait for the process to complete
-      final exitCode = await process.exitCode;
-      logger.log(
-          '[Process.openFileLocation] Process exited with code: $exitCode');
-
-      if (exitCode != 0) {
-        throw Exception('Open command failed with exit code: $exitCode');
+      final result = await executeNativeProcess('open', ['-R', filePath]);
+      if (result.exitCode != 0) {
+        throw Exception(
+            'Open command failed with exit code: ${result.exitCode}');
       }
     } catch (e) {
       logger.log('[Process.openFileLocation] Error: $e');
@@ -830,7 +983,7 @@ class Cli {
     final scriptPath = '${temporaryFile.path}/setup.sh';
     await File(scriptPath).writeAsString(setupScript);
     // Set execute permission for the script
-    await Process.run('chmod', ['+x', scriptPath]);
+    await executeNativeProcess('chmod', ['+x', scriptPath]);
 
     try {
       _writeToPty(scriptPath);

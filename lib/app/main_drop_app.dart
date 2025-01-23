@@ -128,7 +128,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
       decoration: BoxDecoration(
         border: Border.all(
           color: MacosTheme.brightnessOf(context).isDark
-              ? Colors.white.withOpacity(.2)
+              ? Colors.white.withValues(alpha:.2)
               : Colors.black,
           width: 1,
         ),

@@ -50,7 +50,7 @@ class _FileHoverWidgetState extends State<FileHoverWidget> {
             color: _isHovered
                 ? MacosColors.systemGrayColor
                     .resolvedColor(context)
-                    .withOpacity(.2)
+                    .withValues(alpha:.2)
                 : Colors.transparent,
           ),
           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -72,7 +72,7 @@ class _FileHoverWidgetState extends State<FileHoverWidget> {
                   fontSize: 12,
                   color: MacosColors.labelColor
                       .resolvedColor(context)
-                      .withOpacity(.5),
+                      .withValues(alpha:.5),
                 ),
               ),
             ],

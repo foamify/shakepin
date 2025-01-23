@@ -134,19 +134,19 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
               bottom: Radius.circular(appMode() == AppMode.pin ? 24 : 6),
             ),
             color: _isDraggingItemIn
-                ? MacosColors.controlAccentColor.withOpacity(0.1)
+                ? MacosColors.controlAccentColor.withValues(alpha:0.1)
                 : items().isNotEmpty
                     ? MacosColors.controlColor
                         .resolvedColor(context)
-                        .withOpacity(.02)
+                        .withValues(alpha:.02)
                     : MacosColors.controlColor
                         .resolvedColor(context)
-                        .withOpacity(.1),
+                        .withValues(alpha:.1),
             // boxShadow: [
             //   BoxShadow(
             //       color: MacosTheme.brightnessOf(context).isDark
-            //           ? MacosColors.black.withOpacity(.5)
-            //           : Colors.black.withOpacity(.2),
+            //           ? MacosColors.black.withValues(alpha:.5)
+            //           : Colors.black.withValues(alpha:.2),
             //       blurRadius: 8,
             //       blurStyle: BlurStyle.outer),
             // ],
@@ -329,7 +329,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                       height: 1,
                       color: MacosColors.systemGrayColor
                           .resolvedColor(context)
-                          .withOpacity(.2),
+                          .withValues(alpha:.2),
                     ),
                     if (items().isNotEmpty)
                       Expanded(

@@ -247,8 +247,8 @@ class _AboutAppState extends State<AboutApp> {
       padding: const EdgeInsets.all(4),
       onPressed: _handleCloseButtonPress,
       backgroundColor:
-          CupertinoColors.label.resolveFrom(context).withOpacity(.5),
-      hoverColor: CupertinoColors.label.resolveFrom(context).withOpacity(.9),
+          CupertinoColors.label.resolveFrom(context).withValues(alpha:.5),
+      hoverColor: CupertinoColors.label.resolveFrom(context).withValues(alpha:.9),
       pressedOpacity: .6,
       icon: Icon(
         FluentIcons.dismiss_24_filled,

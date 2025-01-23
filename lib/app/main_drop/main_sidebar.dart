@@ -29,9 +29,14 @@ class MainSidebar extends StatelessWidget {
           selected: selectedMode == AppMode.pin,
           tooltip: 'Drop files here to pin them',
           onDragPerform: (paths) {
+            final addedPaths = paths;
             items.value = {
               ...items(),
-              ...paths,
+              ...addedPaths,
+            };
+            selectedItems.value = {
+              ...selectedItems(),
+              ...addedPaths,
             };
             onModeChanged(AppMode.pin);
           },
@@ -50,10 +55,17 @@ class MainSidebar extends StatelessWidget {
           selected: selectedMode == AppMode.minify,
           tooltip: 'Drop images and videos here to minify their size',
           onDragPerform: (paths) {
-            items.value = {
-              ...items(),
+            final addedPaths = {
               ...paths.videoPaths,
               ...paths.imagePaths
+            };
+            items.value = {
+              ...items(),
+              ...addedPaths,
+            };
+            selectedItems.value = {
+              ...selectedItems(),
+              ...addedPaths,
             };
             onModeChanged(AppMode.minify);
           },
@@ -72,9 +84,14 @@ class MainSidebar extends StatelessWidget {
           selected: selectedMode == AppMode.archive,
           tooltip: 'Drop files here to archive them into a .zip',
           onDragPerform: (paths) {
+            final addedPaths = paths;
             items.value = {
               ...items(),
-              ...paths,
+              ...addedPaths,
+            };
+            selectedItems.value = {
+              ...selectedItems(),
+              ...addedPaths,
             };
             onModeChanged(AppMode.archive);
           },
@@ -96,9 +113,14 @@ class MainSidebar extends StatelessWidget {
           },
           tooltip: 'Drop files here to open other tools',
           onDragPerform: (paths) {
+            final addedPaths = paths;
             items.value = {
               ...items(),
-              ...paths,
+              ...addedPaths,
+            };
+            selectedItems.value = {
+              ...selectedItems(),
+              ...addedPaths,
             };
             onModeChanged(AppMode.convertToWav);
           },
