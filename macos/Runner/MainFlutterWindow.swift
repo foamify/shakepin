@@ -20,6 +20,19 @@ class MainFlutterWindow: NSWindow {
   var iconCache = NSCache<NSString, NSImage>()
   var popover: NSPopover?
 
+  var dropdownChannel: FlutterMethodChannel!
+  var dropdownButtons: [String: NSPopUpButton] = [:]
+  var dropdownMenu: NSMenu?
+
+  var dragStarted = false
+
+  private var currentProcess: Process?
+  private var currentOutputPipe: Pipe?
+  private var currentErrorPipe: Pipe?
+  private var currentTimeoutTimer: DispatchSourceTimer?
+
+  private var processHandler: ProcessHandler!
+
   override func awakeFromNib() {
     cleanup()
     flutterViewController = FlutterViewController()
@@ -34,11 +47,15 @@ class MainFlutterWindow: NSWindow {
     dragSource = DragSource(channel: channel)
     flutterViewController.view.addSubview(dragSource, positioned: .below, relativeTo: nil)
 
+    setupNativeDropdownChannel()
+
     setupWindow(flutterViewController)
 
     setupShakeDetector()
 
     setupMenuBar()
+
+    processHandler = ProcessHandler(channel: channel)
 
     super.awakeFromNib()
   }
@@ -56,17 +73,139 @@ class MainFlutterWindow: NSWindow {
     return true
   }
 
+  override var isMainWindow: Bool {
+    return true
+  }
+
+  override var canBecomeKey: Bool {
+    return true
+  }
+
+  override var canBecomeMain: Bool {
+    return true
+  }
+
+  func setupNativeDropdownChannel() {
+    dropdownChannel = FlutterMethodChannel(
+      name: "com.damywise.flutter_macos_native_dropdown/channel",
+      binaryMessenger: flutterViewController.engine.binaryMessenger)
+    dropdownChannel.setMethodCallHandler(handleNativeDropdownMethodCall)
+  }
+
+  func handleNativeDropdownMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    if call.method == "updateNativeDropdown" {
+      guard let args = call.arguments as? [String: Any],
+        let items = args["items"] as? [[String: Any]],
+        let x = args["x"] as? CGFloat,
+        let y = args["y"] as? CGFloat,
+        let width = args["width"] as? CGFloat,
+        let height = args["height"] as? CGFloat,
+        let selectedIndex = args["selectedIndex"] as? Int,
+        let dropdownId = args["dropdownId"] as? String,
+        let enabled = args["enabled"] as? Bool,
+        let remove = args["remove"] as? Bool
+      else {
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENTS",
+            message: "Invalid arguments for updateNativeDropdown",
+            details: nil))
+        return
+      }
+
+      if remove {
+        if let button = dropdownButtons[dropdownId] {
+          button.removeFromSuperview()
+          dropdownButtons.removeValue(forKey: dropdownId)
+        }
+        result(nil)
+        return
+      }
+
+      let button: NSPopUpButton
+      if let existingButton = dropdownButtons[dropdownId] {
+        button = existingButton
+      } else {
+        button = NSPopUpButton(frame: .zero, pullsDown: false)
+        button.bezelStyle = .rounded
+        button.target = self
+        button.action = #selector(handlePopUpButtonAction(_:))
+        button.isBordered = false
+        button.alphaValue = 0
+        flutterViewController.view.addSubview(button)
+        dropdownButtons[dropdownId] = button
+      }
+
+      // Update frame
+      let flutterViewHeight = flutterViewController.view.frame.height
+      let buttonFrame = NSRect(x: x, y: flutterViewHeight - y - 24, width: 200, height: 24)
+      button.frame = buttonFrame
+
+      // Update items
+      button.removeAllItems()
+      for item in items {
+        guard let title = item["title"] as? String,
+          let enabled = item["enabled"] as? Bool
+        else { continue }
+        button.menu?.addItem(withTitle: title, action: nil, keyEquivalent: "")
+        button.menu?.items.last?.isEnabled = enabled
+      }
+
+      // Update selection and state
+      if selectedIndex >= 0 && selectedIndex < items.count {
+        button.selectItem(at: selectedIndex)
+      }
+      button.isEnabled = enabled
+
+      result(nil)
+    } else {
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  @objc private func handlePopUpButtonAction(_ sender: NSPopUpButton) {
+    guard let dropdownId = dropdownButtons.first(where: { $0.value === sender })?.key else {
+      return
+    }
+    dropdownChannel.invokeMethod(
+      "onDropdownMenuSelected",
+      arguments: [
+        "id": dropdownId,
+        "index": sender.indexOfSelectedItem,
+      ])
+  }
+
+  @objc private func handleMenuSelection(_ sender: NSMenuItem) {
+    NSLog("Menu item selected: \(sender.title)")
+    NSLog("dropdownId: \(sender.representedObject)")
+    if let dropdownId = sender.representedObject as? String {
+      dropdownChannel.invokeMethod(
+        "onDropdownMenuSelected",
+        arguments: [
+          "id": dropdownId,
+          "index": sender.tag,
+        ]
+      )
+    }
+  }
+
   func setupWindow(_ flutterViewController: FlutterViewController) {
 
     self.contentViewController = flutterViewController
     flutterViewController.backgroundColor = .clear
 
-    // self.isOpaque = false
+    self.isOpaque = false
     self.backgroundColor = .clear
 
+    // Remove title bar and make it transparent
     self.titleVisibility = .hidden
     self.titlebarAppearsTransparent = true
 
+    // Remove the top border/highlight
+    self.styleMask.remove(.titled)
+    // self.appearance = NSAppearance(named: .vibrantDark)
+
+    // Hide standard window buttons
     self.standardWindowButton(.closeButton)?.isHidden = true
     self.standardWindowButton(.miniaturizeButton)?.isHidden = true
     self.standardWindowButton(.zoomButton)?.isHidden = true
@@ -78,6 +217,10 @@ class MainFlutterWindow: NSWindow {
 
     // self.contentView?.layer?.cornerRadius = 12
     // self.contentView?.layer?.masksToBounds = true
+    // Add corner radius to the window
+    self.contentView?.wantsLayer = true
+    self.contentView?.layer?.cornerRadius = 32
+    self.contentView?.layer?.masksToBounds = true
 
     let effectView = NSVisualEffectView()
     effectView.autoresizingMask = [.width, .height]
@@ -85,6 +228,10 @@ class MainFlutterWindow: NSWindow {
     effectView.material = .menu
     effectView.state = .active
     effectView.frame = flutterViewController.view.bounds
+    effectView.wantsLayer = true
+    effectView.layer?.cornerRadius = 16
+    effectView.layer?.masksToBounds = true
+
     self.contentView?.addSubview(
       effectView, positioned: .below, relativeTo: flutterViewController.view)
 
@@ -285,14 +432,29 @@ class MainFlutterWindow: NSWindow {
       }
 
     case "showPopover":
-      if let content = call.arguments as? String {
-        showPopover(content: content)
-        result(nil)
-      } else {
+      guard let args = call.arguments as? [Any],
+        let content = args[0] as? String,
+        let edgeIndex = args[1] as? Int
+      else {
         result(
           FlutterError(
-            code: "INVALID_ARGUMENT", message: "Invalid argument for showPopover", details: nil))
+            code: "INVALID_ARGUMENTS",
+            message: "Invalid arguments for showPopover",
+            details: nil))
+        return
       }
+
+      let edge: NSRectEdge =
+        switch edgeIndex {
+        case 0: .minX  // left
+        case 1: .maxX  // right
+        case 2: .maxY  // top
+        case 3: .minY  // bottom
+        default: .minX  // default to left
+        }
+
+      showPopover(content: content, edge: edge)
+      result(nil)
 
     case "hidePopover":
       hidePopover()
@@ -301,9 +463,58 @@ class MainFlutterWindow: NSWindow {
     case "getAppVersion":
       result(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
 
+    case "shareXFiles":
+      if let fileURLs = call.arguments as? [String] {
+        shareXFiles(fileURLs: fileURLs, result: result)
+      } else {
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT", message: "Invalid arguments for shareXFiles", details: nil))
+      }
+    case "startProcess":
+      if let args = call.arguments as? [String: Any],
+        let command = args["command"] as? String,
+        let arguments = args["arguments"] as? [String]
+      {
+        startProcess(command: command, arguments: arguments, result: result)
+      } else {
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT",
+            message: "Invalid arguments for startProcess. Expected command and arguments",
+            details: nil))
+      }
+    case "startDragging":
+      startDragging()
+      result(nil)
+
+    case "cancelProcess":
+      NSLog("Received cancelProcess")
+      cleanupProcess()
+      result(true)
+
+    case "isProcessRunning":
+      result(processHandler.isProcessRunning())
+
     default:
       result(FlutterMethodNotImplemented)
     }
+  }
+
+  func startDragging() {
+    DispatchQueue.main.async {
+      if let currentEvent = self.currentEvent {
+        self.performDrag(with: currentEvent)
+      }
+    }
+  }
+
+  private func startProcess(command: String, arguments: [String], result: @escaping FlutterResult) {
+    processHandler.startProcess(command: command, arguments: arguments, result: result)
+  }
+
+  private func cleanupProcess() {
+    processHandler.cleanup()
   }
 
   func convertImage(from path: String, to format: ImageFormat) -> String? {
@@ -466,150 +677,140 @@ class MainFlutterWindow: NSWindow {
     return nil
   }
 
+  private func getPasteboardCount(completion: @escaping (Int) -> Void) {
+    DispatchQueue.main.async {
+      let pasteboard = NSPasteboard(name: .drag)
+      let count = pasteboard.pasteboardItems?.count ?? 0
+      completion(count)
+    }
+  }
+
   private func setupShakeDetector() {
+    var globalMonitor: Any?
+    var mouseDownMonitor: Any?
+    var mouseUpMonitor: Any?
+    var initialChangeCount = 0
+    var isDragging = false
     var positions: [CGPoint] = []
     var timestamps: [Date] = []
-    let shakeThreshold = 10
-    var isDragging = false
-    var shakeDetected = false
+    let shakeThreshold = 4  // Changed from 6 to 4 direction changes
+    let timeWindow: TimeInterval = 1  // Time window to detect shake
+    let minVelocity: CGFloat = 200  // Pixels per second
 
-    // TODO: change to use global event loop  
-    func watch(using closure: @escaping () -> Void) {
-      var changeCount = 0
+    // Monitor mouse down
+    mouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { _ in
+      let pasteboard = NSPasteboard(name: .drag)
+      initialChangeCount = pasteboard.changeCount
+      positions.removeAll()
+      timestamps.removeAll()
+      isDragging = true
+      self.dragStarted = false
+      // NSLog("MouseDown - Initial drag pasteboard changeCount: \(initialChangeCount)")
+    }
 
-      Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-        let pasteboard = NSPasteboard(name: .drag)
-        if pasteboard.changeCount == changeCount { return }
+    // Monitor drag movement
+    globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDragged]) { event in
+      guard isDragging else { return }
 
-        defer {
-          changeCount = pasteboard.changeCount
+      let pasteboard = NSPasteboard(name: .drag)
+      let currentChangeCount = pasteboard.changeCount
+
+      // Only process if we're actually dragging something
+      if currentChangeCount != initialChangeCount {
+        if !self.dragStarted {
+          self.channel.invokeMethod("dragStart", arguments: nil)
+          self.dragStarted = true
         }
 
-        closure()
+        let currentPos = NSEvent.mouseLocation
+        let currentTime = Date()
+
+        positions.append(currentPos)
+        timestamps.append(currentTime)
+
+        // Keep only recent movements
+        while timestamps.count > 1 && currentTime.timeIntervalSince(timestamps[0]) > timeWindow {
+          positions.removeFirst()
+          timestamps.removeFirst()
+        }
+
+        // Check for shake pattern
+        if self.detectShake(
+          positions: positions, timestamps: timestamps,
+          threshold: shakeThreshold, minVelocity: minVelocity)
+        {
+          self.handleShake(at: currentPos)
+        }
       }
     }
 
-    func checkMouseMovement() {
-      let isLeftButtonDown = NSEvent.pressedMouseButtons & (1 << 0) != 0
-
-      if !isLeftButtonDown || !isDragging {
-        if shakeDetected {
-          channel.invokeMethod("conclude", arguments: nil)
-          shakeDetected = false
-        }
-        positions = []
-        timestamps = []
+    // Monitor mouse up
+    mouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) { _ in
+      self.dragStarted = false
+      let pasteboard = NSPasteboard(name: .drag)
+      let currentChangeCount = pasteboard.changeCount
+      if currentChangeCount != initialChangeCount {
         isDragging = false
-        return
-      }
-
-      let currentPosition = NSEvent.mouseLocation
-      let currentTimestamp = Date()
-
-      if let lastTimestamp = timestamps.last,
-        currentTimestamp.timeIntervalSince(lastTimestamp) > 1.0
-      {
         positions.removeAll()
         timestamps.removeAll()
-      }
-
-      positions.append(currentPosition)
-      timestamps.append(currentTimestamp)
-
-      if positions.count > shakeThreshold {
-        positions.removeFirst()
-        timestamps.removeFirst()
-      }
-
-      // NSLog("positions: \(positions)")
-
-      if detectShake() {
-        handleShake(at: currentPosition)
+        self.channel.invokeMethod("dragConclude", arguments: nil)
       }
     }
+  }
 
-    func detectShake() -> Bool {
+  private func detectShake(
+    positions: [CGPoint], timestamps: [Date],
+    threshold: Int, minVelocity: CGFloat
+  ) -> Bool {
+    guard positions.count > 2 else { return false }
 
-      var directionChangesX = 0
-      var directionChangesY = 0
-      var isSpeedThresholdMet = false
+    var horizontalChanges = 0
+    var verticalChanges = 0
+    var lastHorizontalDirection: Int = 0  // -1 for left, 1 for right
+    var lastVerticalDirection: Int = 0  // -1 for down, 1 for up
+    var totalDistance: CGFloat = 0
 
-      var lastDirectionX = 0
-      var lastDirectionY = 0
+    // Calculate direction changes and velocity
+    for i in 1..<positions.count {
+      let dx = positions[i].x - positions[i - 1].x
+      let dy = positions[i].y - positions[i - 1].y
 
-      for i in 1..<positions.count {
-        let dx = positions[i].x - positions[i - 1].x
-        let dy = positions[i].y - positions[i - 1].y
+      let currentHorizontalDirection = dx == 0 ? 0 : dx > 0 ? 1 : -1
+      let currentVerticalDirection = dy == 0 ? 0 : dy > 0 ? 1 : -1
 
-        let currentDirectionX = dx == 0 ? 0 : (dx > 0 ? 1 : -1)
-        let currentDirectionY = dy == 0 ? 0 : (dy > 0 ? 1 : -1)
+      totalDistance += sqrt(dx * dx + dy * dy)
 
-        // Check for direction changes
-        if i > 1 && currentDirectionX != 0 && currentDirectionX != lastDirectionX {
-          directionChangesX += 1
-        }
-
-        if i > 1 && currentDirectionY != 0 && currentDirectionY != lastDirectionY {
-          directionChangesY += 1
-        }
-
-        lastDirectionX = currentDirectionX != 0 ? currentDirectionX : lastDirectionX
-        lastDirectionY = currentDirectionY != 0 ? currentDirectionY : lastDirectionY
+      if lastHorizontalDirection != 0 && currentHorizontalDirection != 0
+        && currentHorizontalDirection != lastHorizontalDirection
+      {
+        horizontalChanges += 1
       }
 
-      // Check duration between first and final segment
-      if positions.count >= 4 {
-        let duration = CGFloat(timestamps.last!.timeIntervalSince(timestamps.first!))
-        // NSLog("duration: \(duration)")
-        if duration <= 1.0 {
-          isSpeedThresholdMet = true
-        } else {
-          isSpeedThresholdMet = false
-        }
+      if lastVerticalDirection != 0 && currentVerticalDirection != 0
+        && currentVerticalDirection != lastVerticalDirection
+      {
+        verticalChanges += 1
       }
 
-      // Detect shake if there are at least 5 direction changes in either axis and speed threshold is met
-      return (directionChangesX >= 4 || directionChangesY >= 4) && isSpeedThresholdMet
-    }
-
-    func handleShake(at position: CGPoint) {
-      shakeDetected = true
-      channel.invokeMethod("shakeDetected", arguments: [position.x, position.y])
-      // let wndWidth = self.frame.width
-      // let wndHeight = self.frame.height
-
-      // if self.isVisible {
-      //   return
-      // }
-      // NSLog("Shake detected")
-      // self.setIsVisible(true)
-      // if let screen = getCurrentScreen() {
-      //   let x = min(max(position.x - wndWidth / 2, screen.frame.minX), screen.frame.maxX - wndWidth)
-      //   let cursorDistanceFromBottom = position.y - screen.frame.minY
-      //   if cursorDistanceFromBottom < wndHeight + 24 {  // Adjust this value as needed
-      //     self.setFrameOrigin(NSPoint(x: x, y: position.y + 24))
-      //   } else {
-      //     self.setFrameTopLeftPoint(NSPoint(x: x, y: position.y - 24))
-      //   }
-      // } else {
-      //   self.setFrameTopLeftPoint(NSPoint(x: position.x - wndWidth / 2, y: position.y - 24))
-      // }
-      // self.makeKeyAndOrderFront(nil)
-    }
-
-    func getPasteboardCount(completion: @escaping (Int) -> Void) {
-      DispatchQueue.main.async {
-        let count = NSPasteboard(name: .drag).pasteboardItems?.count ?? 0
-        completion(count)
+      if currentHorizontalDirection != 0 {
+        lastHorizontalDirection = currentHorizontalDirection
+      }
+      if currentVerticalDirection != 0 {
+        lastVerticalDirection = currentVerticalDirection
       }
     }
 
-    watch {
-      isDragging = true
-    }
-    Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-      checkMouseMovement()
-    }
+    // Calculate velocity
+    let duration = timestamps.last!.timeIntervalSince(timestamps.first!)
+    let velocity = CGFloat(totalDistance) / CGFloat(duration)
+
+    // Consider shake detected if either horizontal or vertical changes exceed threshold
+    return (horizontalChanges >= threshold || verticalChanges >= threshold)
+      && velocity >= minVelocity
+  }
+
+  private func handleShake(at position: CGPoint) {
+    channel.invokeMethod("shakeDetected", arguments: [position.x, position.y])
   }
 
   private func setupMenuBar() {
@@ -641,7 +842,7 @@ class MainFlutterWindow: NSWindow {
     }
   }
 
-  func showPopover(content: String) {
+  func showPopover(content: String, edge: NSRectEdge) {
     if popover == nil {
       popover = NSPopover()
     }
@@ -682,13 +883,28 @@ class MainFlutterWindow: NSWindow {
       let viewPoint = self.contentView?.convert(windowPoint, from: nil) ?? windowPoint
 
       popover?.show(
-        relativeTo: NSRect(origin: viewPoint, size: .zero), of: self.contentView!,
-        preferredEdge: .minY)
+        relativeTo: NSRect(origin: mouseLocation, size: .zero), of: self.contentView!,
+        preferredEdge: edge)
     }
   }
 
   func hidePopover() {
     popover?.close()
+  }
+
+  func shareXFiles(fileURLs: [String], result: @escaping FlutterResult) {
+    DispatchQueue.main.async {
+      let urls = fileURLs.map { URL(fileURLWithPath: $0) }
+      let picker = NSSharingServicePicker(items: urls)
+      picker.delegate = ShareSuccessDelegate(result: result).keep()
+
+      if let contentView = self.contentView {
+        picker.show(relativeTo: self.frame, of: self.contentView!, preferredEdge: .minY)
+      } else {
+        result(
+          FlutterError(code: "SHARE_ERROR", message: "Unable to show share picker", details: nil))
+      }
+    }
   }
 }
 
@@ -763,5 +979,151 @@ extension NSImage {
       return true
     }
     return rotatedImage
+  }
+}
+
+class ShareSuccessDelegate: NSObject, NSSharingServicePickerDelegate {
+  private var result: FlutterResult
+  private var keepSelf: (() -> Void)?
+
+  init(result: @escaping FlutterResult) {
+    self.result = result
+  }
+
+  public func keep() -> Self {
+    self.keepSelf = { _ = self }
+    return self
+  }
+
+  public func sharingServicePicker(
+    _ sharingServicePicker: NSSharingServicePicker, didChoose service: NSSharingService?
+  ) {
+    result(service != nil ? service!.title : "")
+    self.keepSelf = nil
+  }
+}
+
+class ProcessHandler {
+  private let channel: FlutterMethodChannel
+  private var currentProcess: Process?
+  private var currentOutputPipe: Pipe?
+  private var currentErrorPipe: Pipe?
+
+  init(channel: FlutterMethodChannel) {
+    self.channel = channel
+    NSLog("ProcessHandler initialized")
+  }
+
+  func startProcess(command: String, arguments: [String], result: @escaping FlutterResult) {
+    NSLog("Starting process with command: \(command) and arguments: \(arguments)")
+    cleanup()
+
+    let process = Process()
+    let outputPipe = Pipe()
+    let errorPipe = Pipe()
+
+    self.currentProcess = process
+    self.currentOutputPipe = outputPipe
+    self.currentErrorPipe = errorPipe
+
+    let fullCommand = ([command] + arguments).joined(separator: " ")
+    NSLog("Full command to execute: \(fullCommand)")
+
+    process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+    process.arguments = ["-l", "-c", fullCommand]
+    process.standardOutput = outputPipe
+    process.standardError = errorPipe
+    // Create output storage
+    var collectedOutput = Data()
+    var collectedError = Data()
+
+    // Setup pipe handling
+    outputPipe.fileHandleForReading.readabilityHandler = { [weak channel = self.channel] handle in
+      let data = handle.availableData
+      if !data.isEmpty {
+        collectedOutput.append(data)
+        if let output = String(data: data, encoding: .utf8) {
+          NSLog("Process output: \(output)")
+          DispatchQueue.main.async {
+            channel?.invokeMethod("cliOutput", arguments: output)
+          }
+        }
+      }
+    }
+
+    errorPipe.fileHandleForReading.readabilityHandler = { [weak channel = self.channel] handle in
+      let data = handle.availableData
+      if !data.isEmpty {
+        collectedError.append(data)
+        if let error = String(data: data, encoding: .utf8) {
+          NSLog("Process error: \(error)")
+          DispatchQueue.main.async {
+            channel?.invokeMethod("cliError", arguments: error)
+          }
+        }
+      }
+    }
+
+    process.terminationHandler = { process in
+      NSLog("Process terminated with status: \(process.terminationStatus)")
+      self.cleanup()
+      DispatchQueue.main.async {
+        result([
+          "exitCode": process.terminationStatus,
+          "output": String(data: collectedOutput, encoding: .utf8) ?? "",
+          "error": String(data: collectedError, encoding: .utf8) ?? ""
+        ])
+      }
+    }
+
+    do {
+      NSLog("Attempting to launch process")
+      process.launch()
+
+      let pgid = process.processIdentifier
+      let pgidResult = setpgid(pgid, pgid)
+      NSLog("Process launched - PID: \(pgid), PGID set result: \(pgidResult)")
+
+    } catch {
+      NSLog("Failed to launch process: \(error.localizedDescription)")
+      self.cleanup()
+      result(
+        FlutterError(
+          code: "PROCESS_ERROR",
+          message: error.localizedDescription,
+          details: nil
+        ))
+    }
+  }
+
+  func cleanup() {
+    NSLog("Starting process cleanup")
+
+    if let process = currentProcess {
+      let pgid = process.processIdentifier
+      NSLog("Found active process with PID: \(pgid)")
+
+      // Kill process group
+      let killResult = killpg(pgid, SIGKILL)
+      NSLog("killpg result: \(killResult)")
+
+      process.terminate()
+      NSLog("Process terminate() called")
+
+      // Clean up pipes
+      currentOutputPipe?.fileHandleForReading.readabilityHandler = nil
+      currentErrorPipe?.fileHandleForReading.readabilityHandler = nil
+    } else {
+      NSLog("No active process found during cleanup")
+    }
+
+    currentProcess = nil
+    currentOutputPipe = nil
+    currentErrorPipe = nil
+    NSLog("Process cleanup completed - all references cleared")
+  }
+
+  func isProcessRunning() -> Bool {
+    return currentProcess != nil
   }
 }

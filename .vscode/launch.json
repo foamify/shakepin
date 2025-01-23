@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "shakepin",
+            "request": "launch",
+            "type": "dart",
+            "args": ["--flavor", "oss"]
+        },
+        {
+            "name": "shakepin (profile mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile",
+            "args": ["--flavor", "oss"]
+        },
+        {
+            "name": "shakepin (release mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release",
+            "args": ["--flavor", "oss"]
+        }
+    ]
+}

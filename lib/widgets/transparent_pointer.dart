@@ -18,7 +18,7 @@ import 'package:flutter/widgets.dart';
 ///       children: [
 ///         GestureDetector(
 ///           behavior: HitTestBehavior.opaque,
-///           onVerticalDragStart: (_) => print("Background drag started"),
+///           onVerticalDragStart: (_) => logger.log("Background drag started"),
 ///         ),
 ///         Positioned(
 ///           top: 60,
@@ -28,7 +28,7 @@ import 'package:flutter/widgets.dart';
 ///           child: TransparentPointer(
 ///             child: TextButton(
 ///               child: Text("Tap me"),
-///               onPressed: () => print("You tapped me"),
+///               onPressed: () => logger.log("You tapped me"),
 ///             ),
 ///           ),
 ///         ),

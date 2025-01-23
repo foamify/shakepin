@@ -1,2 +1,2 @@
-sh ./setup_store.sh
+sh ./setup.sh
 flutter build macos --release

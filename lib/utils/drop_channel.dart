@@ -1,15 +1,24 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
+import 'package:shakepin/app/sections/minify_section/minify_state.dart';
 import 'package:shakepin/utils/handle_menu_item.dart';
 import 'package:flutter/foundation.dart';
+import 'package:file_selector/file_selector.dart';
+import 'package:shakepin/utils/logger.dart';
 
 typedef ShakeDetectedCallback = void Function(double x, double y);
 typedef DraggingSessionEndedCallback = void Function(int operation);
 typedef MenuItemClickedCallback = void Function(int tag);
 typedef ConcludeCallback = void Function();
+typedef CliOutputCallback = void Function(String output);
+typedef CliErrorCallback = void Function(String error);
 
 const MethodChannel _channel = MethodChannel('click.shakepin.macos/drop');
 
 final dropChannel = DropChannel._();
+
+enum PopoverEdge { left, right, top, bottom }
 
 class DropChannel {
   DropChannel._() {
@@ -40,6 +49,11 @@ class DropChannel {
             listener.onDragConclude();
           }
 
+        case 'dragStart':
+          for (final e in listeners) {
+            e.onDragStart();
+          }
+
         case 'dragEnter':
           final args = call.arguments;
           listeners
@@ -52,8 +66,8 @@ class DropChannel {
               .onDragExited();
 
         case 'dragConclude':
-          for (var element in listeners) {
-            element.onDragConclude();
+          for (var listener in listeners) {
+            listener.onDragConclude();
           }
 
         case 'dragPerform':
@@ -68,12 +82,53 @@ class DropChannel {
               .firstWhere((element) => element.label == args[0])
               .onDraggingUpdated(Offset(args[1] as double, args[2] as double));
 
+        case 'cliOutput':
+          logger.log('CLI output: ${call.arguments}');
+          for (final callback in _cliOutputCallbacks) {
+            callback(call.arguments);
+          }
+
+        case 'cliError':
+          logger.log('CLI error: ${call.arguments}');
+          for (final callback in _cliErrorCallbacks) {
+            callback(call.arguments);
+          }
+
         default:
-        // print('DropChannel: unknown method ${call.method}');
+          logger.log('DropChannel: unknown method ${call.method}');
       }
     });
   }
   final listeners = <DragDropListener>[];
+
+  final List<CliOutputCallback> _cliOutputCallbacks = [];
+  final List<CliErrorCallback> _cliErrorCallbacks = [];
+
+  void addCliOutputCallback(CliOutputCallback callback) {
+    _cliOutputCallbacks.add(callback);
+  }
+
+  void addCliErrorCallback(CliErrorCallback callback) {
+    _cliErrorCallbacks.add(callback);
+  }
+
+  void removeCliOutputCallback(CliOutputCallback callback) {
+    _cliOutputCallbacks.remove(callback);
+  }
+
+  void removeCliErrorCallback(CliErrorCallback callback) {
+    _cliErrorCallbacks.remove(callback);
+  }
+
+  void clearCliCallbacks() {
+    _cliOutputCallbacks.clear();
+    _cliErrorCallbacks.clear();
+  }
+
+  void removeAllCallbacks() {
+    _cliOutputCallbacks.clear();
+    _cliErrorCallbacks.clear();
+  }
 
   Future<void> cleanup() async {
     try {
@@ -161,7 +216,8 @@ class DropChannel {
 
   Future<String?> convertImage(String inputPath, ImageFormat format) async {
     try {
-      final result = await _channel.invokeMethod('convertImage', [inputPath, format.index]);
+      final result = await _channel
+          .invokeMethod('convertImage', [inputPath, format.index]);
       return result as String?;
     } on PlatformException catch (e) {
       throw FlutterError('Error converting image: ${e.message}');
@@ -170,8 +226,9 @@ class DropChannel {
     }
   }
 
-  Future<void> showPopover(String content) async {
-    await _channel.invokeMethod('showPopover', content);
+  Future<void> showPopover(String content,
+      {PopoverEdge edge = PopoverEdge.bottom}) async {
+    await _channel.invokeMethod('showPopover', [content, edge.index]);
   }
 
   Future<void> hidePopover() async {
@@ -187,6 +244,62 @@ class DropChannel {
     } catch (e) {
       throw FlutterError('Unexpected error getting app version: $e');
     }
+  }
+
+  Future<void> shareXFiles(List<XFile> xFiles) async {
+    try {
+      final filePaths = xFiles.map((xFile) => xFile.path).toList();
+      await _channel.invokeMethod('shareXFiles', filePaths);
+    } on PlatformException catch (e) {
+      throw FlutterError('Error sharing files: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error sharing files: $e');
+    }
+  }
+
+  Future<ProcessResult> startProcess(
+      String command, List<String> arguments) async {
+    try {
+      final result = await _channel.invokeMethod('startProcess', {
+        'command': command,
+        'arguments': arguments.map((e) => "'$e'").toList(),
+      });
+
+      return ProcessResult(
+        0, // pid (not available from native side)
+        int.parse(result['exitCode'].toString()),
+        result['output'] as String,
+        result['error'] as String,
+      );
+    } on PlatformException catch (e) {
+      throw FlutterError('Error starting process: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error starting process: $e');
+    }
+  }
+
+  Future<bool> cancelProcess() async {
+    try {
+      final result = await _channel.invokeMethod('cancelProcess');
+      return result as bool;
+    } on PlatformException catch (e) {
+      throw FlutterError('Error canceling process: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error canceling process: $e');
+    }
+  }
+
+  Future<bool> isProcessRunning() async {
+    try {
+      final result = await _channel.invokeMethod('isProcessRunning');
+      return result as bool;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  void startDragging() async {
+    _channel.invokeMethod('startDragging');
   }
 
   void addListener(DragDropListener listener) {
@@ -207,6 +320,7 @@ enum DropOperation {
 mixin class DragDropListener {
   String label = '';
 
+  void onDragStart() {}
   void onDragEnter(Offset position) {}
   void onDragExited() {}
   void onDragConclude() {}
@@ -214,11 +328,4 @@ mixin class DragDropListener {
   void onDragPerform(List<String> paths) {}
   void shakeDetected(Offset position) {}
   void onDragSessionEnded(DropOperation operation) {}
-}
-
-enum ImageFormat {
-  png,
-  jpeg,
-  tiff,
-  webp,
 }

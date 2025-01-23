@@ -7,6 +7,7 @@ class DropTarget extends StatefulWidget {
     super.key,
     required this.label,
     required this.child,
+    this.onDragStart,
     this.onDragPerform,
     this.onDragEnter,
     this.onDragExited,
@@ -18,6 +19,9 @@ class DropTarget extends StatefulWidget {
 
   final String label;
   final Widget child;
+
+  /// Called when user starts dragging a file or an item from anywhere.
+  final Function(Offset position)? onDragStart;
   final Function(List<String> paths)? onDragPerform;
   final Function(Offset position)? onDragEnter;
   final Function()? onDragExited;
@@ -31,18 +35,11 @@ class DropTarget extends StatefulWidget {
 }
 
 class _DropTargetState extends State<DropTarget> implements DragDropListener {
+  var isDragging = false;
+
   @override
   void initState() {
     dropChannel.addListener(this);
-    WidgetsBinding.instance.addPersistentFrameCallback((_) {
-      if (!mounted || !context.mounted) return;
-      if (context.debugDoingBuild) return;
-      final renderObject = context.findRenderObject() as RenderBox?;
-      if (renderObject == null) return;
-      final offset = renderObject.localToGlobal(Offset.zero);
-      final size = renderObject.size;
-      dropChannel.setDropTarget(offset & size, widget.label);
-    });
 
     super.initState();
   }
@@ -64,7 +61,30 @@ class _DropTargetState extends State<DropTarget> implements DragDropListener {
 
   @override
   void onDragConclude() {
+    Future.delayed(Durations.short4, () {
+      dropChannel.removeDropTarget(widget.label);
+    });
     widget.onDragConclude?.call();
+  }
+
+  @override
+  void onDragStart() async {
+    final startTime = DateTime.now();
+    RenderBox? renderObject;
+    
+    while (DateTime.now().difference(startTime).inSeconds < 1) {
+      renderObject = context.findRenderObject() as RenderBox?;
+      if (renderObject != null) break;
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    
+    if (renderObject == null) return;
+    
+    final offset = renderObject.localToGlobal(Offset.zero);
+    final size = renderObject.size;
+    dropChannel.setDropTarget(offset & size, widget.label);
+
+    widget.onDragStart?.call(Offset.zero);
   }
 
   @override
@@ -90,6 +110,12 @@ class _DropTargetState extends State<DropTarget> implements DragDropListener {
 
   @override
   void shakeDetected(Offset position) {
+    final renderObject = context.findRenderObject() as RenderBox?;
+    if (renderObject == null) return;
+    final offset = renderObject.localToGlobal(Offset.zero);
+    final size = renderObject.size;
+    dropChannel.setDropTarget(offset & size, widget.label);
+
     widget.shakeDetected?.call(position);
   }
 

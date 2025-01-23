@@ -36,5 +36,7 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUPublicEDKey</key>
+	<string>FW6+zjkR3W1sbIbBNpvhtWSAt/1oFo0jAgT6n8lmz6g=</string>
 </dict>
 </plist>

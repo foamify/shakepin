@@ -9,33 +9,11 @@ class DragToMoveArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RawGestureDetector(
-      behavior: HitTestBehavior.translucent,
-      gestures: {
-        VerticalDragGestureRecognizer:
-            GestureRecognizerFactoryWithHandlers<VerticalDragGestureRecognizer>(
-          () => VerticalDragGestureRecognizer(supportedDevices: {
-            PointerDeviceKind.touch,
-            PointerDeviceKind.mouse,
-          }),
-          (VerticalDragGestureRecognizer instance) {
-            instance.onStart = (details) {
-              dropChannel.performDragWindow();
-            };
-          },
-        ),
-        HorizontalDragGestureRecognizer: GestureRecognizerFactoryWithHandlers<
-            HorizontalDragGestureRecognizer>(
-          () => HorizontalDragGestureRecognizer(supportedDevices: {
-            PointerDeviceKind.touch,
-            PointerDeviceKind.mouse,
-          }),
-          (HorizontalDragGestureRecognizer instance) {
-            instance.onStart = (details) {
-              dropChannel.performDragWindow();
-            };
-          },
-        ),
+    return GestureDetector(
+      onPanStart: (details) {
+        if (details.kind == PointerDeviceKind.mouse) {
+          dropChannel.performDragWindow();
+        }
       },
       child: child,
     );

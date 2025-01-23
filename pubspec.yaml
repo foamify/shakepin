@@ -1,7 +1,7 @@
 name: shakepin
 description: "Pin, minify, and archive your files with unparalleled ease"
 publish_to: 'none'
-version: 0.2.18
+version: 0.2.20
 environment:
   sdk: ^3.5.3
 dependencies:
@@ -15,14 +15,21 @@ dependencies:
   macos_haptic_feedback: ^1.0.0
   cupertino_icons: ^1.0.8
   libcaesium_dart:
-    path: ../libcaesium_dart
+    git:
+      url: https://github.com/foamify/libcaesium_dart.git
   path: any
   extended_text: ^14.1.0
   super_sliver_list: ^0.4.1
   path_provider: ^2.1.4
   url_launcher: ^6.1.10
   lukehog: ^0.4.1+2
-  ffmpeg_kit_flutter_video: ^6.0.3
+  gradient_borders: ^1.0.1
+  flutter_pty: ^0.4.1
+  package_info_plus:
+    git:
+      url: https://github.com/fluttercommunity/plus_plugins.git
+      path: packages/package_info_plus/package_info_plus
+  auto_updater: ^1.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -33,6 +40,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/tray_icon.png
+    - assets/setup.sh
 icons_launcher:
   image_path: "assets/images/icon.png"
   platforms:

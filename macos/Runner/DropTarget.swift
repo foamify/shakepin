@@ -52,8 +52,8 @@ class DropTarget: NSView {
                 paths.append(url.standardized.path)
                 NSLog("Added file URL path: \(url.standardized.path)")
             } else if let urlString = item.string(forType: .URL), let url = URL(string: urlString) {
-                paths.append(url.standardized.path)
-                NSLog("Added URL path: \(url.standardized.path)")
+                paths.append(url.absoluteString)
+                NSLog("Added URL path: \(url.absoluteString)")
                 // } else if let colorData = item.data(forType: .color),
                 //     let color = NSColor(data: colorData)
                 // {
