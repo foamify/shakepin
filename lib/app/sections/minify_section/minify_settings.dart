@@ -50,11 +50,12 @@ class _MinifySettingsState extends State<MinifySettings> {
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(
-                            color: MacosColors.systemGrayColor.withValues(alpha:.2)),
+                            color: MacosColors.systemGrayColor
+                                .withValues(alpha: .2)),
                         borderRadius: BorderRadius.circular(6),
                         color: MacosColors.controlColor
                             .resolvedColor(context)
-                            .withValues(alpha:.03),
+                            .withValues(alpha: .03),
                       ),
                       padding: const EdgeInsets.all(8),
                       margin: const EdgeInsets.only(bottom: 8),
@@ -78,7 +79,9 @@ class _MinifySettingsState extends State<MinifySettings> {
                               ),
                             ],
                           ),
-                          const Divider(color: MacosColors.gridColor),
+                          Divider(
+                              color: MacosColors.systemGrayColor
+                                  .withValues(alpha: .2)),
                           Row(
                             children: [
                               const Text('Video format'),
@@ -103,11 +106,12 @@ class _MinifySettingsState extends State<MinifySettings> {
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(
-                            color: MacosColors.systemGrayColor.withValues(alpha:.2)),
+                            color: MacosColors.systemGrayColor
+                                .withValues(alpha: .2)),
                         borderRadius: BorderRadius.circular(6),
                         color: MacosColors.controlColor
                             .resolvedColor(context)
-                            .withValues(alpha:.03),
+                            .withValues(alpha: .03),
                       ),
                       padding: const EdgeInsets.all(8),
                       margin: const EdgeInsets.only(bottom: 8),
@@ -131,7 +135,9 @@ class _MinifySettingsState extends State<MinifySettings> {
                               ),
                             ],
                           ),
-                          const Divider(color: MacosColors.gridColor),
+                          Divider(
+                              color: MacosColors.systemGrayColor
+                                  .withValues(alpha: .2)),
                           Row(
                             children: [
                               const Text('Image format'),
@@ -149,7 +155,9 @@ class _MinifySettingsState extends State<MinifySettings> {
                               ),
                             ],
                           ),
-                          const Divider(color: MacosColors.gridColor),
+                          Divider(
+                              color: MacosColors.systemGrayColor
+                                  .withValues(alpha: .2)),
                           Row(
                             children: [
                               const Text('Image size'),
@@ -173,14 +181,15 @@ class _MinifySettingsState extends State<MinifySettings> {
                   Container(
                     decoration: BoxDecoration(
                       border: Border.all(
-                          color: MacosColors.systemGrayColor.withValues(alpha:.2)),
+                          color: MacosColors.systemGrayColor
+                              .withValues(alpha: .2)),
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(6),
                         bottom: Radius.circular(24),
                       ),
                       color: MacosColors.controlColor
                           .resolvedColor(context)
-                          .withValues(alpha:.03),
+                          .withValues(alpha: .03),
                     ),
                     padding: const EdgeInsets.all(8),
                     child: Column(
@@ -420,14 +429,15 @@ class _MinifySettingsState extends State<MinifySettings> {
 
       await logger.log(
           'Starting video minification with quality: ${_videoQuality.name}');
-      
+
       // Enable hardware acceleration for VP9 if available
       const bool tryHardwareAcceleration = true;
-      
+
       await cli.minifyVideo(
         outputPath,
         quality: _videoQuality.name,
-        format: _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
+        format:
+            _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
         enableHardwareAcceleration: tryHardwareAcceleration,
         onProgress: (progress) async {
           minifyOneFileProgress.value = progress;

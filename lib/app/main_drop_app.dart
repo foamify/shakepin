@@ -129,7 +129,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
         border: Border.all(
           color: MacosTheme.brightnessOf(context).isDark
               ? Colors.white.withValues(alpha:.2)
-              : Colors.black,
+              : Colors.black.withValues(alpha:.05),
           width: 1,
         ),
         borderRadius: const BorderRadius.all(Radius.circular(32)),
