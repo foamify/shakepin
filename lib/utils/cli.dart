@@ -223,7 +223,7 @@ class Cli {
       dropChannel.addCliOutputCallback(callback);
 
       final result = await dropChannel.startProcess(
-          'yt-dlp', args.map((e) => "'$e'").toList());
+          'yt-dlp', args);
 
       dropChannel.removeCliOutputCallback(callback);
 
