@@ -96,6 +96,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
       },
       onDragPerform: (paths) async {
         items.value = items().union(paths.toSet());
+        selectedItems.value = selectedItems().union(paths.toSet());
       },
       child: SizedBox(
         // width: AppSizes.main.height - 8,
