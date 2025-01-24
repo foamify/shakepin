@@ -128,9 +128,9 @@ class Cli {
 
   // MARK: - Process
 
-  // MARK: - Download Media using yt-dlp
+  // MARK: - Download Video using yt-dlp
 
-  Future<void> downloadMedia(
+  Future<void> downloadVideo(
     String urlString, {
     void Function(double)? onProgress,
   }) async {
@@ -242,6 +242,82 @@ class Cli {
       logger.log('Cleaning up process resources');
       cancel();
       logger.log('=== Media Download Process Completed ===');
+    }
+  }
+
+  Future<void> downloadImage(
+    String urlString, {
+    void Function(double)? onProgress,
+  }) async {
+    logger.log('=== Starting Image Download Process ===');
+    logger.log('URL: $urlString');
+
+    if (await dropChannel.isProcessRunning()) {
+      logger.log('⚠️ Process conflict: Another download process is running');
+      logger.log('Aborting new download request');
+      return;
+    }
+
+    var outputDir = (await getDownloadsDirectory())?.path;
+
+    if (outputDir == null) {
+      logger.log('❌ Error: Downloads directory not found. Using application documents directory');
+      final documentsDir = await getApplicationDocumentsDirectory();
+      outputDir = '${documentsDir.path}/Downloads';
+      await Directory(outputDir).create(recursive: true);
+    }
+
+    final args = [
+      '--directory', outputDir,
+      '--filename', '{filename}.{extension}',
+      '--verbose',
+      urlString,
+    ];
+
+    try {
+      logger.log('🚀 Launching gallery-dl process...');
+
+      callback(String line) {
+        if (onProgress != null) {
+          // Match download progress patterns
+          if (line.contains('Download complete')) {
+            onProgress(1.0);
+            logger.log('Download completed');
+            return;
+          }
+
+          // Match percentage pattern
+          final progressMatch = RegExp(r'(\d+)%').firstMatch(line);
+          if (progressMatch != null) {
+            final percent = double.tryParse(progressMatch.group(1)!);
+            if (percent != null) {
+              onProgress(percent / 100);
+              logger.log('Download progress: $percent%');
+            }
+          }
+        }
+      }
+
+      dropChannel.addCliOutputCallback(callback);
+
+      final result = await dropChannel.startProcess('gallery-dl', args);
+
+      dropChannel.removeCliOutputCallback(callback);
+
+      if (result.exitCode != 0) {
+        throw Exception('gallery-dl process failed with exit code: ${result.exitCode}');
+      }
+
+      // Open the downloads folder
+      await executeNativeProcess('open', [outputDir]);
+    } catch (e) {
+      logger.log('❌ Critical error during download: $e');
+      logger.log('Stack trace: ${StackTrace.current}');
+      rethrow;
+    } finally {
+      logger.log('Cleaning up process resources');
+      cancel();
+      logger.log('=== Image Download Process Completed ===');
     }
   }
 

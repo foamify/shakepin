@@ -54,13 +54,24 @@ check_ytdlp() {
   return 1
 }
 
+# Function to check if gallery-dl is installed and working
+check_gallerydl() {
+  local version_output
+  version_output=$(gallery-dl --version 2>/dev/null)
+  if [ $? -eq 0 ]; then
+    return 0
+  fi
+  return 1
+}
+
 # Check if all tools are installed and working
 ffmpeg_exists=$(check_ffmpeg && echo true || echo false)
 imagemagick_exists=$(check_imagemagick && echo true || echo false)
 ytdlp_exists=$(check_ytdlp && echo true || echo false)
+gallerydl_exists=$(check_gallerydl && echo true || echo false)
 
 # Only proceed with Homebrew installation if any tool is missing
-if ! $ffmpeg_exists || ! $imagemagick_exists || ! $ytdlp_exists; then
+if ! $ffmpeg_exists || ! $imagemagick_exists || ! $ytdlp_exists || ! $gallerydl_exists; then
   # Check if Homebrew needs to be installed
   if ! brew --version &>/dev/null; then
     echo -e "\nNote: Homebrew is not installed. Installing Homebrew since one or more required tools are missing...\n"
@@ -150,6 +161,26 @@ else
   echo -e "yt-dlp installation completed.\n"
 fi
 
+if ! $gallerydl_exists; then
+  echo -e "Note: gallery-dl is not installed. Installing gallery-dl...\n"
+  brew install gallery-dl
+  
+  # Verify installation
+  if ! check_gallerydl; then
+    echo -e "\nError: gallery-dl not working. Trying reinstall...\n"
+    brew reinstall gallery-dl
+    
+    if ! check_gallerydl; then
+      echo -e "\nError: gallery-dl installation failed. Please check your system configuration.\n"
+      exit 1
+    fi
+  fi
+  
+  echo -e "\ngallery-dl installation completed.\n"
+else
+  echo -e "gallery-dl installation completed.\n"
+fi
+
 echo -e "\nBoth ffmpeg and ImageMagick are already installed.\n"
 
 # Function to check if a command runs successfully
@@ -167,6 +198,7 @@ check_command() {
 ffmpeg_working=false
 imagemagick_working=false
 ytdlp_working=false
+gallerydl_working=false
 
 if check_command ffmpeg -version; then
   ffmpeg_working=true
@@ -180,12 +212,17 @@ if check_command yt-dlp --version; then
   ytdlp_working=true
 fi
 
+if check_command gallery-dl --version; then
+  gallerydl_working=true
+fi
+
 # Only print paths if all tools are working correctly
-if $ffmpeg_working && $imagemagick_working && $ytdlp_working; then
+if $ffmpeg_working && $imagemagick_working && $ytdlp_working && $gallerydl_working; then
   # Get the paths of all tools
   FFMPEG_PATH=$(which ffmpeg)
   IMAGEMAGICK_PATH=$(which magick)
   YTDLP_PATH=$(which yt-dlp)
+  GALLERYDL_PATH=$(which gallery-dl)
   
   # Print the paths with some formatting
   echo -e "\nPaths for installed tools:"
@@ -193,6 +230,7 @@ if $ffmpeg_working && $imagemagick_working && $ytdlp_working; then
   echo -e "FFmpeg path: $FFMPEG_PATH"
   echo -e "ImageMagick path: $IMAGEMAGICK_PATH"
   echo -e "yt-dlp path: $YTDLP_PATH"
+  echo -e "gallery-dl path: $GALLERYDL_PATH"
   echo -e "---------------------------------\n"
   
   echo -e "All checks and installations are completed successfully."
@@ -205,6 +243,9 @@ else
   fi
   if ! $ytdlp_working; then
     echo -e "- yt-dlp is not working properly\n"
+  fi
+  if ! $gallerydl_working; then
+    echo -e "- gallery-dl is not working properly\n"
   fi
   echo -e "Error: An error occurred during one or more installations."
 fi

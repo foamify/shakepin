@@ -26,12 +26,12 @@ class _MiscSettingsState extends State<MiscSettings> {
       children: [
         Container(
           decoration: BoxDecoration(
-            border:
-                Border.all(color: MacosColors.systemGrayColor.withValues(alpha:.2)),
+            border: Border.all(
+                color: MacosColors.systemGrayColor.withValues(alpha: .2)),
             borderRadius: BorderRadius.circular(6),
             color: MacosColors.controlColor
                 .resolvedColor(context)
-                .withValues(alpha:.03),
+                .withValues(alpha: .03),
           ),
           padding: const EdgeInsets.all(8),
           child: Column(
@@ -71,15 +71,15 @@ class _MiscSettingsState extends State<MiscSettings> {
         ),
         Container(
           decoration: BoxDecoration(
-            border:
-                Border.all(color: MacosColors.systemGrayColor.withValues(alpha:.2)),
+            border: Border.all(
+                color: MacosColors.systemGrayColor.withValues(alpha: .2)),
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(6),
               bottom: Radius.circular(24),
             ),
             color: MacosColors.controlColor
                 .resolvedColor(context)
-                .withValues(alpha:.03),
+                .withValues(alpha: .03),
           ),
           padding: const EdgeInsets.all(8),
           child: ListenableBuilder(
@@ -143,8 +143,18 @@ class _MiscSettingsState extends State<MiscSettings> {
                                 //   progressNotifier.value = -1;
                                 // },
                               );
-                            case AppMode.downloadMedia:
-                              await cli.downloadMedia(
+                            case AppMode.downloadVideo:
+                              await cli.downloadVideo(
+                                selectedItems().first,
+                                onProgress: (progress) {
+                                  progressNotifier.value = progress;
+                                },
+                                // onError: () {
+                                //   progressNotifier.value = -1;
+                                // },
+                              );
+                            case AppMode.downloadImage:
+                              await cli.downloadImage(
                                 selectedItems().first,
                                 onProgress: (progress) {
                                   progressNotifier.value = progress;
