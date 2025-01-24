@@ -75,7 +75,7 @@ class Cli {
   //     String command, List<String> arguments) async {
   //   try {
   //     logger.log('[Native Process] Starting: $command ${arguments.join(' ')}');
-  //     final result = await dropChannel.startProcess(command, arguments);
+  //     final result = await executeNativeProcess(command, arguments);
   //     logger
   //         .log('[Native Process] Completed with exit code: ${result.exitCode}');
   //     if (result.exitCode != 0) {
@@ -94,33 +94,34 @@ class Cli {
     String command,
     List<String> arguments,
   ) async {
-    logger.log('[OneOff Process] Starting: $command ${arguments.join(' ')}');
+    logger.log(
+        '[Native Process] Starting: $command ${arguments.map((e) => "'$e'").join(' ')}');
 
     // Check if another process is running
     if (await dropChannel.isProcessRunning()) {
       const error = 'Another process is already running';
-      logger.log('[OneOff Process] Error: $error');
+      logger.log('[Native Process] Error: $error');
       throw ProcessException(command, arguments, error, -1);
     }
 
     try {
       final result = await dropChannel.startProcess(
         command,
-        arguments.map((e) => "'$e'").toList(),
+        arguments,
       );
 
       if (result.exitCode != 0) {
         final error =
             'Process failed with exit code: ${result.exitCode}\nError: ${result.stderr}';
-        logger.log('[OneOff Process] $error');
+        logger.log('[Native Process] $error');
         throw ProcessException(command, arguments, error, result.exitCode);
       }
 
-      logger.log('[OneOff Process] Completed successfully');
+      logger.log('[Native Process] Completed successfully');
       return result;
     } catch (e, stack) {
-      logger.log('[OneOff Process] Error: $e');
-      logger.log('[OneOff Process] Stack trace: $stack');
+      logger.log('[Native Process] Error: $e');
+      logger.log('[Native Process] Stack trace: $stack');
       dropChannel.cancelProcess();
       rethrow;
     }
@@ -222,8 +223,7 @@ class Cli {
 
       dropChannel.addCliOutputCallback(callback);
 
-      final result = await dropChannel.startProcess(
-          'yt-dlp', args);
+      final result = await executeNativeProcess('yt-dlp', args);
 
       dropChannel.removeCliOutputCallback(callback);
 
@@ -261,15 +261,18 @@ class Cli {
     var outputDir = (await getDownloadsDirectory())?.path;
 
     if (outputDir == null) {
-      logger.log('❌ Error: Downloads directory not found. Using application documents directory');
+      logger.log(
+          '❌ Error: Downloads directory not found. Using application documents directory');
       final documentsDir = await getApplicationDocumentsDirectory();
       outputDir = '${documentsDir.path}/Downloads';
       await Directory(outputDir).create(recursive: true);
     }
 
     final args = [
-      '--directory', outputDir,
-      '--filename', '{filename}.{extension}',
+      '--directory',
+      outputDir,
+      '--filename',
+      '{filename}.{extension}',
       '--verbose',
       urlString,
     ];
@@ -300,12 +303,13 @@ class Cli {
 
       dropChannel.addCliOutputCallback(callback);
 
-      final result = await dropChannel.startProcess('gallery-dl', args);
+      final result = await executeNativeProcess('gallery-dl', args);
 
       dropChannel.removeCliOutputCallback(callback);
 
       if (result.exitCode != 0) {
-        throw Exception('gallery-dl process failed with exit code: ${result.exitCode}');
+        throw Exception(
+            'gallery-dl process failed with exit code: ${result.exitCode}');
       }
 
       // Open the downloads folder
@@ -417,7 +421,7 @@ class Cli {
 
       dropChannel.addCliOutputCallback(callback);
 
-      final result = await dropChannel.startProcess('ffmpeg', ffmpegArgs);
+      final result = await executeNativeProcess('ffmpeg', ffmpegArgs);
 
       dropChannel.removeCliOutputCallback(callback);
 
@@ -436,6 +440,7 @@ class Cli {
         final outputFileSize = await outputFile.length();
         logger.log(
             'Output file size: ${(outputFileSize / 1024).toStringAsFixed(2)} KB');
+        executeNativeProcess('open', ['-R', outputPath]);
       } else {
         logger.log('❌ Warning: Output file was not created');
       }
@@ -756,7 +761,7 @@ class Cli {
 
       dropChannel.addCliErrorCallback(callback);
 
-      final result = await dropChannel.startProcess('ffmpeg', ffmpegArgs);
+      final result = await executeNativeProcess('ffmpeg', ffmpegArgs);
       logger.log('Process completed with exit code: ${result.exitCode}');
 
       dropChannel.removeCliErrorCallback(callback);
@@ -819,7 +824,7 @@ class Cli {
         onFileProgress('Compressing...');
       }
 
-      final result = await dropChannel.startProcess('ditto', [
+      final result = await executeNativeProcess('ditto', [
         '-c',
         '-k',
         '--sequesterRsrc',
