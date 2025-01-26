@@ -32,6 +32,7 @@ class MainFlutterWindow: NSWindow {
   private var currentTimeoutTimer: DispatchSourceTimer?
 
   private var processHandler: ProcessHandler!
+  private var shiftKeyCheckEnabled = true  // Add this property
 
   override func awakeFromNib() {
     cleanup()
@@ -496,6 +497,16 @@ class MainFlutterWindow: NSWindow {
     case "isProcessRunning":
       result(processHandler.isProcessRunning())
 
+    case "setShiftKeyCheckEnabled":
+      if let enabled = call.arguments as? Bool {
+        shiftKeyCheckEnabled = enabled
+        result(nil)
+      } else {
+        result(FlutterError(code: "INVALID_ARGUMENT", 
+                           message: "Argument must be a boolean", 
+                           details: nil))
+      }
+
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -724,6 +735,12 @@ class MainFlutterWindow: NSWindow {
 
         let currentPos = NSEvent.mouseLocation
         let currentTime = Date()
+
+        // Check if shift key is pressed
+        if self.shiftKeyCheckEnabled && event.modifierFlags.contains(.shift) {
+          self.handleShake(at: currentPos)
+          return
+        }
 
         positions.append(currentPos)
         timestamps.append(currentTime)
@@ -1043,7 +1060,7 @@ class ProcessHandler {
       if !data.isEmpty {
         collectedOutput.append(data)
         if let output = String(data: data, encoding: .utf8) {
-          NSLog("Process output: \(output)")
+          // NSLog("Process output: \(output)")
           DispatchQueue.main.async {
             channel?.invokeMethod("cliOutput", arguments: output)
           }
@@ -1056,7 +1073,7 @@ class ProcessHandler {
       if !data.isEmpty {
         collectedError.append(data)
         if let error = String(data: data, encoding: .utf8) {
-          NSLog("Process error: \(error)")
+          // NSLog("Process error: \(error)")
           DispatchQueue.main.async {
             channel?.invokeMethod("cliError", arguments: error)
           }

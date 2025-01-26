@@ -83,13 +83,13 @@ class DropChannel {
               .onDraggingUpdated(Offset(args[1] as double, args[2] as double));
 
         case 'cliOutput':
-          logger.log('CLI output: ${call.arguments}');
+          // logger.log('CLI output: ${call.arguments}');
           for (final callback in _cliOutputCallbacks) {
             callback(call.arguments);
           }
 
         case 'cliError':
-          logger.log('CLI error: ${call.arguments}');
+          // logger.log('CLI error: ${call.arguments}');
           for (final callback in _cliErrorCallbacks) {
             callback(call.arguments);
           }
@@ -300,6 +300,16 @@ class DropChannel {
 
   void startDragging() async {
     _channel.invokeMethod('startDragging');
+  }
+
+  Future<void> setShiftKeyCheckEnabled(bool enabled) async {
+    try {
+      await _channel.invokeMethod('setShiftKeyCheckEnabled', enabled);
+    } on PlatformException catch (e) {
+      throw FlutterError('Error setting shift key check: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error setting shift key check: $e');
+    }
   }
 
   void addListener(DragDropListener listener) {
