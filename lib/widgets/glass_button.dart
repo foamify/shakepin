@@ -11,6 +11,7 @@ class GlassButton extends StatefulWidget {
     this.borderRadius,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     this.secondary = false,
+    this.ghost = false,
   });
 
   final Widget child;
@@ -19,6 +20,7 @@ class GlassButton extends StatefulWidget {
   final BorderRadius? borderRadius;
   final EdgeInsets padding;
   final bool secondary;
+  final bool ghost;
 
   @override
   State<GlassButton> createState() => _GlassButtonState();
@@ -32,9 +34,11 @@ class _GlassButtonState extends State<GlassButton> {
   Widget build(BuildContext context) {
     final isDisabled = widget.onTap == null;
 
-    final buttonColor = widget.secondary || isDisabled
-        ? MacosColors.controlColor.resolvedColor(context)
-        : MacosColors.controlAccentColor;
+    final buttonColor = widget.ghost
+        ? Colors.transparent
+        : (widget.secondary || isDisabled
+            ? MacosColors.controlColor.resolvedColor(context)
+            : MacosColors.controlAccentColor);
 
     return MouseRegion(
       cursor: isDisabled ? SystemMouseCursors.forbidden : MouseCursor.defer,
@@ -63,17 +67,17 @@ class _GlassButtonState extends State<GlassButton> {
               duration: Durations.medium4,
               curve: Curves.fastEaseInToSlowEaseOut,
               decoration: BoxDecoration(
-                  borderRadius:
-                      widget.borderRadius ?? BorderRadius.circular(radius),
-                  color: isDisabled
-                      ? buttonColor.withValues(alpha:0.375)
-                      : buttonColor),
+                borderRadius: widget.borderRadius ?? BorderRadius.circular(radius),
+                color: isDisabled
+                    ? buttonColor.withValues(alpha: 0.375)
+                    : buttonColor,
+              ),
               foregroundDecoration: BoxDecoration(
-                  borderRadius:
-                      widget.borderRadius ?? BorderRadius.circular(radius),
-                  color: _isHovered
-                      ? MacosColors.controlColor.resolvedColor(context)
-                      : null),
+                borderRadius: widget.borderRadius ?? BorderRadius.circular(radius),
+                color: _isHovered
+                    ? MacosColors.controlColor.resolvedColor(context)
+                    : null,
+              ),
               child: AnimatedScale(
                 scale: _isHovered ? 1.1 : 1,
                 duration: Durations.long4,
