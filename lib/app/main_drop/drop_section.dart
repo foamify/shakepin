@@ -14,6 +14,7 @@ import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_target.dart';
 import 'package:shakepin/widgets/file_image_widget.dart';
 import 'package:shakepin/widgets/glass_button.dart';
+import 'package:shakepin/widgets/native_dropdown_button.dart';
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:path/path.dart' as path;
@@ -135,14 +136,14 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
               bottom: Radius.circular(appMode() == AppMode.pin ? 24 : 6),
             ),
             color: _isDraggingItemIn
-                ? MacosColors.controlAccentColor.withValues(alpha:0.1)
+                ? MacosColors.controlAccentColor.withValues(alpha: 0.1)
                 : items().isNotEmpty
                     ? MacosColors.controlColor
                         .resolvedColor(context)
-                        .withValues(alpha:.02)
+                        .withValues(alpha: .02)
                     : MacosColors.controlColor
                         .resolvedColor(context)
-                        .withValues(alpha:.1),
+                        .withValues(alpha: .1),
             // boxShadow: [
             //   BoxShadow(
             //       color: MacosTheme.brightnessOf(context).isDark
@@ -244,16 +245,72 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                             ),
                                           ),
                                         ),
+                                        SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: GlassButton(
+                                            ghost: true,
+                                            secondary: true,
+                                            padding: EdgeInsets.zero,
+                                            radius: 4,
+                                            onTap: () {},
+                                            child: MacosIcon(
+                                              FluentIcons.settings_16_regular,
+                                              color: MacosColors.labelColor
+                                                  .resolvedColor(context),
+                                              size: 16,
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
-                                  IgnorePointer(
+                                  IntrinsicWidth(
                                     child: Row(
                                       children: [
-                                        Text(
-                                          '${items().length} Files',
-                                          style: const TextStyle(fontSize: 12),
+                                        const Spacer(),
+                                        IgnorePointer(
+                                          child: IntrinsicWidth(
+                                            child: Text(
+                                              '${items().length} Files ',
+                                              style:
+                                                  const TextStyle(fontSize: 12),
+                                            ),
+                                          ),
                                         ),
+                                        Transform.translate(
+                                          offset: const Offset(0, 1),
+                                          child: SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: NativeDropdownButton(
+                                              disableTrailing: true,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 2),
+                                              pullsDown: true,
+                                              onChanged: (value) => logger.log(
+                                                  'Selected action: $value'),
+                                              items: DropAction.values
+                                                  .map((action) =>
+                                                      NativeDropdownItem(
+                                                        value: action,
+                                                        label: action.label,
+                                                      ))
+                                                  .toList(),
+                                              child: Transform.translate(
+                                                offset: const Offset(0, 0),
+                                                child: MacosIcon(
+                                                  FluentIcons
+                                                      .chevron_down_16_regular,
+                                                  color: MacosColors.labelColor
+                                                      .resolvedColor(context),
+                                                  size: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        )
                                       ],
                                     ),
                                   ),
@@ -330,7 +387,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                       height: 1,
                       color: MacosColors.systemGrayColor
                           .resolvedColor(context)
-                          .withValues(alpha:.2),
+                          .withValues(alpha: .2),
                     ),
                     if (items().isNotEmpty)
                       Expanded(
@@ -570,4 +627,18 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
 enum DisplayMode {
   grid,
   list,
+}
+
+enum DropAction {
+  // This is required because for some reason the first item in pullsDown dropdown is not shown
+  _('_'),
+  removeAll('Remove All Items'),
+  copyLink('Copy ShakePin Link'),
+  unselectAl('Unselect All Items'),
+  selectAll('Select All Items'),
+  ;
+
+  final String label;
+
+  const DropAction(this.label);
 }
