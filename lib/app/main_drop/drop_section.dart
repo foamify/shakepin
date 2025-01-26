@@ -114,6 +114,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
           _ => MediaQuery.sizeOf(context).height - 16,
         },
         child: AnimatedContainer(
+          clipBehavior: Clip.hardEdge,
           duration: Durations.long2,
           curve: Curves.fastEaseInToSlowEaseOut,
           foregroundDecoration: BoxDecoration(
@@ -289,13 +290,48 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                                   const EdgeInsets.symmetric(
                                                       horizontal: 2),
                                               pullsDown: true,
-                                              onChanged: (value) => logger.log(
-                                                  'Selected action: $value'),
+                                              onChanged: (value) {
+                                                switch (value) {
+                                                  case null:
+                                                    throw UnimplementedError();
+                                                  case DropAction._:
+                                                    throw UnimplementedError();
+                                                  case DropAction.removeAll:
+                                                    items.clear();
+                                                    selectedItems.clear();
+                                                  case DropAction.copyLink:
+                                                    // TODO: Handle this case.
+                                                    throw UnimplementedError();
+                                                  case DropAction.unselectAl:
+                                                    selectedItems.clear();
+                                                  case DropAction.selectAll:
+                                                    selectedItems.value =
+                                                        Set.from(items());
+                                                }
+                                              },
                                               items: DropAction.values
                                                   .map((action) =>
                                                       NativeDropdownItem(
                                                         value: action,
                                                         label: action.label,
+                                                        enabled: switch (
+                                                            action) {
+                                                          DropAction._ => false,
+                                                          DropAction
+                                                                .removeAll =>
+                                                            items().isNotEmpty,
+                                                          DropAction.copyLink =>
+                                                            items().isNotEmpty,
+                                                          DropAction
+                                                                .unselectAl =>
+                                                            selectedItems()
+                                                                .isNotEmpty,
+                                                          DropAction
+                                                                .selectAll =>
+                                                            items().difference(
+                                                                selectedItems())
+                                                                .isNotEmpty,
+                                                        },
                                                       ))
                                                   .toList(),
                                               child: Transform.translate(

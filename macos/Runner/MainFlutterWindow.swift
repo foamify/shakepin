@@ -128,7 +128,7 @@ class MainFlutterWindow: NSWindow {
       if let existingButton = dropdownButtons[dropdownId] {
         button = existingButton
       } else {
-        button = NSPopUpButton(frame: .zero, pullsDown: pullsDown)
+        button = NSPopUpButton.init(popUpMenu: dropdownMenu ?? NSMenu(), target: nil, action: nil)
         button.bezelStyle = .rounded
         button.target = self
         button.action = #selector(handlePopUpButtonAction(_:))
@@ -140,8 +140,15 @@ class MainFlutterWindow: NSWindow {
 
       // Update frame
       let flutterViewHeight = flutterViewController.view.frame.height
-      let buttonFrame = NSRect(x: x, y: flutterViewHeight - y - height, width: width, height: height)
+      let buttonFrame = NSRect(
+        x: x, y: flutterViewHeight - y - height, width: width, height: height)
       button.frame = buttonFrame
+
+      button.menu!.autoenablesItems = false
+
+      if pullsDown {
+        button.pullsDown = true
+      }
 
       // Update items
       button.removeAllItems()
@@ -156,7 +163,7 @@ class MainFlutterWindow: NSWindow {
       // Update selection and state
       if selectedIndex >= 0 && selectedIndex < items.count {
         button.selectItem(at: selectedIndex)
-      }
+      } 
       button.isEnabled = enabled
 
       result(nil)
