@@ -78,7 +78,7 @@ extension AppModeEx on AppMode {
   bool isFileCompatible(String path) => switch (this) {
         AppMode.minify =>
           (isImageFile(path) || isVideoFile(path)) && !isUrl(path),
-        AppMode.archive when isUrl(path) => false,
+        AppMode.archive => !isUrl(path),
         AppMode.convertToIco => isImageFile(path),
         AppMode.convertToWav => isVideoFile(path) || isAudioFile(path),
         AppMode.downloadVideo || AppMode.downloadImage => isUrl(path),
