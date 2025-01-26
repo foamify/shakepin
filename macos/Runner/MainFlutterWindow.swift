@@ -140,7 +140,7 @@ class MainFlutterWindow: NSWindow {
 
       // Update frame
       let flutterViewHeight = flutterViewController.view.frame.height
-      let buttonFrame = NSRect(x: x, y: flutterViewHeight - y - 24, width: width, height: height)
+      let buttonFrame = NSRect(x: x, y: flutterViewHeight - y - height, width: width, height: height)
       button.frame = buttonFrame
 
       // Update items

@@ -65,6 +65,11 @@ class DropdownManager {
 }
 
 class NativeDropdownButton<T> extends StatefulWidget {
+  /// The list of items to display in the dropdown.
+  /// 
+  /// NOTE: For pullsDown functionality, a placeholder empty item must be added
+  /// as the first item in the list, since the first item may not display properly
+  /// for unknown technical reasons.
   final List<NativeDropdownItem<T>> items;
   final T? value;
   final ValueChanged<T?>? onChanged;
@@ -73,6 +78,11 @@ class NativeDropdownButton<T> extends StatefulWidget {
   final ControlSize controlSize;
   final String? tooltip;
   final bool enabled;
+
+  /// Whether the dropdown button pulls items down.
+  ///
+  /// NOTE: pullsDown requires adding a placeholder empty item at the beginning of the items list
+  /// since for unknown technical reasons, the first item won't be displayed.
   final bool pullsDown;
   final bool disableTrailing;
   final EdgeInsetsGeometry? padding;
@@ -299,8 +309,8 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
                         borderRadius: _kBorderRadius,
                       )
                     : null,
-                padding:
-                    widget.padding ?? const EdgeInsets.only(left: 8.0, right: 2.0),
+                padding: widget.padding ??
+                    const EdgeInsets.only(left: 8.0, right: 2.0),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
