@@ -29,27 +29,6 @@ class DropdownChannel {
         logger.log('unknown method: ${call.method}');
     }
   }
-
-  Future<int?> showDropdownMenu({
-    required List<Map<String, dynamic>> items,
-    required double x,
-    required double y,
-    required int selectedIndex,
-    required String dropdownId,
-  }) async {
-    try {
-      return await channel.invokeMethod<int>('showDropdownMenu', {
-        'items': items,
-        'x': x,
-        'y': y,
-        'selectedIndex': selectedIndex,
-        'dropdownId': dropdownId,
-      });
-    } catch (e) {
-      logger.log('Error showing dropdown menu: $e');
-      return null;
-    }
-  }
 }
 
 const Radius _kSideRadius = Radius.circular(5.0);
@@ -94,6 +73,9 @@ class NativeDropdownButton<T> extends StatefulWidget {
   final ControlSize controlSize;
   final String? tooltip;
   final bool enabled;
+  final bool pullsDown;
+  final bool disableTrailing;
+  final EdgeInsetsGeometry? padding;
 
   const NativeDropdownButton({
     super.key,
@@ -105,6 +87,9 @@ class NativeDropdownButton<T> extends StatefulWidget {
     this.controlSize = ControlSize.regular,
     this.tooltip,
     this.enabled = true,
+    this.pullsDown = false,
+    this.disableTrailing = false,
+    this.padding,
   });
 
   @override
@@ -173,6 +158,7 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
         'selectedIndex': 0,
         'enabled': false,
         'remove': true,
+        'pullsDown': false,
       });
       return;
     }
@@ -201,6 +187,7 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
       'selectedIndex': selectedIndex,
       'enabled': widget.enabled,
       'remove': remove,
+      'pullsDown': widget.pullsDown,
     });
   }
 
@@ -305,42 +292,45 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
                                 color: widget.enabled
                                     ? brightness == Brightness.light
                                         ? MacosColors.controlColor
-                                            .withValues(alpha:.05)
+                                            .withValues(alpha: .05)
                                         : const Color(0xFF007AFF)
                                     : buttonStyles.borderColor,
                               ),
                         borderRadius: _kBorderRadius,
                       )
                     : null,
-                padding: const EdgeInsets.only(left: 8.0, right: 2.0),
+                padding:
+                    widget.padding ?? const EdgeInsets.only(left: 8.0, right: 2.0),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Spacer(),
+                    if (!widget.disableTrailing) const Spacer(),
                     DefaultTextStyle(
                       style: MacosTheme.of(context).typography.body.copyWith(
                             color: buttonStyles.textColor,
                           ),
                       child: widget.child ?? const SizedBox(),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CustomPaint(
-                          painter: _UpDownCaretsPainter(
-                            color: buttonStyles.caretColor,
-                            backgroundColor: _isHovered
-                                ? MacosColors.transparent
-                                : buttonStyles.caretBgColor,
-                            borderColor: _isHovered
-                                ? MacosColors.transparent
-                                : buttonStyles.caretColor.withValues(alpha:.05),
+                    if (!widget.disableTrailing)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CustomPaint(
+                            painter: _UpDownCaretsPainter(
+                              color: buttonStyles.caretColor,
+                              backgroundColor: _isHovered
+                                  ? MacosColors.transparent
+                                  : buttonStyles.caretBgColor,
+                              borderColor: _isHovered
+                                  ? MacosColors.transparent
+                                  : buttonStyles.caretColor
+                                      .withValues(alpha: .05),
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -383,7 +373,7 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
     );
     Color caretColor = MacosColors.controlTextColor.resolvedColor(context);
     Color caretBgColor =
-        MacosColors.controlColor.resolvedColor(context).withValues(alpha:.05);
+        MacosColors.controlColor.resolvedColor(context).withValues(alpha: .05);
     if (!enabled) {
       caretBgColor = MacosColors.transparent;
       textColor = caretColor = brightness.resolve(
@@ -403,8 +393,9 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
         const Color(0xffc3c4c9),
         const Color(0xff222222),
       );
-      caretBgColor =
-          MacosColors.controlColor.resolvedColor(context).withValues(alpha:.05);
+      caretBgColor = MacosColors.controlColor
+          .resolvedColor(context)
+          .withValues(alpha: .05);
     }
     return _ButtonStyles(
       textColor: textColor,

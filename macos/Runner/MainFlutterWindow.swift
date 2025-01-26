@@ -104,7 +104,8 @@ class MainFlutterWindow: NSWindow {
         let selectedIndex = args["selectedIndex"] as? Int,
         let dropdownId = args["dropdownId"] as? String,
         let enabled = args["enabled"] as? Bool,
-        let remove = args["remove"] as? Bool
+        let remove = args["remove"] as? Bool,
+        let pullsDown = args["pullsDown"] as? Bool
       else {
         result(
           FlutterError(
@@ -127,7 +128,7 @@ class MainFlutterWindow: NSWindow {
       if let existingButton = dropdownButtons[dropdownId] {
         button = existingButton
       } else {
-        button = NSPopUpButton(frame: .zero, pullsDown: false)
+        button = NSPopUpButton(frame: .zero, pullsDown: pullsDown)
         button.bezelStyle = .rounded
         button.target = self
         button.action = #selector(handlePopUpButtonAction(_:))
@@ -139,7 +140,7 @@ class MainFlutterWindow: NSWindow {
 
       // Update frame
       let flutterViewHeight = flutterViewController.view.frame.height
-      let buttonFrame = NSRect(x: x, y: flutterViewHeight - y - 24, width: 200, height: 24)
+      let buttonFrame = NSRect(x: x, y: flutterViewHeight - y - 24, width: width, height: height)
       button.frame = buttonFrame
 
       // Update items
@@ -502,9 +503,11 @@ class MainFlutterWindow: NSWindow {
         shiftKeyCheckEnabled = enabled
         result(nil)
       } else {
-        result(FlutterError(code: "INVALID_ARGUMENT", 
-                           message: "Argument must be a boolean", 
-                           details: nil))
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT",
+            message: "Argument must be a boolean",
+            details: nil))
       }
 
     default:
@@ -1088,7 +1091,7 @@ class ProcessHandler {
         result([
           "exitCode": process.terminationStatus,
           "output": String(data: collectedOutput, encoding: .utf8) ?? "",
-          "error": String(data: collectedError, encoding: .utf8) ?? ""
+          "error": String(data: collectedError, encoding: .utf8) ?? "",
         ])
       }
     }
