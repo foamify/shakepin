@@ -105,3 +105,7 @@ void handleModeChanged(AppMode mode) async {
   );
   dropChannel.setFrame(rect, animate: true);
 }
+
+final setupProgress = ValueNotifier<double>(0);
+final setupStep = ValueNotifier<String>('');
+final setupSuccess = ValueNotifier<bool?>(null);

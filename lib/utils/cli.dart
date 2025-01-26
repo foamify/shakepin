@@ -440,7 +440,6 @@ class Cli {
         final outputFileSize = await outputFile.length();
         logger.log(
             'Output file size: ${(outputFileSize / 1024).toStringAsFixed(2)} KB');
-        executeNativeProcess('open', ['-R', outputPath]);
       } else {
         logger.log('❌ Warning: Output file was not created');
       }
@@ -640,8 +639,12 @@ class Cli {
       ffmpegArgs.addAll(['-hwaccel', 'auto']);
     }
 
-    ffmpegArgs.add('-i');
-    ffmpegArgs.add(inputPath);
+    // Add progress monitoring flags
+    ffmpegArgs.addAll([
+      '-progress', 'pipe:2', // Output progress to stderr
+      '-stats',
+      '-i', inputPath,
+    ]);
 
     // Add format-specific encoding parameters
     switch (format.toLowerCase()) {
@@ -701,24 +704,19 @@ class Cli {
         await logger
             .log('[Process.minifyVideo] Using MP4 encoding with CRF: $crf');
         ffmpegArgs.addAll([
-          '-c:v',
-          'libx264',
-          '-preset',
-          'fast',
-          '-crf',
-          crf,
-          '-pix_fmt',
-          'yuv420p',
+          '-c:v', 'libx264',
+          '-preset', 'fast',
+          '-crf', crf,
+          '-pix_fmt', 'yuv420p',
           '-profile:v',
-          'high',
-          '-level',
-          '4.1',
-          '-movflags',
-          '+faststart',
-          '-c:a',
-          'aac',
-          '-b:a',
-          '128k',
+          'main', // Changed from 'high' to 'main' for better compatibility
+          '-level', '4.0', // Changed from '4.1' to '4.0'
+          '-tune', 'fastdecode', // Add tune option for faster decoding
+          '-movflags', '+faststart',
+          '-y', // Overwrite output file without asking
+          '-c:a', 'aac',
+          '-b:a', '128k',
+          '-threads', '0', // Use optimal number of threads
         ]);
     }
 
@@ -740,18 +738,25 @@ class Cli {
       // Add progress tracking
       callback(String line) {
         if (onProgress != null) {
+          // Improved progress parsing regex to handle more FFmpeg output formats
           final timeMatch =
-              RegExp(r'time=(\d+):(\d+):(\d+)\.(\d+)').firstMatch(line);
+              RegExp(r'time=(\d+):(\d+):(\d+)\.(\d+)|\btime=\s*(\d+\.\d+)')
+                  .firstMatch(line);
           if (timeMatch != null) {
-            final hours = int.parse(timeMatch.group(1)!);
-            final minutes = int.parse(timeMatch.group(2)!);
-            final seconds = int.parse(timeMatch.group(3)!);
-            final milliseconds = int.parse(timeMatch.group(4)!);
-
-            final currentTime =
-                hours * 3600 + minutes * 60 + seconds + milliseconds / 100;
+            double currentTime;
+            if (timeMatch.group(1) != null) {
+              // HH:MM:SS.ms format
+              final hours = int.parse(timeMatch.group(1)!);
+              final minutes = int.parse(timeMatch.group(2)!);
+              final seconds = int.parse(timeMatch.group(3)!);
+              final milliseconds = int.parse(timeMatch.group(4)!);
+              currentTime =
+                  hours * 3600 + minutes * 60 + seconds + milliseconds / 100;
+            } else {
+              // Seconds format
+              currentTime = double.parse(timeMatch.group(5)!);
+            }
             final progress = currentTime / durationInSeconds;
-
             onProgress(progress.clamp(0.0, 1.0));
             logger.log(
                 '[Process.minifyVideo] Progress: ${(progress * 100).toStringAsFixed(1)}%');
@@ -993,6 +998,44 @@ class Cli {
     required Function() onSuccess,
   }) async {
     logger.log('[Cli.setup] Starting setup...');
+    final stopwatch = Stopwatch()..start();
+    try {
+      final ffmpegInstalled = await executeNativeProcess('which', ['ffmpeg']);
+      final ffmpegTime = stopwatch.elapsed;
+      logger
+          .log('[Cli.setup] FFmpeg check took: ${ffmpegTime.inMilliseconds}ms');
+
+      final imagemagickInstalled =
+          await executeNativeProcess('which', ['magick']);
+      final magickTime = stopwatch.elapsed;
+      logger.log(
+          '[Cli.setup] ImageMagick check took: ${magickTime.inMilliseconds}ms');
+
+      final ytdlpInstalled = await executeNativeProcess('which', ['yt-dlp']);
+      final ytdlpTime = stopwatch.elapsed;
+      logger
+          .log('[Cli.setup] yt-dlp check took: ${ytdlpTime.inMilliseconds}ms');
+
+      final gallerydlInstalled =
+          await executeNativeProcess('which', ['gallery-dl']);
+      final gallerydlTime = stopwatch.elapsed;
+      logger.log(
+          '[Cli.setup] gallery-dl check took: ${gallerydlTime.inMilliseconds}ms');
+
+      stopwatch.stop();
+      logger.log(
+          '[Cli.setup] Total check time: ${stopwatch.elapsed.inMilliseconds}ms');
+
+      if (ffmpegInstalled.exitCode == 0 &&
+          imagemagickInstalled.exitCode == 0 &&
+          ytdlpInstalled.exitCode == 0 &&
+          gallerydlInstalled.exitCode == 0) {
+        onSuccess();
+        return;
+      }
+    } catch (e) {
+      logger.log('[Cli.setup] Somethong not installef: $e');
+    }
 
     final completer = Completer<void>();
     String currentStep = '';
@@ -1007,13 +1050,17 @@ class Cli {
       logger.log('[Cli.setup] Output: $text');
 
       final steps = [
-        'Starting setup...',
+        'Checking requirements...',
         'Installing Homebrew...',
         'Homebrew installed',
         'Installing FFmpeg...',
         'FFmpeg installed',
         'Installing ImageMagick...',
         'ImageMagick installed',
+        'Installing yt-dlp...',
+        'yt-dlp installed',
+        'Installing gallery-dl...',
+        'gallery-dl installed',
         'Setup completed',
       ];
 
@@ -1025,6 +1072,10 @@ class Cli {
         'ffmpeg installation completed',
         'Installing ImageMagick',
         'ImageMagick installation completed',
+        'Installing yt-dlp',
+        'yt-dlp installation completed',
+        'Installing gallery-dl',
+        'gallery-dl installation completed',
         'All checks and installations are completed successfully',
       ];
 
@@ -1037,14 +1088,28 @@ class Cli {
         }
       }
 
-      if (text.contains('Error: An error occurred')) {
-        currentStep = 'Error: Installation failed';
-        progress = 0;
-        onError(currentStep);
-        completer.completeError(Exception('Setup failed'));
+      // Handle tool-specific reinstall messages
+      if (text.contains('FFmpeg exists but not working correctly')) {
+        currentStep = 'Reinstalling FFmpeg...';
+        onProgress(currentStep, progress);
+      } else if (text.contains('yt-dlp not working')) {
+        currentStep = 'Reinstalling yt-dlp...';
+        onProgress(currentStep, progress);
+      } else if (text.contains('gallery-dl not working')) {
+        currentStep = 'Reinstalling gallery-dl...';
+        onProgress(currentStep, progress);
       }
 
-      if (text.contains('All checks and installations are completed')) {
+      // Handle errors
+      if (text.contains('Error:')) {
+        final errorMessage = text.substring(text.indexOf('Error:'));
+        currentStep = 'Error: Installation failed';
+        onError(errorMessage);
+        completer.completeError(Exception(errorMessage));
+      }
+
+      if (text.contains(
+          'All checks and installations are completed successfully')) {
         onSuccess();
         completer.complete();
       }
