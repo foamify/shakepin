@@ -296,8 +296,10 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                                     throw UnimplementedError();
                                                   case DropAction._:
                                                     throw UnimplementedError();
-                                                  case DropAction.removeAll:
-                                                    items.clear();
+                                                  case DropAction.removeSelected:
+                                                    items.value = items()
+                                                        .difference(
+                                                            selectedItems());
                                                     selectedItems.clear();
                                                   case DropAction.copyLink:
                                                     // TODO: Handle this case.
@@ -318,7 +320,7 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                                             action) {
                                                           DropAction._ => false,
                                                           DropAction
-                                                                .removeAll =>
+                                                                .removeSelected =>
                                                             items().isNotEmpty,
                                                           DropAction.copyLink =>
                                                             items().isNotEmpty,
@@ -668,7 +670,7 @@ enum DisplayMode {
 enum DropAction {
   // This is required because for some reason the first item in pullsDown dropdown is not shown
   _('_'),
-  removeAll('Remove All Items'),
+  removeSelected('Remove All Selected Items'),
   copyLink('Copy ShakePin Link'),
   unselectAl('Unselect All Items'),
   selectAll('Select All Items'),
