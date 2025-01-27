@@ -4,18 +4,14 @@ import 'package:file_selector/file_selector.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
-import 'package:shakepin/app/main_drop/custom_drag_gesture.dart';
 import 'package:shakepin/app/main_drop/dropped_item.dart';
-import 'package:shakepin/app/sections/minify_section/file_hover_widget.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/drop_target.dart';
-import 'package:shakepin/widgets/file_image_widget.dart';
 import 'package:shakepin/widgets/glass_button.dart';
 import 'package:shakepin/widgets/native_dropdown_button.dart';
-import 'package:super_context_menu/super_context_menu.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:path/path.dart' as path;
 
@@ -296,7 +292,8 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                                     throw UnimplementedError();
                                                   case DropAction._:
                                                     throw UnimplementedError();
-                                                  case DropAction.removeSelected:
+                                                  case DropAction
+                                                        .removeSelected:
                                                     items.value = items()
                                                         .difference(
                                                             selectedItems());
@@ -330,8 +327,9 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                                                 .isNotEmpty,
                                                           DropAction
                                                                 .selectAll =>
-                                                            items().difference(
-                                                                selectedItems())
+                                                            items()
+                                                                .difference(
+                                                                    selectedItems())
                                                                 .isNotEmpty,
                                                         },
                                                       ))
@@ -445,11 +443,6 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                 ),
                                 itemBuilder: (context, index) {
                                   final filePath = items().elementAt(index);
-                                  final file = File(filePath);
-                                  final fileName = path.basename(filePath);
-                                  final fileSize = file.existsSync()
-                                      ? formatFileSize(file.lengthSync())
-                                      : '';
                                   // final isImage = isImageFile(fileName);
                                   // final isVideo = isVideoFile(fileName);
                                   // final icon = isImage
@@ -457,7 +450,8 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                   //     : isVideo
                                   //         ? FluentIcons.video_24_regular
                                   //         : FluentIcons.document_24_regular;
-                                  return CustomDragGesture(
+                                  return DroppedItem(
+                                    displayMode: _displayMode,
                                     onDragStart: () {
                                       if (!selectedItems().contains(filePath)) {
                                         draggedItem = filePath;
@@ -468,79 +462,37 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                             selectedItems().toList());
                                       }
                                     },
-                                    child: ContextMenuWidget(
-                                      menuProvider: (request) => Menu(
-                                        children: [
-                                          MenuAction(
-                                            callback: () {
-                                              Process.run(
-                                                  'open', ['-R', filePath]);
-                                            },
-                                            title: 'Show in Finder',
-                                          ),
-                                          if (selectedItems()
-                                              .contains(filePath))
-                                            MenuAction(
-                                              callback: () {
-                                                setState(() {
-                                                  selectedItems.value =
-                                                      Set.from(selectedItems())
-                                                        ..remove(filePath);
-                                                });
-                                              },
-                                              title: 'Deselect',
-                                            ),
-                                          if (!selectedItems()
-                                              .contains(filePath))
-                                            MenuAction(
-                                              callback: () {
-                                                setState(() {
-                                                  selectedItems.value =
-                                                      Set.from(selectedItems())
-                                                        ..add(filePath);
-                                                });
-                                              },
-                                              title: 'Select',
-                                            ),
-                                          MenuAction(
-                                            callback: () {
-                                              items.remove(filePath);
-                                              selectedItems.value =
-                                                  Set.from(selectedItems())
-                                                    ..remove(filePath);
-                                            },
-                                            title: 'Remove',
-                                          ),
-                                        ],
-                                      ),
-                                      child: FileHoverWidget(
-                                        fileName: fileName,
-                                        fileSize: fileSize,
-                                        onTap: () {
-                                          setState(() {
-                                            if (selectedItems()
-                                                .contains(filePath)) {
-                                              selectedItems.value =
-                                                  Set.from(selectedItems())
-                                                    ..remove(filePath);
-                                            } else {
-                                              selectedItems.value =
-                                                  Set.from(selectedItems())
-                                                    ..add(filePath);
-                                            }
-                                          });
-                                        },
-                                        selected:
-                                            selectedItems().contains(filePath),
-                                        // icon: icon,
-                                        child: SizedBox.square(
-                                          dimension: 16,
-                                          child: FileImageWidget(
-                                            path: filePath,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
+                                    onEnter: () {
+                                      setState(() {
+                                        _isHoveredItem = true;
+                                      });
+                                    },
+                                    onExit: () {
+                                      setState(() {
+                                        _isHoveredItem = false;
+                                      });
+                                    },
+                                    onRemove: () {
+                                      onRemove(filePath);
+                                    },
+                                    path: filePath,
+                                    isSelected:
+                                        selectedItems().contains(filePath),
+                                    onToggleSelection: () {
+                                      setState(() {
+                                        if (selectedItems()
+                                            .contains(filePath)) {
+                                          selectedItems.value =
+                                              Set.from(selectedItems())
+                                                ..remove(filePath);
+                                        } else {
+                                          selectedItems.value =
+                                              Set.from(selectedItems())
+                                                ..add(filePath);
+                                        }
+                                      });
+                                    },
+                                    isHoveredItem: _isHoveredItem,
                                   );
                                 },
                               ),
@@ -560,19 +512,20 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                         final itemIndex = startIndex + index;
 
                                         if (itemIndex < items().length) {
-                                          final path =
+                                          final filePath =
                                               items().elementAt(itemIndex);
-                                          final isSelected =
-                                              selectedItems().contains(path);
+                                          final isSelected = selectedItems()
+                                              .contains(filePath);
                                           return Expanded(
-                                            child: CustomDragGesture(
+                                            child: DroppedItem(
+                                              displayMode: _displayMode,
                                               onDragStart: () {
                                                 if (!selectedItems()
-                                                    .contains(path)) {
-                                                  draggedItem = path;
+                                                    .contains(filePath)) {
+                                                  draggedItem = filePath;
                                                   dropChannel
                                                       .performDragSession(
-                                                          [path]);
+                                                          [filePath]);
                                                 } else {
                                                   dropChannel
                                                       .performDragSession(
@@ -580,40 +533,35 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                                               .toList());
                                                 }
                                               },
-                                              child: DroppedItem(
-                                                onEnter: () {
-                                                  setState(() {
-                                                    _isHoveredItem = true;
-                                                  });
-                                                },
-                                                onExit: () {
-                                                  setState(() {
-                                                    _isHoveredItem = false;
-                                                  });
-                                                },
-                                                onRemove: () {
-                                                  items.remove(path);
-                                                  selectedItems.value =
-                                                      Set.from(selectedItems())
-                                                        ..remove(path);
-                                                },
-                                                path: path,
-                                                isSelected: isSelected,
-                                                onToggleSelection: () {
-                                                  setState(() {
-                                                    if (isSelected) {
-                                                      selectedItems.value = Set
-                                                          .from(selectedItems())
-                                                        ..remove(path);
-                                                    } else {
-                                                      selectedItems.value = Set
-                                                          .from(selectedItems())
-                                                        ..add(path);
-                                                    }
-                                                  });
-                                                },
-                                                isHoveredItem: _isHoveredItem,
-                                              ),
+                                              onEnter: () {
+                                                setState(() {
+                                                  _isHoveredItem = true;
+                                                });
+                                              },
+                                              onExit: () {
+                                                setState(() {
+                                                  _isHoveredItem = false;
+                                                });
+                                              },
+                                              onRemove: () {
+                                                onRemove(filePath);
+                                              },
+                                              path: filePath,
+                                              isSelected: isSelected,
+                                              onToggleSelection: () {
+                                                setState(() {
+                                                  if (isSelected) {
+                                                    selectedItems.value = Set
+                                                        .from(selectedItems())
+                                                      ..remove(filePath);
+                                                  } else {
+                                                    selectedItems.value = Set
+                                                        .from(selectedItems())
+                                                      ..add(filePath);
+                                                  }
+                                                });
+                                              },
+                                              isHoveredItem: _isHoveredItem,
                                             ),
                                           );
                                         } else {
@@ -653,6 +601,11 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
         ),
       ),
     );
+  }
+
+  void onRemove(String path) {
+    items.remove(path);
+    selectedItems.value = Set.from(selectedItems())..remove(path);
   }
 
   @override

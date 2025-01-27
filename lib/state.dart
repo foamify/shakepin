@@ -83,7 +83,6 @@ extension AppModeEx on AppMode {
         AppMode.convertToWav => isVideoFile(path) || isAudioFile(path),
         AppMode.downloadVideo || AppMode.downloadMedia => isUrl(path),
         AppMode.pin => true,
-        _ => false,
       };
 }
 

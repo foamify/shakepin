@@ -149,6 +149,8 @@ extension IterableExtension<T> on Iterable<String> {
   bool get containsImage => any((path) => isImageFile(path));
   Iterable<String> get videoPaths => where((path) => isVideoFile(path));
   Iterable<String> get imagePaths => where((path) => isImageFile(path));
+  Iterable<String> get audioPaths => where((path) => isAudioFile(path));
+  Iterable<String> get urls => where((path) => isUrl(path));
 }
 
 void resetFrameAndHide() async {

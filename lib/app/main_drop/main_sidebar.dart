@@ -55,10 +55,7 @@ class MainSidebar extends StatelessWidget {
           selected: selectedMode == AppMode.minify,
           tooltip: 'Drop images and videos here to minify their size',
           onDragPerform: (paths) {
-            final addedPaths = {
-              ...paths.videoPaths,
-              ...paths.imagePaths
-            };
+            final addedPaths = {...paths.videoPaths, ...paths.imagePaths};
             items.value = {
               ...items(),
               ...addedPaths,
@@ -122,12 +119,12 @@ class MainSidebar extends StatelessWidget {
               ...selectedItems(),
               ...addedPaths,
             };
-            onModeChanged(AppMode.convertToWav);
+            handleMiscModeChange(paths);
           },
           onShowTooltip: onShowTooltip,
           onHideTooltip: onHideTooltip,
           onTap: () {
-            onModeChanged(AppMode.convertToWav);
+            handleMiscModeChange();
           },
           child: MacosIcon(
             FluentIcons.apps_24_regular,
@@ -136,5 +133,28 @@ class MainSidebar extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  void handleMiscModeChange([List<String>? paths]) {
+    paths ??= selectedItems().toList();
+
+    if (paths.videoPaths.isNotEmpty) {
+      onModeChanged(AppMode.convertToWav);
+      return;
+    }
+    if (paths.imagePaths.isNotEmpty) {
+      onModeChanged(AppMode.convertToIco);
+      return;
+    }
+    if (paths.audioPaths.isNotEmpty) {
+      onModeChanged(AppMode.convertToWav);
+      return;
+    }
+    if (paths.urls.isNotEmpty) {
+      onModeChanged(AppMode.downloadMedia);
+      return;
+    }
+
+    onModeChanged(AppMode.convertToWav);
   }
 }
