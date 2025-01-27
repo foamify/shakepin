@@ -153,7 +153,7 @@ class _MiscSettingsState extends State<MiscSettings> {
                                 //   progressNotifier.value = -1;
                                 // },
                               );
-                            case AppMode.downloadImage:
+                            case AppMode.downloadMedia:
                               await cli.downloadImage(
                                 selectedItems().first,
                                 onProgress: (progress) {
