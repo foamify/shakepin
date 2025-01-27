@@ -90,7 +90,7 @@ class Cli {
   // }
 
   /// Executes a one-off native process with basic error handling and logging
-  Future<ProcessResult> executeNativeProcess(
+  Future<ProcessResult> run(
     String command,
     List<String> arguments,
   ) async {
@@ -223,7 +223,7 @@ class Cli {
 
       dropChannel.addCliOutputCallback(callback);
 
-      final result = await executeNativeProcess('yt-dlp', args);
+      final result = await run('yt-dlp', args);
 
       dropChannel.removeCliOutputCallback(callback);
 
@@ -233,7 +233,7 @@ class Cli {
       }
 
       // Open the downloads folder
-      await executeNativeProcess('open', [outputDir]);
+      await run('open', [outputDir]);
     } catch (e) {
       logger.log('❌ Critical error during download: $e');
       logger.log('Stack trace: ${StackTrace.current}');
@@ -303,7 +303,7 @@ class Cli {
 
       dropChannel.addCliOutputCallback(callback);
 
-      final result = await executeNativeProcess('gallery-dl', args);
+      final result = await run('gallery-dl', args);
 
       dropChannel.removeCliOutputCallback(callback);
 
@@ -313,7 +313,7 @@ class Cli {
       }
 
       // Open the downloads folder
-      await executeNativeProcess('open', [outputDir]);
+      await run('open', [outputDir]);
     } catch (e) {
       logger.log('❌ Critical error during download: $e');
       logger.log('Stack trace: ${StackTrace.current}');
@@ -421,7 +421,7 @@ class Cli {
 
       dropChannel.addCliOutputCallback(callback);
 
-      final result = await executeNativeProcess('ffmpeg', ffmpegArgs);
+      final result = await run('ffmpeg', ffmpegArgs);
 
       dropChannel.removeCliOutputCallback(callback);
 
@@ -480,7 +480,7 @@ class Cli {
       logger.log('🚀 Launching ImageMagick process...');
       logger.log('ImageMagick command arguments: ${args.join(" ")}');
 
-      final result = await executeNativeProcess(
+      final result = await run(
           'magick', args.map((e) => "'$e'").toList());
       logger.log('Process completed with exit code: ${result.exitCode}');
       logger.log('Output: ${result.stdout}');
@@ -569,7 +569,7 @@ class Cli {
 
       dropChannel.addCliErrorCallback(callback);
 
-      final result = await executeNativeProcess(
+      final result = await run(
           'magick', args.map((e) => "'$e'").toList());
       logger.log('Process completed with exit code: ${result.exitCode}');
       logger.log('Output: ${result.stdout}');
@@ -766,7 +766,7 @@ class Cli {
 
       dropChannel.addCliErrorCallback(callback);
 
-      final result = await executeNativeProcess('ffmpeg', ffmpegArgs);
+      final result = await run('ffmpeg', ffmpegArgs);
       logger.log('Process completed with exit code: ${result.exitCode}');
 
       dropChannel.removeCliErrorCallback(callback);
@@ -815,7 +815,7 @@ class Cli {
         }
 
         // Use cp because ditto won't work for some reason
-        await executeNativeProcess('cp', [path, destPath]);
+        await run('cp', [path, destPath]);
 
         // Calculate and update progress
         if (onProgress != null) {
@@ -829,7 +829,7 @@ class Cli {
         onFileProgress('Compressing...');
       }
 
-      final result = await executeNativeProcess('ditto', [
+      final result = await run('ditto', [
         '-c',
         '-k',
         '--sequesterRsrc',
@@ -850,7 +850,7 @@ class Cli {
       }
 
       // Open Finder and reveal the archive
-      await executeNativeProcess('open', ['-R', outputArchive]);
+      await run('open', ['-R', outputArchive]);
 
       return outputArchive;
     } catch (e) {
@@ -961,7 +961,7 @@ class Cli {
 
     try {
       logger.log('Getting media duration for: $filePath');
-      final result = await executeNativeProcess(
+      final result = await run(
         'ffprobe',
         args,
       );
@@ -979,7 +979,7 @@ class Cli {
 
   Future<void> openFileLocation(String filePath) async {
     try {
-      final result = await executeNativeProcess('open', ['-R', filePath]);
+      final result = await run('open', ['-R', filePath]);
       if (result.exitCode != 0) {
         throw Exception(
             'Open command failed with exit code: ${result.exitCode}');
@@ -1000,24 +1000,24 @@ class Cli {
     logger.log('[Cli.setup] Starting setup...');
     final stopwatch = Stopwatch()..start();
     try {
-      final ffmpegInstalled = await executeNativeProcess('which', ['ffmpeg']);
+      final ffmpegInstalled = await run('which', ['ffmpeg']);
       final ffmpegTime = stopwatch.elapsed;
       logger
           .log('[Cli.setup] FFmpeg check took: ${ffmpegTime.inMilliseconds}ms');
 
       final imagemagickInstalled =
-          await executeNativeProcess('which', ['magick']);
+          await run('which', ['magick']);
       final magickTime = stopwatch.elapsed;
       logger.log(
           '[Cli.setup] ImageMagick check took: ${magickTime.inMilliseconds}ms');
 
-      final ytdlpInstalled = await executeNativeProcess('which', ['yt-dlp']);
+      final ytdlpInstalled = await run('which', ['yt-dlp']);
       final ytdlpTime = stopwatch.elapsed;
       logger
           .log('[Cli.setup] yt-dlp check took: ${ytdlpTime.inMilliseconds}ms');
 
       final gallerydlInstalled =
-          await executeNativeProcess('which', ['gallery-dl']);
+          await run('which', ['gallery-dl']);
       final gallerydlTime = stopwatch.elapsed;
       logger.log(
           '[Cli.setup] gallery-dl check took: ${gallerydlTime.inMilliseconds}ms');
@@ -1129,7 +1129,7 @@ class Cli {
     final scriptPath = '${temporaryFile.path}/setup.sh';
     await File(scriptPath).writeAsString(setupScript);
     // Set execute permission for the script
-    await executeNativeProcess('chmod', ['+x', scriptPath]);
+    await run('chmod', ['+x', scriptPath]);
 
     try {
       _writeToPty(scriptPath);

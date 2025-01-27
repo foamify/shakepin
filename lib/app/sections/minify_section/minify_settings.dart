@@ -392,7 +392,7 @@ class _MinifySettingsState extends State<MinifySettings> {
       await logger.log('Output path set to: $outputPath');
       await logger.log('Checking for ffprobe availability...');
 
-      final whichResult = await Process.run('which', ['ffprobe']);
+      final whichResult = await cli.run('which', ['ffprobe']);
       await logger.log(
           'which ffprobe command executed with exit code: ${whichResult.exitCode}');
 
@@ -406,7 +406,7 @@ class _MinifySettingsState extends State<MinifySettings> {
       await logger.log('Found ffprobe at path: $ffprobePath');
 
       await logger.log('Executing ffprobe to get video duration...');
-      final probeResult = await Process.run(ffprobePath, [
+      final probeResult = await cli.run(ffprobePath, [
         '-v',
         'error',
         '-show_entries',

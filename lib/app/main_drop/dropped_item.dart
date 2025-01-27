@@ -7,6 +7,7 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/app/main_drop/custom_drag_gesture.dart';
 import 'package:shakepin/app/main_drop/drop_section.dart';
 import 'package:shakepin/state.dart';
+import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
@@ -69,7 +70,7 @@ class _DroppedItemState extends State<DroppedItem> {
               title: 'Show in Finder',
               callback: () async {
                 try {
-                  final result = await Process.run('open', ['-R', widget.path]);
+                  final result = await cli.run('open', ['-R', widget.path]);
                   if (result.exitCode != 0) {
                     throw Exception(result.stderr);
                   }
