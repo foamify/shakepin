@@ -163,7 +163,7 @@ class MainFlutterWindow: NSWindow {
       // Update selection and state
       if selectedIndex >= 0 && selectedIndex < items.count {
         button.selectItem(at: selectedIndex)
-      } 
+      }
       button.isEnabled = enabled
 
       result(nil)
@@ -921,7 +921,13 @@ class MainFlutterWindow: NSWindow {
 
   func shareXFiles(fileURLs: [String], result: @escaping FlutterResult) {
     DispatchQueue.main.async {
-      let urls = fileURLs.map { URL(fileURLWithPath: $0) }
+      let urls = fileURLs.map { path -> URL in
+        if path.starts(with: "http://") || path.starts(with: "https://") {
+          return URL(string: path)!
+        } else {
+          return URL(fileURLWithPath: path)
+        }
+      }
       let picker = NSSharingServicePicker(items: urls)
       picker.delegate = ShareSuccessDelegate(result: result).keep()
 
