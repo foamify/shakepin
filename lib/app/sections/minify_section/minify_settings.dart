@@ -384,12 +384,12 @@ class _MinifySettingsState extends State<MinifySettings> {
     await logger.log('Minification process completed successfully');
   }
 
-  Future<void> minifyVideo(String outputPath) async {
-    await logger.log('Starting minification for video: $outputPath');
+  Future<void> minifyVideo(String filePath) async {
+    await logger.log('Starting minification for video: $filePath');
     final stopwatch = Stopwatch()..start();
     await logger.log('Started stopwatch for timing');
     try {
-      await logger.log('Output path set to: $outputPath');
+      await logger.log('Output path set to: $filePath');
       await logger.log('Checking for ffprobe availability...');
 
       final whichResult = await cli.run('which', ['ffprobe']);
@@ -413,7 +413,7 @@ class _MinifySettingsState extends State<MinifySettings> {
         'format=duration',
         '-of',
         'default=noprint_wrappers=1:nokey=1',
-        outputPath
+        filePath
       ]);
       await logger.log(
           'ffprobe command completed with exit code: ${probeResult.exitCode}');
@@ -433,8 +433,8 @@ class _MinifySettingsState extends State<MinifySettings> {
       // Enable hardware acceleration for VP9 if available
       const bool tryHardwareAcceleration = true;
 
-      await cli.minifyVideo(
-        outputPath,
+      final minifiedPath = await cli.minifyVideo(
+        filePath,
         quality: _videoQuality.name,
         format:
             _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
@@ -446,14 +446,19 @@ class _MinifySettingsState extends State<MinifySettings> {
         },
       );
 
-      final originalSize = File(outputPath).lengthSync();
+      if (minifiedPath == null) {
+        await logger.log('Minification failed, no output path returned');
+        throw Exception('Minification failed, no output path returned');
+      }
+
+      final originalSize = File(filePath).lengthSync();
       await logger.log('Original file size: $originalSize bytes');
-      final minifiedSize = File(outputPath).lengthSync();
+      final minifiedSize = File(minifiedPath).lengthSync();
       await logger.log('Minified file size: $minifiedSize bytes');
 
       final minifiedFile = MinifiedFile(
-        originalPath: outputPath,
-        minifiedPath: outputPath,
+        originalPath: filePath,
+        minifiedPath: minifiedPath,
         originalSize: originalSize,
         minifiedSize: minifiedSize,
         duration: stopwatch.elapsed,
@@ -464,6 +469,17 @@ class _MinifySettingsState extends State<MinifySettings> {
       minifiedFiles.value = [...minifiedFiles(), minifiedFile];
       await logger.log('Added minified file to tracking list');
 
+      // Update or add minified path to items set
+      final newItems = items().toList();
+      final index = newItems.indexWhere((item) => item == filePath);
+      if (index != -1) {
+        newItems[index] = minifiedPath;
+      } else {
+        newItems.add(minifiedPath);
+      }
+      items.value = newItems.toSet();
+      await logger.log('Updated items set with minified path');
+
       final compressionRatio = (1 - (minifiedSize / originalSize)) * 100;
       await logger.log(
           'Achieved compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
@@ -471,16 +487,16 @@ class _MinifySettingsState extends State<MinifySettings> {
       await logger.log('Error occurred during video minification: $e');
       errorMessages.value = [
         ...errorMessages(),
-        'Failed to minify $outputPath: $e'
+        'Failed to minify $filePath: $e'
       ];
       await logger.log('Added error message to error messages list');
     }
     stopwatch.stop();
-    await logger.log('Video minification process completed for: $outputPath');
+    await logger.log('Video minification process completed for: $filePath');
   }
 
-  Future<void> minifyImage(String outputPath) async {
-    await logger.log('Starting minification for image: $outputPath');
+  Future<void> minifyImage(String filePath) async {
+    await logger.log('Starting minification for image: $filePath');
     final stopwatch = Stopwatch()..start();
     await logger.log('Started stopwatch for timing');
 
@@ -488,7 +504,7 @@ class _MinifySettingsState extends State<MinifySettings> {
       await logger.log(
           'Beginning image minification with quality: ${_imageQuality.value}');
       cli;
-      await logger.log('Output path set to: $outputPath');
+      await logger.log('Output path set to: $filePath');
       await logger.log(
           'Format setting: ${_imageFormat == ImageFormat.sameAsInput ? 'same as input' : _imageFormat.name}');
       onProgress(progress) async {
@@ -499,8 +515,8 @@ class _MinifySettingsState extends State<MinifySettings> {
 
       await logger.log('Set progress');
 
-      await cli.minifyImage(
-        outputPath,
+      final minifiedPath = await cli.minifyImage(
+        filePath,
         fileExtension:
             _imageFormat == ImageFormat.sameAsInput ? null : _imageFormat.name,
         quality: _imageQuality.value,
@@ -508,14 +524,19 @@ class _MinifySettingsState extends State<MinifySettings> {
         onProgress: onProgress,
       );
 
-      final originalSize = File(outputPath).lengthSync();
+      if (minifiedPath == null) {
+        await logger.log('Minification failed, no output path returned');
+        throw Exception('Minification failed, no output path returned');
+      }
+
+      final originalSize = File(filePath).lengthSync();
       await logger.log('Original image size: $originalSize bytes');
-      final minifiedSize = File(outputPath).lengthSync();
+      final minifiedSize = File(minifiedPath).lengthSync();
       await logger.log('Minified image size: $minifiedSize bytes');
 
       final minifiedFile = MinifiedFile(
-        originalPath: outputPath,
-        minifiedPath: outputPath,
+        originalPath: filePath,
+        minifiedPath: minifiedPath,
         originalSize: originalSize,
         minifiedSize: minifiedSize,
         duration: stopwatch.elapsed,
@@ -526,6 +547,17 @@ class _MinifySettingsState extends State<MinifySettings> {
       minifiedFiles.value = [...minifiedFiles(), minifiedFile];
       await logger.log('Added minified image to tracking list');
 
+      // Update or add minified path to items set
+      final newItems = items().toList();
+      final index = newItems.indexWhere((item) => item == filePath);
+      if (index != -1) {
+        newItems[index] = minifiedPath;
+      } else {
+        newItems.add(minifiedPath);
+      }
+      items.value = newItems.toSet();
+      await logger.log('Updated items set with minified path');
+
       final compressionRatio = (1 - (minifiedSize / originalSize)) * 100;
       await logger.log(
           'Achieved compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
@@ -533,11 +565,11 @@ class _MinifySettingsState extends State<MinifySettings> {
       await logger.log('Error occurred during image minification: $e');
       errorMessages.value = [
         ...errorMessages(),
-        'Failed to minify $outputPath: $e'
+        'Failed to minify $filePath: $e'
       ];
       await logger.log('Added error message to error messages list');
     }
     stopwatch.stop();
-    await logger.log('Image minification process completed for: $outputPath');
+    await logger.log('Image minification process completed for: $filePath');
   }
 }

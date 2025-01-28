@@ -480,8 +480,7 @@ class Cli {
       logger.log('🚀 Launching ImageMagick process...');
       logger.log('ImageMagick command arguments: ${args.join(" ")}');
 
-      final result = await run(
-          'magick', args.map((e) => "'$e'").toList());
+      final result = await run('magick', args.map((e) => "'$e'").toList());
       logger.log('Process completed with exit code: ${result.exitCode}');
       logger.log('Output: ${result.stdout}');
       logger.log('Error: ${result.stderr}');
@@ -503,11 +502,13 @@ class Cli {
 
   // MARK: - Minify Image
 
-  Future<void> minifyImage(String inputPath,
-      {String? fileExtension,
-      int quality = 95,
-      required int downScale,
-      void Function(double)? onProgress}) async {
+  Future<String?> minifyImage(
+    String inputPath, {
+    String? fileExtension,
+    int quality = 95,
+    required int downScale,
+    void Function(double)? onProgress,
+  }) async {
     logger.log('=== Starting Image Minification Process ===');
     logger.log('Input path: $inputPath');
     logger.log('Target quality: $quality');
@@ -517,7 +518,7 @@ class Cli {
       logger
           .log('⚠️ Process conflict: Another minification process is running');
       logger.log('Aborting new minification request');
-      return;
+      return null;
     }
 
     final outputPath = _getUniqueFilePath(inputPath,
@@ -569,8 +570,7 @@ class Cli {
 
       dropChannel.addCliErrorCallback(callback);
 
-      final result = await run(
-          'magick', args.map((e) => "'$e'").toList());
+      final result = await run('magick', args.map((e) => "'$e'").toList());
       logger.log('Process completed with exit code: ${result.exitCode}');
       logger.log('Output: ${result.stdout}');
       logger.log('Error: ${result.stderr}');
@@ -599,6 +599,7 @@ class Cli {
       } else {
         logger.log('❌ Warning: Output file was not created');
       }
+      return outputPath;
     } catch (e) {
       logger.log('❌ Critical error during minification: $e');
       logger.log('Stack trace: ${StackTrace.current}');
@@ -611,7 +612,7 @@ class Cli {
 
   // MARK: - Minify Video
 
-  Future<void> minifyVideo(String inputPath,
+  Future<String?> minifyVideo(String inputPath,
       {String? format,
       String quality = 'medium',
       bool enableHardwareAcceleration = true,
@@ -619,7 +620,7 @@ class Cli {
     await logger.log('[Process.minifyVideo] Starting video minification');
     if (await dropChannel.isProcessRunning()) {
       await logger.log('A process is already running. Please cancel it first.');
-      return;
+      return null;
     }
 
     format ??= path.extension(inputPath);
@@ -782,6 +783,8 @@ class Cli {
           '[Process.minifyVideo] Compressed size: ${(outputSize / 1024 / 1024).toStringAsFixed(2)} MB');
       await logger.log(
           '[Process.minifyVideo] Compression ratio: ${compressionRatio.toStringAsFixed(2)}%');
+
+      return finalOutputPath;
     } catch (e) {
       await logger.log('[Process.minifyVideo] Error: $e');
       rethrow;
@@ -1005,8 +1008,7 @@ class Cli {
       logger
           .log('[Cli.setup] FFmpeg check took: ${ffmpegTime.inMilliseconds}ms');
 
-      final imagemagickInstalled =
-          await run('which', ['magick']);
+      final imagemagickInstalled = await run('which', ['magick']);
       final magickTime = stopwatch.elapsed;
       logger.log(
           '[Cli.setup] ImageMagick check took: ${magickTime.inMilliseconds}ms');
@@ -1016,8 +1018,7 @@ class Cli {
       logger
           .log('[Cli.setup] yt-dlp check took: ${ytdlpTime.inMilliseconds}ms');
 
-      final gallerydlInstalled =
-          await run('which', ['gallery-dl']);
+      final gallerydlInstalled = await run('which', ['gallery-dl']);
       final gallerydlTime = stopwatch.elapsed;
       logger.log(
           '[Cli.setup] gallery-dl check took: ${gallerydlTime.inMilliseconds}ms');
