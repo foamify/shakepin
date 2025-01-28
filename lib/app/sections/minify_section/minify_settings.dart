@@ -20,6 +20,7 @@ class MinifySettings extends StatefulWidget {
 class _MinifySettingsState extends State<MinifySettings> {
   var _videoQuality = VideoQuality.goodQuality;
   var _videoFormat = VideoFormat.sameAsInput;
+  var _videoDownscale = VideoDownscale.sameAsInput; // Add this
   var _imageQuality = ImageQuality.normal;
   var _imageFormat = ImageFormat.sameAsInput;
   var _imageDownscale = ImageDownscale.sameAsInput; // Add this line
@@ -96,6 +97,26 @@ class _MinifySettingsState extends State<MinifySettings> {
                                 onChanged: (format) =>
                                     setState(() => _videoFormat = format!),
                                 child: Text(_videoFormat.name),
+                              ),
+                            ],
+                          ),
+                          Divider(
+                              color: MacosColors.systemGrayColor
+                                  .withValues(alpha: .2)),
+                          Row(
+                            children: [
+                              const Text('Video size'),
+                              const Spacer(),
+                              NativeDropdownButton(
+                                value: _videoDownscale,
+                                items: VideoDownscale.values
+                                    .map((scale) =>
+                                        NativeDropdownItem<VideoDownscale>(
+                                            value: scale, label: scale.name))
+                                    .toList(),
+                                onChanged: (scale) =>
+                                    setState(() => _videoDownscale = scale!),
+                                child: Text(_videoDownscale.name),
                               ),
                             ],
                           ),
@@ -368,7 +389,11 @@ class _MinifySettingsState extends State<MinifySettings> {
       await logger.log('Processing video: $path');
       minifyOneFileProgress.value = 0;
       await logger.log('Reset progress for current video');
-      await minifyVideo(path);
+      await minifyVideo(path, 
+        quality: _videoQuality.name,
+        format: _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
+        downScale: _videoDownscale.value, // Add this
+      );
       processedFiles.value++;
       logger
           .log('Incremented processed files count to: ${processedFiles.value}');
@@ -384,7 +409,7 @@ class _MinifySettingsState extends State<MinifySettings> {
     await logger.log('Minification process completed successfully');
   }
 
-  Future<void> minifyVideo(String filePath) async {
+  Future<void> minifyVideo(String filePath, {required String quality, String? format, required int downScale}) async {
     await logger.log('Starting minification for video: $filePath');
     final stopwatch = Stopwatch()..start();
     await logger.log('Started stopwatch for timing');
@@ -439,6 +464,7 @@ class _MinifySettingsState extends State<MinifySettings> {
         format:
             _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
         enableHardwareAcceleration: tryHardwareAcceleration,
+        downScale: _videoDownscale.value, // Add this
         onProgress: (progress) async {
           minifyOneFileProgress.value = progress;
           await logger.log(

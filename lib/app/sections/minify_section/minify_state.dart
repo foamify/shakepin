@@ -132,3 +132,30 @@ extension ImageDownscaleExtension on ImageDownscale {
     };
   }
 }
+
+enum VideoDownscale {
+  sameAsInput,
+  seventyFive,
+  fifty,
+  twentyFive,
+}
+
+extension VideoDownscaleExtension on VideoDownscale {
+  String get name {
+    return switch (this) {
+      VideoDownscale.sameAsInput => 'Same as Input',
+      VideoDownscale.seventyFive => '75%',
+      VideoDownscale.fifty => '50%',
+      VideoDownscale.twentyFive => '25%',
+    };
+  }
+
+  int get value {
+    return switch (this) {
+      VideoDownscale.sameAsInput => 100,
+      VideoDownscale.seventyFive => 75,
+      VideoDownscale.fifty => 50,
+      VideoDownscale.twentyFive => 25,
+    };
+  }
+}

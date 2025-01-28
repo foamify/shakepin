@@ -616,6 +616,7 @@ class Cli {
       {String? format,
       String quality = 'medium',
       bool enableHardwareAcceleration = true,
+      int downScale = 100, // Add this parameter
       void Function(double)? onProgress}) async {
     await logger.log('[Process.minifyVideo] Starting video minification');
     if (await dropChannel.isProcessRunning()) {
@@ -646,6 +647,16 @@ class Cli {
       '-stats',
       '-i', inputPath,
     ]);
+
+    // Add downscaling filter if needed
+    List<String> filterArgs = [];
+    if (downScale < 100) {
+      filterArgs.addAll([
+        '-vf',
+        'scale=iw*${downScale/100}:ih*${downScale/100}'
+      ]);
+      await logger.log('[Process.minifyVideo] Adding downscale filter: ${downScale}%');
+    }
 
     // Add format-specific encoding parameters
     switch (format.toLowerCase()) {
@@ -685,14 +696,27 @@ class Cli {
           '-b:a', // Reduced audio bitrate
           '96k',
         ]);
+        if (filterArgs.isNotEmpty) {
+          ffmpegArgs.addAll(filterArgs);
+        }
+        
       case 'gif':
         await logger.log('[Process.minifyVideo] Using GIF encoding');
-        ffmpegArgs.addAll([
-          '-vf',
-          'fps=10,scale=500:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
-          '-loop',
-          '0',
-        ]);
+        // For gif, merge the scale filter with existing filters
+        if (downScale < 100) {
+          ffmpegArgs.addAll([
+            '-vf',
+            'fps=10,scale=iw*${downScale/100}:ih*${downScale/100},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+          ]);
+        } else {
+          ffmpegArgs.addAll([
+            '-vf',
+            'fps=10,scale=500:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+            '-loop',
+            '0',
+          ]);
+        }
+        
       default: // mp4
         final crf = switch (quality) {
           'lowest' => '51',
@@ -719,6 +743,9 @@ class Cli {
           '-b:a', '128k',
           '-threads', '0', // Use optimal number of threads
         ]);
+        if (filterArgs.isNotEmpty) {
+          ffmpegArgs.addAll(filterArgs);
+        }
     }
 
     ffmpegArgs.add(finalOutputPath);
