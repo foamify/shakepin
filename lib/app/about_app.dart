@@ -197,8 +197,11 @@ class _AboutAppState extends State<AboutApp> {
         onPressed: () {
           showMacosSheet(
             context: context,
+            barrierColor: MacosTheme.brightnessOf(context).isDark
+                ? Colors.black.withAlpha(100)
+                : Colors.white.withAlpha(100),
             builder: (context) => MacosSheet(
-              insetPadding: const EdgeInsets.all(12),
+              insetPadding: const EdgeInsets.all(12).copyWith(top: 36),
               child: Stack(
                 children: [
                   SingleChildScrollView(
