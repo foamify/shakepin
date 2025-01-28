@@ -136,7 +136,10 @@ class _DroppedItemState extends State<DroppedItem> {
               Expanded(
                 child: Text(
                   fileName,
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: widget.isSelected ? MacosColors.white : null,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -144,8 +147,9 @@ class _DroppedItemState extends State<DroppedItem> {
                 fileSize,
                 style: TextStyle(
                   fontSize: 12,
-                  color: MacosColors.labelColor
-                      .resolvedColor(context)
+                  color: (widget.isSelected
+                          ? MacosColors.white
+                          : MacosColors.labelColor.resolvedColor(context))
                       .withOpacity(.5),
                 ),
               ),
@@ -193,14 +197,24 @@ class _DroppedItemState extends State<DroppedItem> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 12,
-                          color: CupertinoColors.label.resolveFrom(context),
+                          color: widget.isSelected
+                              ? MacosColors.white
+                              : MacosColors.labelColor.resolveFrom(context),
                         ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
-                        overflowWidget: const TextOverflowWidget(
+                        overflowWidget: TextOverflowWidget(
                           position: TextOverflowPosition.middle,
                           align: TextOverflowAlign.center,
-                          child: Text('…', style: TextStyle(fontSize: 12)),
+                          child: Text(
+                            '…',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: widget.isSelected
+                                  ? MacosColors.white
+                                  : MacosColors.labelColor,
+                            ),
+                          ),
                         ),
                       ),
                     )

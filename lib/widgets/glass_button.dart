@@ -67,13 +67,15 @@ class _GlassButtonState extends State<GlassButton> {
               duration: Durations.medium4,
               curve: Curves.fastEaseInToSlowEaseOut,
               decoration: BoxDecoration(
-                borderRadius: widget.borderRadius ?? BorderRadius.circular(radius),
+                borderRadius:
+                    widget.borderRadius ?? BorderRadius.circular(radius),
                 color: isDisabled
                     ? buttonColor.withValues(alpha: 0.375)
                     : buttonColor,
               ),
               foregroundDecoration: BoxDecoration(
-                borderRadius: widget.borderRadius ?? BorderRadius.circular(radius),
+                borderRadius:
+                    widget.borderRadius ?? BorderRadius.circular(radius),
                 color: _isHovered
                     ? MacosColors.controlColor.resolvedColor(context)
                     : null,
@@ -88,10 +90,16 @@ class _GlassButtonState extends State<GlassButton> {
                     opacity: isDisabled ? 0.5 : (_isHovered ? 1 : 0.8),
                   ),
                   child: Center(
-                      child: Padding(
-                    padding: widget.padding,
-                    child: widget.child,
-                  )),
+                    child: Padding(
+                      padding: widget.padding,
+                      child: DefaultTextStyle(
+                        style: const TextStyle(
+                          color: MacosColors.white,
+                        ),
+                        child: widget.child,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             );
