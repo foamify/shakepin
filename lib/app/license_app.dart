@@ -210,6 +210,7 @@ class _LicenseAppState extends State<LicenseApp> {
                     ],
                   );
                 },
+                // underline text, AI!
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: GestureDetector(
