@@ -9,6 +9,7 @@ sealed class AppSizes {
   static const archive = Size(240 + 48 + 12 + 16, 240 + 64);
   static const minify = Size(240 + 48 + 12 + 16, 468);
   static const about = Size(360, 360);
+  static const license = Size(360, 240);
   static const misc = Size(240 + 48 + 12 + 16, 468);
 
   static const pin = Size(240 + 48 + 12 + 16, 240);

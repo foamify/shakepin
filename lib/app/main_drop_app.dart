@@ -2,6 +2,7 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/app/about_app.dart';
+import 'package:shakepin/app/license_app.dart';
 import 'package:shakepin/app/sections/archive_section/archive_section.dart';
 import 'package:shakepin/app/main_drop/drop_section.dart';
 import 'package:shakepin/app/main_drop/main_sidebar.dart';
@@ -126,7 +127,10 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-        listenable: isAboutApp,
+        listenable: Listenable.merge([
+          isAboutApp,
+          isLicenseApp,
+        ]),
         builder: (context, _) {
           return Stack(
             children: [
@@ -290,6 +294,10 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
               Offstage(
                 offstage: !isAboutApp(),
                 child: const AboutApp(),
+              ),
+              Offstage(
+                offstage: !isLicenseApp(),
+                child: const LicenseApp(),
               ),
             ],
           );

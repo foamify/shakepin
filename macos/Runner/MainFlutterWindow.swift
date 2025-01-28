@@ -524,14 +524,57 @@ class MainFlutterWindow: NSWindow {
         pasteboard.setString(text, forType: .string)
         result(true)
       } else {
-        result(FlutterError(code: "INVALID_ARGUMENT", 
-                           message: "Text must be a string", 
-                           details: nil))
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT",
+            message: "Text must be a string",
+            details: nil))
+      }
+
+    case "setupMenuBar":
+      if let menuItems = call.arguments as? [[String: Any]] {
+        setupMenuBar(with: menuItems)
+        result(nil)
+      } else {
+        result(
+          FlutterError(
+            code: "INVALID_ARGUMENT",
+            message: "Menu items must be an array of dictionaries",
+            details: nil))
       }
 
     default:
       result(FlutterMethodNotImplemented)
     }
+  }
+
+  private func setupMenuBar(with items: [[String: Any]]) {
+    statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    let menu = NSMenu()
+
+    for item in items {
+      guard let title = item["title"] as? String,
+        let tag = item["tag"] as? Int,
+        let highlight = item["highlight"] as? Bool
+      else { continue }
+
+      let menuItem = NSMenuItem(title: title, action: #selector(menuItemClicked), keyEquivalent: "")
+      menuItem.target = self
+      menuItem.tag = tag
+
+      if highlight {
+        menuItem.attributedTitle = NSAttributedString(
+          string: title,
+          attributes: [
+            .font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize),
+            .foregroundColor: NSColor.systemBlue,
+          ]
+        )
+      }
+
+      menu.addItem(menuItem)
+    }
+    statusItem.menu = menu
   }
 
   func startDragging() {
@@ -853,6 +896,8 @@ class MainFlutterWindow: NSWindow {
   }
 
   private func setupMenuBar() {
+    // this is done natively because calling it from dart causes crash for some reason.
+    // maybe next time try to add future.delayed to it.
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
     let menu = NSMenu()
@@ -860,6 +905,7 @@ class MainFlutterWindow: NSWindow {
       ("Show", 1),
       ("Hide", 2),
       ("About Shakepin", 3),
+      ("Manage License", 5),
       ("Quit", -1),
     ]
 
@@ -867,6 +913,18 @@ class MainFlutterWindow: NSWindow {
       let item = NSMenuItem(title: title, action: #selector(menuItemClicked), keyEquivalent: "")
       item.target = self
       item.tag = tag
+
+      // Highlight the "Mange License" item with background color
+      if tag == 5 {
+        item.attributedTitle = NSAttributedString(
+          string: title,
+          attributes: [
+            .font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize),
+            .foregroundColor: NSColor.systemBlue,
+          ]
+        )
+      }
+
       menu.addItem(item)
     }
     statusItem.menu = menu

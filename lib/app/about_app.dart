@@ -7,7 +7,6 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
-import 'package:shakepin/utils/utils.dart';
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -26,7 +25,6 @@ class _AboutAppState extends State<AboutApp> {
   @override
   void initState() {
     super.initState();
-    dropChannel.setMinimumSize(AppSizes.about);
     _loadVersion();
   }
 
@@ -63,7 +61,7 @@ class _AboutAppState extends State<AboutApp> {
                 ),
                 Positioned(
                   top: 0,
-                  height: 24,
+                  height: 36,
                   left: 0,
                   right: 0,
                   child: Listener(
