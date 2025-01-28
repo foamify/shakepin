@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
@@ -68,6 +69,23 @@ class _MiscSettingsState extends State<MiscSettings> {
               ),
             ],
           ),
+        ),
+        const Row(
+          spacing: 8,
+          children: [
+            Icon(
+              CupertinoIcons.exclamationmark_triangle,
+              size: 16,
+              color: MacosColors.systemYellowColor,
+            ),
+            Text(
+              'Experimental: These features are in beta\nand may not work as expected.',
+              style: TextStyle(
+                color: MacosColors.systemYellowColor,
+                fontSize: 10,
+              ),
+            ),
+          ],
         ),
         Container(
           decoration: BoxDecoration(
