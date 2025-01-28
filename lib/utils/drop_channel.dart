@@ -312,6 +312,17 @@ class DropChannel {
     }
   }
 
+  Future<bool> writeToClipboard(String text) async {
+    try {
+      final result = await _channel.invokeMethod('writeToClipboard', text);
+      return result as bool;
+    } on PlatformException catch (e) {
+      throw FlutterError('Error writing to clipboard: ${e.message}');
+    } catch (e) {
+      throw FlutterError('Unexpected error writing to clipboard: $e');
+    }
+  }
+
   void addListener(DragDropListener listener) {
     listeners.add(listener);
   }

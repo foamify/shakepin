@@ -517,6 +517,18 @@ class MainFlutterWindow: NSWindow {
             details: nil))
       }
 
+    case "writeToClipboard":
+      if let text = call.arguments as? String {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        result(true)
+      } else {
+        result(FlutterError(code: "INVALID_ARGUMENT", 
+                           message: "Text must be a string", 
+                           details: nil))
+      }
+
     default:
       result(FlutterMethodNotImplemented)
     }

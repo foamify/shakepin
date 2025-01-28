@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
@@ -6,6 +8,8 @@ import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
+import 'package:super_context_menu/super_context_menu.dart';
+import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shakepin/oss_licenses.dart';
 
@@ -41,7 +45,7 @@ class _AboutAppState extends State<AboutApp> {
           builder: (context, scrollController) {
             return Stack(
               children: [
-                ListView(
+                SuperListView(
                   controller: scrollController,
                   padding: const EdgeInsets.all(20),
                   children: [
@@ -56,6 +60,20 @@ class _AboutAppState extends State<AboutApp> {
                     const SizedBox(height: 30),
                     _buildLicenses(),
                   ],
+                ),
+                Positioned(
+                  top: 0,
+                  height: 24,
+                  left: 0,
+                  right: 0,
+                  child: Listener(
+                    onPointerMove: (event) {
+                      dropChannel.startDragging();
+                    },
+                    child: const ColoredBox(
+                      color: Colors.transparent,
+                    ),
+                  ),
                 ),
                 Positioned(
                   top: 10,
@@ -114,25 +132,38 @@ class _AboutAppState extends State<AboutApp> {
 
   Widget _buildLinks() {
     return Column(
+      spacing: 10,
       children: [
-        _buildLinkText('Website', 'https://github.com/damywise'),
-        const SizedBox(height: 10),
+        _buildLinkText('Twitter/X', 'https://github.com/damywise'),
+        _buildLinkText('Website', 'https://damywise.com'),
         _buildLinkText('GitHub', 'https://github.com/foamify/shakepin'),
       ],
     );
   }
 
   Widget _buildLinkText(String title, String url) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () => _launchURL(url),
-        child: Text(
-          title,
-          style: MacosTheme.of(context).typography.body.copyWith(
-                color: MacosColors.systemBlueColor,
-                decoration: TextDecoration.underline,
-              ),
+    return ContextMenuWidget(
+      menuProvider: (_) => Menu(
+        children: [
+          MenuAction(
+            title: 'Copy Link to Clipboard',
+            callback: () async {
+              await dropChannel.writeToClipboard(url);
+            },
+          ),
+        ],
+      ),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => _launchURL(url),
+          child: Text(
+            title,
+            style: MacosTheme.of(context).typography.body.copyWith(
+                  color: MacosColors.systemBlueColor,
+                  decoration: TextDecoration.underline,
+                ),
+          ),
         ),
       ),
     );
@@ -243,22 +274,39 @@ class _AboutAppState extends State<AboutApp> {
   }
 
   Widget _buildCloseButton(BuildContext context) {
-    return MacosIconButton(
-      padding: const EdgeInsets.all(4),
-      onPressed: _handleCloseButtonPress,
-      backgroundColor:
-          CupertinoColors.label.resolveFrom(context).withValues(alpha:.5),
-      hoverColor: CupertinoColors.label.resolveFrom(context).withValues(alpha:.9),
-      pressedOpacity: .6,
-      icon: Icon(
-        FluentIcons.dismiss_24_filled,
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        size: 14,
+    return ClipRRect(
+      borderRadius:
+          BorderRadius.circular(8).copyWith(topLeft: const Radius.circular(32)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        blendMode: BlendMode.src,
+        child: MacosIconButton(
+          borderRadius: BorderRadius.circular(8)
+              .copyWith(topLeft: const Radius.circular(32)),
+          padding: const EdgeInsets.only(
+            left: 6,
+            top: 6,
+            right: 4,
+            bottom: 4,
+          ),
+          onPressed: _handleCloseButtonPress,
+          backgroundColor:
+              CupertinoColors.label.resolveFrom(context).withValues(alpha: .5),
+          hoverColor:
+              CupertinoColors.label.resolveFrom(context).withValues(alpha: .9),
+          pressedOpacity: .6,
+          icon: Icon(
+            FluentIcons.dismiss_24_filled,
+            color: CupertinoColors.systemBackground.resolveFrom(context),
+            size: 14,
+          ),
+        ),
       ),
     );
   }
 
   Future<void> _handleCloseButtonPress() async {
     isAboutApp.value = false;
+    handleModeChanged(AppMode.pin);
   }
 }

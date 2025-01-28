@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
@@ -13,7 +12,6 @@ import 'package:shakepin/widgets/drop_target.dart';
 import 'package:shakepin/widgets/glass_button.dart';
 import 'package:shakepin/widgets/native_dropdown_button.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
-import 'package:path/path.dart' as path;
 
 class DropSection extends StatefulWidget {
   const DropSection({super.key});

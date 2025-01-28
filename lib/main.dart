@@ -89,8 +89,9 @@ class MainApp extends StatelessWidget {
                       width: 200,
                       height: 40,
                       child: setupProgress() == 0
-                      ? const Center(child: ProgressCircle())
-                      : Center(child: ProgressBar(value: setupProgress() * 100)),
+                          ? const Center(child: ProgressCircle())
+                          : Center(
+                              child: ProgressBar(value: setupProgress() * 100)),
                     ),
                     Container(
                       decoration: BoxDecoration(
@@ -108,7 +109,9 @@ class MainApp extends StatelessWidget {
                       ),
                       padding: const EdgeInsets.all(8),
                       child: Text(
-                        setupStep().isEmpty ? 'Checking requirements...' : setupStep(),
+                        setupStep().isEmpty
+                            ? 'Checking requirements...'
+                            : setupStep(),
                         style: TextStyle(
                           fontSize: 12,
                           color: MacosColors.labelColor.resolvedColor(context),
