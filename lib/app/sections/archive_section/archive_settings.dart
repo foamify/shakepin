@@ -28,25 +28,50 @@ class _ArchiveSettingsState extends State<ArchiveSettings> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: MacosColors.systemGrayColor.withValues(alpha:.2)),
+        border: Border.all(
+            color: MacosColors.systemGrayColor.withValues(alpha: .2)),
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(6),
           bottom: Radius.circular(24),
         ),
-        color: MacosColors.controlColor.resolvedColor(context).withValues(alpha:.03),
+        color: MacosColors.controlColor
+            .resolvedColor(context)
+            .withValues(alpha: .03),
       ),
       padding: const EdgeInsets.all(8),
       child: Column(
         spacing: 8,
         children: [
           if (progressNotifier.value != -1)
-            SizedBox(
-              width: double.infinity,
-              child: ProgressBar(
-                value: progressNotifier(),
-              ),
-            ),
-          ValueListenableBuilder(
+            Column(
+              spacing: 8,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ProgressBar(
+                    value: progressNotifier(),
+                  ),
+                ),
+                SizedBox(
+                  width: 80,
+                  height: 32,
+                  child: GlassButton(
+                    secondary: true,
+                    onTap: () {
+                      progressNotifier.value = -1;
+                      cli.cancel();
+                    },
+                    radius: 16,
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            ValueListenableBuilder(
               valueListenable: selectedItems,
               builder: (context, items, _) {
                 return GlassButton(
@@ -67,7 +92,8 @@ class _ArchiveSettingsState extends State<ArchiveSettings> {
                   radius: 16,
                   child: const Text('Archive Files'),
                 );
-              }),
+              },
+            ),
         ],
       ),
     );
