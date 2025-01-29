@@ -1,1 +1,2 @@
+# open build/macos/Build/Products/Release-oss/shakepin.app
 open build/macos/Build/Products/Release-oss/shakepin.app/Contents/MacOS/shakepin
