@@ -13,6 +13,8 @@ An open source Dropover alternative with gimmicks.
 - Compress image and videos
 - Quick archive files to zip
 
+...And many more!
+
 ## Installation
 
 1. Clone the repository:
