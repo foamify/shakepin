@@ -80,11 +80,21 @@ class SetupApp extends StatelessWidget {
                     ),
                     if (isHomebrewStep) ...[
                       const SizedBox(height: 8),
+                      Text(
+                        'You may need to install Homebrew manually.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: MacosColors.systemYellowColor
+                              .resolvedColor(context),
+                        ),
+                      ),
                       GlassButton(
+                        padding: EdgeInsets.zero,
                         ghost: true,
                         onTap: _launchBrewWebsite,
                         child: Text(
-                          'You need to install Homebrew manually. Visit brew.sh for installation instructions →',
+                          'Visit brew.sh for installation instructions →',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 10,
@@ -120,9 +130,23 @@ class SetupApp extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             spacing: 16,
             children: [
-              Text(
-                'Failed when ${setupError()?.label ?? "setup"}',
-                textAlign: TextAlign.center,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Failed when ',
+                    textAlign: TextAlign.center,
+                  ),
+                  Text(
+                    ' ${setupError()?.label ?? "setup"} ',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      backgroundColor: MacosColors.systemGrayColor
+                          .resolvedColor(context)
+                          .withValues(alpha: .5),
+                    ),
+                  ),
+                ],
               ),
               if (isHomebrewStep)
                 Column(children: [

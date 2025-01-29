@@ -41,7 +41,9 @@ enum SetupStep {
   ytDlpInstalled(label: 'yt-dlp installed', progress: 0.95),
   checkingGalleryDl(label: 'Checking gallery-dl...', progress: 0.96),
   installingGalleryDl(label: 'Installing gallery-dl...', progress: 0.98),
-  galleryDlInstalled(label: 'gallery-dl installed', progress: 1.0);
+  galleryDlInstalled(label: 'gallery-dl installed', progress: 0.99),
+  finishingUp(label: 'Finishing up...', progress: 1.0),
+  ;
 
   final String label;
   final double progress;
@@ -1104,6 +1106,7 @@ class Cli {
         }
       }
       updateProgress(SetupStep.galleryDlInstalled);
+      updateProgress(SetupStep.finishingUp);
 
       // Verify all installations
       final List<String> verifyCommands = [
@@ -1135,6 +1138,11 @@ class Cli {
 }
 
 void initCli() {
+  if (setupError() != null) {
+    setupError.value = null;
+    setupSuccess.value = null;
+    setupStep.value = null;
+  }
   cli.setup(
     onProgress: (step) {
       logger.log('Setup progress: ${step.label} (${step.progress})');
