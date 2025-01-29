@@ -110,3 +110,9 @@ void handleModeChanged(AppMode mode) async {
 final setupProgress = ValueNotifier<double>(0);
 final setupStep = ValueNotifier<String>('');
 final setupSuccess = ValueNotifier<bool?>(null);
+
+// Update states
+final isCheckingForUpdate = ValueNotifier<bool>(false);
+final updateAvailable = ValueNotifier<bool>(false);
+final updateError = ValueNotifier<String?>(null);
+final updateVersion = ValueNotifier<String?>(null);

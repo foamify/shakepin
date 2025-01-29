@@ -8,10 +8,12 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
+import 'package:shakepin/widgets/glass_button.dart';
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shakepin/oss_licenses.dart';
+import 'package:auto_updater/auto_updater.dart';
 
 class AboutApp extends StatefulWidget {
   const AboutApp({super.key});
@@ -109,8 +111,64 @@ class _AboutAppState extends State<AboutApp> {
           style: TextStyle(
               color: CupertinoColors.secondaryLabel.resolveFrom(context)),
         ),
+        const SizedBox(height: 12),
+        ListenableBuilder(
+          listenable: Listenable.merge([
+            isCheckingForUpdate,
+            updateAvailable,
+            updateError,
+          ]),
+          builder: (context, _) {
+            if (isCheckingForUpdate.value) {
+              return const GlassButton(
+                onTap: null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: ProgressCircle(),
+                    ),
+                    SizedBox(width: 8),
+                    Text('Checking...'),
+                  ],
+                ),
+              );
+            }
+
+            return GlassButton(
+              ghost: true,
+              onTap: _checkForUpdates,
+              child: Text(updateAvailable.value
+                  ? 'Update Available'
+                  : 'Check for Updates →'),
+            );
+          },
+        ),
       ],
     );
+  }
+
+  Future<void> _checkForUpdates() async {
+    try {
+      await autoUpdater.checkForUpdates();
+    } catch (e) {
+      if (!mounted) return;
+      showMacosAlertDialog(
+        context: context,
+        builder: (_) => MacosAlertDialog(
+          appIcon: _buildAppIcon(),
+          title: const Text('Error'),
+          message: Text('Failed to check for updates: $e'),
+          primaryButton: PushButton(
+            controlSize: ControlSize.large,
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildDeveloperInfo() {

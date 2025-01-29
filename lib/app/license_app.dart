@@ -38,7 +38,7 @@ class _LicenseAppState extends State<LicenseApp> {
 
   // License key format: SKPN_PERP-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
   final _licenseFormat = RegExp(
-      r'^SKPN_PERP-[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$');
+      r'^SKPN_PERP-[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$');
 
   final _manageUrl = Uri.parse('https://polar.sh/purchases/license-keys');
 
@@ -244,7 +244,7 @@ class _LicenseAppState extends State<LicenseApp> {
                 child: MacosTextField(
                   controller: _licenseController,
                   placeholder: 'SKPN_PERP-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX',
-                  maxLength: 45,
+                  maxLength: 46,
                   enabled: !_isSubmitting,
                   onSubmitted: (_) => _handleSubmit(),
                   inputFormatters: [

@@ -1,3 +1,4 @@
+import 'package:auto_updater/auto_updater.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:libcaesium_dart/libcaesium_dart.dart';
@@ -18,6 +19,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   LicenseService.instance;
   await DropdownChannel.instance.initialize();
+  
+  // Setup auto updater
+  autoUpdater
+    ..setFeedURL('https://skpn-dl.damywise.com/skpn-appcast.xml')
+    ..addListener(_UpdaterListener()) // Add listener
+    ..checkForUpdates(inBackground: true)
+    ..setScheduledCheckInterval(86400);
 
   initCli();
 
@@ -56,6 +64,43 @@ void initCli() {
       setupSuccess.value = true;
     },
   );
+}
+
+class _UpdaterListener extends UpdaterListener {
+  @override
+  void onUpdaterCheckingForUpdate(appcast) {
+    isCheckingForUpdate.value = true;
+    updateError.value = null;
+  }
+
+  @override 
+  void onUpdaterUpdateAvailable(item) {
+    isCheckingForUpdate.value = false;
+    updateAvailable.value = true;
+    updateVersion.value = item?.versionString;
+  }
+
+  @override
+  void onUpdaterUpdateNotAvailable(error) {
+    isCheckingForUpdate.value = false;
+    updateAvailable.value = false;
+  }
+
+  @override
+  void onUpdaterError(error) {
+    isCheckingForUpdate.value = false;
+    updateError.value = error?.message;
+  }
+
+  @override
+  void onUpdaterUpdateDownloaded(item) {
+    // Handle download complete
+  }
+
+  @override
+  void onUpdaterBeforeQuitForUpdate(item) {
+    // Handle before quit
+  }
 }
 
 class MainApp extends StatelessWidget {

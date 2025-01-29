@@ -11,6 +11,7 @@ import 'package:shakepin/app/sections/misc_section/misc_section.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
+import 'package:shakepin/widgets/support_banner.dart';
 
 import '../state.dart';
 
@@ -300,17 +301,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
               child: const LicenseApp(),
             ),
             if (!isLicenseValid())
-              const Positioned.fill(
-                child: Banner(
-                  message: 'anoyying wateemrak',
-                  location: BannerLocation.bottomStart,
-                  shadow: BoxShadow(
-                    color: Colors.red,
-                    blurRadius: 48,
-                  ),
-                  child: SizedBox(),
-                ),
-              ),
+              const SupportBanner(),
           ],
         );
       },

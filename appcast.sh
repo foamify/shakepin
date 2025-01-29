@@ -1,6 +1,6 @@
-ditto -ck --keepParent dist/notarized/ShakePin.app dist/notarized/ShakePin.zip
+ditto -ck --keepParent dist/ShakePin.app dist/ShakePin.zip
 rm -rf dist/temp
-ditto dist/notarized/ShakePin.zip dist/temp/ShakePin.zip
+ditto dist/ShakePin.zip dist/temp/ShakePin.zip
 
-./generate_appcast dist/temp -o dist/appcast.xml
+./generate_appcast dist/temp -o dist/skpn-appcast.xml
 rm -rf dist/temp
