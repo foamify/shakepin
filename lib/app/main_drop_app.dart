@@ -8,6 +8,7 @@ import 'package:shakepin/app/main_drop/drop_section.dart';
 import 'package:shakepin/app/main_drop/main_sidebar.dart';
 import 'package:shakepin/app/sections/minify_section/minify_section.dart';
 import 'package:shakepin/app/sections/misc_section/misc_section.dart';
+import 'package:shakepin/app/setup_app.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
@@ -132,12 +133,13 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
         isAboutApp,
         isLicenseApp,
         isLicenseValid,
+        isSetupApp,
       ]),
       builder: (context, _) {
         return Stack(
           children: [
             Offstage(
-              offstage: isAboutApp(),
+              offstage: isAboutApp() || isLicenseApp() || isSetupApp(),
               child: SingleChildScrollView(
                 scrollDirection: Axis.vertical,
                 physics: const NeverScrollableScrollPhysics(),
@@ -300,8 +302,11 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
               offstage: !isLicenseApp(),
               child: const LicenseApp(),
             ),
-            if (!isLicenseValid())
-              const SupportBanner(),
+            Offstage(
+              offstage: !isSetupApp(),
+              child: const SetupApp(),
+            ),
+            if (!isLicenseValid()) const SupportBanner(),
           ],
         );
       },

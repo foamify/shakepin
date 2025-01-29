@@ -4,9 +4,9 @@ import 'dart:io' hide Process;
 
 import 'package:flutter/services.dart';
 
-import 'package:flutter_pty/flutter_pty.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 
@@ -26,44 +26,38 @@ String get shell {
 
 final cli = Cli._();
 
-class Cli {
-  late final Pty pty;
-  final listeners = <CliListener>[];
+enum SetupStep {
+  checkingHomebrew(label: 'Checking Homebrew...', progress: 0.1),
+  installingHomebrew(label: 'Installing Homebrew...', progress: 0.2),
+  homebrewInstalled(label: 'Homebrew installed', progress: 0.3),
+  checkingFfmpeg(label: 'Checking FFmpeg...', progress: 0.4),
+  installingFfmpeg(label: 'Installing FFmpeg...', progress: 0.5),
+  ffmpegInstalled(label: 'FFmpeg installed', progress: 0.6),
+  checkingImageMagick(label: 'Checking ImageMagick...', progress: 0.65),
+  installingImageMagick(label: 'Installing ImageMagick...', progress: 0.7),
+  imageMagickInstalled(label: 'ImageMagick installed', progress: 0.8),
+  checkingYtDlp(label: 'Checking yt-dlp...', progress: 0.85),
+  installingYtDlp(label: 'Installing yt-dlp...', progress: 0.9),
+  ytDlpInstalled(label: 'yt-dlp installed', progress: 0.95),
+  checkingGalleryDl(label: 'Checking gallery-dl...', progress: 0.96),
+  installingGalleryDl(label: 'Installing gallery-dl...', progress: 0.98),
+  galleryDlInstalled(label: 'gallery-dl installed', progress: 1.0);
 
+  final String label;
+  final double progress;
+
+  const SetupStep({required this.label, required this.progress});
+}
+
+class Cli {
   Cli._() {
     init();
   }
 
-  void _writeToPty(String text) {
-    pty.write(const Utf8Encoder().convert('$text$carriageReturn'));
-  }
-
-  void init() {
-    pty = Pty.start(shell);
-
-    pty.output.cast<List<int>>().transform(const Utf8Decoder()).listen((text) {
-      for (final listener in listeners) {
-        listener.onOutput(text);
-      }
-    });
-
-    pty.exitCode.then((code) {
-      for (final listener in listeners) {
-        listener.onExit('the process exited with exit code $code');
-      }
-    });
-  }
+  void init() {}
 
   void dispose() {
-    pty.kill();
-  }
-
-  void addListener(CliListener listener) {
-    listeners.add(listener);
-  }
-
-  void removeListener(CliListener listener) {
-    listeners.remove(listener);
+    cancel();
   }
 
   void cancel() {
@@ -92,8 +86,9 @@ class Cli {
   /// Executes a one-off native process with basic error handling and logging
   Future<ProcessResult> run(
     String command,
-    List<String> arguments,
-  ) async {
+    List<String> arguments, {
+    bool noThrow = false,
+  }) async {
     logger.log(
         '[Native Process] Starting: $command ${arguments.map((e) => "'$e'").join(' ')}');
 
@@ -110,7 +105,7 @@ class Cli {
         arguments,
       );
 
-      if (result.exitCode != 0) {
+      if (result.exitCode != 0 && !noThrow) {
         final error =
             'Process failed with exit code: ${result.exitCode}\nError: ${result.stderr}';
         logger.log('[Native Process] $error');
@@ -651,11 +646,10 @@ class Cli {
     // Add downscaling filter if needed
     List<String> filterArgs = [];
     if (downScale < 100) {
-      filterArgs.addAll([
-        '-vf',
-        'scale=iw*${downScale/100}:ih*${downScale/100}'
-      ]);
-      await logger.log('[Process.minifyVideo] Adding downscale filter: ${downScale}%');
+      filterArgs
+          .addAll(['-vf', 'scale=iw*${downScale / 100}:ih*${downScale / 100}']);
+      await logger
+          .log('[Process.minifyVideo] Adding downscale filter: ${downScale}%');
     }
 
     // Add format-specific encoding parameters
@@ -699,14 +693,14 @@ class Cli {
         if (filterArgs.isNotEmpty) {
           ffmpegArgs.addAll(filterArgs);
         }
-        
+
       case 'gif':
         await logger.log('[Process.minifyVideo] Using GIF encoding');
         // For gif, merge the scale filter with existing filters
         if (downScale < 100) {
           ffmpegArgs.addAll([
             '-vf',
-            'fps=10,scale=iw*${downScale/100}:ih*${downScale/100},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
+            'fps=10,scale=iw*${downScale / 100}:ih*${downScale / 100},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse',
           ]);
         } else {
           ffmpegArgs.addAll([
@@ -716,7 +710,7 @@ class Cli {
             '0',
           ]);
         }
-        
+
       default: // mp4
         final crf = switch (quality) {
           'lowest' => '51',
@@ -1023,184 +1017,137 @@ class Cli {
   // MARK: - Setup
 
   Future<void> setup({
-    required Function(String step, double progress) onProgress,
-    required Function(String error) onError,
+    required Function(SetupStep step) onProgress,
+    required Function(String error, SetupStep step)
+        onError, // Modified signature
     required Function() onSuccess,
   }) async {
     logger.log('[Cli.setup] Starting setup...');
     final stopwatch = Stopwatch()..start();
-    try {
-      final ffmpegInstalled = await run('which', ['ffmpeg']);
-      final ffmpegTime = stopwatch.elapsed;
-      logger
-          .log('[Cli.setup] FFmpeg check took: ${ffmpegTime.inMilliseconds}ms');
 
-      final imagemagickInstalled = await run('which', ['magick']);
-      final magickTime = stopwatch.elapsed;
-      logger.log(
-          '[Cli.setup] ImageMagick check took: ${magickTime.inMilliseconds}ms');
-
-      final ytdlpInstalled = await run('which', ['yt-dlp']);
-      final ytdlpTime = stopwatch.elapsed;
-      logger
-          .log('[Cli.setup] yt-dlp check took: ${ytdlpTime.inMilliseconds}ms');
-
-      final gallerydlInstalled = await run('which', ['gallery-dl']);
-      final gallerydlTime = stopwatch.elapsed;
-      logger.log(
-          '[Cli.setup] gallery-dl check took: ${gallerydlTime.inMilliseconds}ms');
-
-      stopwatch.stop();
-      logger.log(
-          '[Cli.setup] Total check time: ${stopwatch.elapsed.inMilliseconds}ms');
-
-      if (ffmpegInstalled.exitCode == 0 &&
-          imagemagickInstalled.exitCode == 0 &&
-          ytdlpInstalled.exitCode == 0 &&
-          gallerydlInstalled.exitCode == 0) {
-        onSuccess();
-        return;
-      }
-    } catch (e) {
-      logger.log('[Cli.setup] Somethong not installed: $e');
+    void updateProgress(SetupStep step) {
+      logger.log('[Cli.setup] Progress: ${step.label} (${step.progress})');
+      onProgress(step);
     }
 
-    final completer = Completer<void>();
-    String currentStep = '';
-    double progress = 0.0;
+    // Check if Homebrew is installed
+    try {
+      updateProgress(SetupStep.checkingHomebrew);
+      final brewResult = await run('which', ['brew'], noThrow: true);
+      if (brewResult.exitCode != 0) {
+        updateProgress(SetupStep.installingHomebrew);
 
-    void updateProgress(String text) {
-      // Remove ANSI escape codes and extra whitespace
-      text = text.replaceAll(RegExp(r'\x1B\[[0-?]*[ -/]*[@-~]'), '').trim();
+        const installScript =
+            'yes \'\' | /bin/bash -c "\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"';
+        final result = await run(installScript, [], noThrow: true);
 
-      if (text.isEmpty) return;
+        if (result.exitCode != 0) {
+          onError('Failed to install Homebrew: ${result.stderr}',
+              SetupStep.installingHomebrew);
+          return;
+        }
+        updateProgress(SetupStep.homebrewInstalled);
+      }
 
-      logger.log('[Cli.setup] Output: $text');
+      // Check and install FFmpeg
+      updateProgress(SetupStep.checkingFfmpeg);
+      final ffmpegResult = await run('which', ['ffmpeg'], noThrow: true);
+      if (ffmpegResult.exitCode != 0) {
+        updateProgress(SetupStep.installingFfmpeg);
+        final result = await run('brew', ['install', 'ffmpeg'], noThrow: true);
+        if (result.exitCode != 0) {
+          onError('Failed to install FFmpeg', SetupStep.installingFfmpeg);
+          return;
+        }
+      }
+      updateProgress(SetupStep.ffmpegInstalled);
 
-      final steps = [
-        'Checking requirements...',
-        'Installing Homebrew...',
-        'Homebrew installed',
-        'Installing FFmpeg...',
-        'FFmpeg installed',
-        'Installing ImageMagick...',
-        'ImageMagick installed',
-        'Installing yt-dlp...',
-        'yt-dlp installed',
-        'Installing gallery-dl...',
-        'gallery-dl installed',
-        'Setup completed',
+      // Check and install ImageMagick
+      updateProgress(SetupStep.checkingImageMagick);
+      final magickResult = await run('which', ['magick'], noThrow: true);
+      if (magickResult.exitCode != 0) {
+        updateProgress(SetupStep.installingImageMagick);
+        final result =
+            await run('brew', ['install', 'imagemagick'], noThrow: true);
+        if (result.exitCode != 0) {
+          onError(
+              'Failed to install ImageMagick', SetupStep.installingImageMagick);
+          return;
+        }
+      }
+      updateProgress(SetupStep.imageMagickInstalled);
+
+      // Check and install yt-dlp
+      updateProgress(SetupStep.checkingYtDlp);
+      final ytdlpResult = await run('which', ['yt-dlp'], noThrow: true);
+      if (ytdlpResult.exitCode != 0) {
+        updateProgress(SetupStep.installingYtDlp);
+        final result = await run('brew', ['install', 'yt-dlp'], noThrow: true);
+        if (result.exitCode != 0) {
+          onError('Failed to install yt-dlp', SetupStep.installingYtDlp);
+          return;
+        }
+      }
+      updateProgress(SetupStep.ytDlpInstalled);
+
+      // Check and install gallery-dl
+      updateProgress(SetupStep.checkingGalleryDl);
+      final galleryResult = await run('which', ['gallery-dl'], noThrow: true);
+      if (galleryResult.exitCode != 0) {
+        updateProgress(SetupStep.installingGalleryDl);
+        final result =
+            await run('brew', ['install', 'gallery-dl'], noThrow: true);
+        if (result.exitCode != 0) {
+          onError(
+              'Failed to install gallery-dl', SetupStep.installingGalleryDl);
+          return;
+        }
+      }
+      updateProgress(SetupStep.galleryDlInstalled);
+
+      // Verify all installations
+      final List<String> verifyCommands = [
+        'ffmpeg -version',
+        'magick -version',
+        'yt-dlp --version',
+        'gallery-dl --version'
       ];
 
-      final stepMessages = [
-        'v1',
-        'Homebrew is not installed',
-        'Homebrew installation completed',
-        'Installing ffmpeg',
-        'ffmpeg installation completed',
-        'Installing ImageMagick',
-        'ImageMagick installation completed',
-        'Installing yt-dlp',
-        'yt-dlp installation completed',
-        'Installing gallery-dl',
-        'gallery-dl installation completed',
-        'All checks and installations are completed successfully',
-      ];
-
-      for (int i = 0; i < steps.length; i++) {
-        if (text.contains(stepMessages[i])) {
-          progress = (i + 1) / steps.length;
-          currentStep = steps[i];
-          onProgress(currentStep, progress);
-          break;
+      for (final cmd in verifyCommands) {
+        final parts = cmd.split(' ');
+        final result = await run(parts[0], parts.sublist(1), noThrow: true);
+        if (result.exitCode != 0) {
+          onError('Failed to verify ${parts[0]} installation',
+              setupStep.value ?? SetupStep.checkingHomebrew);
+          return;
         }
       }
 
-      // Handle tool-specific reinstall messages
-      if (text.contains('FFmpeg exists but not working correctly')) {
-        currentStep = 'Reinstalling FFmpeg...';
-        onProgress(currentStep, progress);
-      } else if (text.contains('yt-dlp not working')) {
-        currentStep = 'Reinstalling yt-dlp...';
-        onProgress(currentStep, progress);
-      } else if (text.contains('gallery-dl not working')) {
-        currentStep = 'Reinstalling gallery-dl...';
-        onProgress(currentStep, progress);
-      }
-
-      // Handle errors
-      if (text.contains('Error:')) {
-        final errorMessage = text.substring(text.indexOf('Error:'));
-        currentStep = 'Error: Installation failed';
-        onError(errorMessage);
-        completer.completeError(Exception(errorMessage));
-      }
-
-      if (text.contains(
-          'All checks and installations are completed successfully')) {
-        onSuccess();
-        completer.complete();
-      }
-    }
-
-    final setupListener = LocalCliListener()
-      ..onOutputCallback = updateProgress
-      ..onExitCallback = (text) {
-        logger.log('[Cli.setup] Process exited: $text');
-        completer.complete();
-      };
-
-    addListener(setupListener);
-
-    final setupScript = await rootBundle.loadString('assets/setup.sh');
-    final temporaryFile = await getTemporaryDirectory();
-    final scriptPath = '${temporaryFile.path}/setup.sh';
-    await File(scriptPath).writeAsString(setupScript);
-    // Set execute permission for the script
-    await run('chmod', ['+x', scriptPath]);
-
-    try {
-      _writeToPty(scriptPath);
-      await completer.future;
-      logger.log('[Cli.setup] Setup completed');
+      stopwatch.stop();
+      logger.log(
+          '[Cli.setup] Setup completed in ${stopwatch.elapsed.inSeconds}s');
+      onSuccess();
     } catch (e) {
-      logger.log('[Cli.setup] Setup error: $e');
-      rethrow;
-    } finally {
-      removeListener(setupListener);
-      File(scriptPath).delete();
+      logger.log('[Cli.setup] Error: $e');
+      onError(e.toString(), setupStep.value ?? SetupStep.checkingHomebrew);
     }
   }
 }
 
-mixin CliListener {
-  void onOutput(String text);
-  void onExit(String text);
-}
-
-class LocalCliListener implements CliListener {
-  void Function(String)? onOutputCallback;
-  void Function(String)? onExitCallback;
-  bool _startedOutput = false;
-
-  @override
-  void onOutput(String text) {
-    if (!_startedOutput) {
-      if (text.contains('[?2004l')) {
-        _startedOutput = true;
-      }
-      return;
-    }
-
-    if (onOutputCallback != null) {
-      onOutputCallback!(text);
-    }
-  }
-
-  @override
-  void onExit(String text) {
-    if (onExitCallback != null) {
-      onExitCallback!(text);
-    }
-  }
+void initCli() {
+  cli.setup(
+    onProgress: (step) {
+      logger.log('Setup progress: ${step.label} (${step.progress})');
+      setupStep.value = step;
+    },
+    onError: (error, step) {
+      logger.log('Setup error at ${step.label}: $error');
+      setupError.value = step;
+      setupSuccess.value = false;
+    },
+    onSuccess: () {
+      logger.log('Setup completed');
+      setupSuccess.value = true;
+    },
+  );
 }

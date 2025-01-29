@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,10 +9,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 final items = ValueNotifier<Set<String>>({});
 final selectedItems = ValueNotifier<Set<String>>({});
 final archiveProgress = ValueNotifier<double>(-1);
-final isMinifyApp = ValueNotifier<bool>(false);
 final isAboutApp = ValueNotifier<bool>(false);
 final isLicenseApp = ValueNotifier<bool>(false);
 final isLicenseValid = ValueNotifier<bool>(false);
+
+final isSetupApp = ValueNotifier<bool>(false);
 
 const isAppStore = appFlavor != 'oss';
 
@@ -107,9 +109,9 @@ void handleModeChanged(AppMode mode) async {
   dropChannel.setFrame(rect, animate: true);
 }
 
-final setupProgress = ValueNotifier<double>(0);
-final setupStep = ValueNotifier<String>('');
+final setupStep = ValueNotifier<SetupStep?>(null);
 final setupSuccess = ValueNotifier<bool?>(null);
+final setupError = ValueNotifier<SetupStep?>(null);  // Add this line
 
 // Update states
 final isCheckingForUpdate = ValueNotifier<bool>(false);
