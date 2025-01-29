@@ -78,10 +78,10 @@ class _SideButtonState extends State<SideButton> {
                 shape: BoxShape.circle,
                 color: _isHovered
                     ? widget.selected
-                        ? MacosColors.controlAccentColor.withValues(alpha:0.4)
+                        ? MacosColors.controlAccentColor.withValues(alpha: 0.4)
                         : MacosColors.controlColor.resolvedColor(context)
                     : widget.selected
-                        ? MacosColors.controlAccentColor.withValues(alpha:0.2)
+                        ? MacosColors.controlAccentColor.withValues(alpha: 0.2)
                         : MacosColors.controlColor
                             .resolvedColor(context)
                             .withAlpha(0),

@@ -8,7 +8,8 @@ class SupportBanner extends StatefulWidget {
   State<SupportBanner> createState() => _SupportBannerState();
 }
 
-class _SupportBannerState extends State<SupportBanner> with SingleTickerProviderStateMixin {
+class _SupportBannerState extends State<SupportBanner>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _glowAnimation;
 
@@ -19,7 +20,7 @@ class _SupportBannerState extends State<SupportBanner> with SingleTickerProvider
       duration: const Duration(seconds: 1),
       vsync: this,
     )..repeat(reverse: true);
-    
+
     _glowAnimation = Tween<double>(
       begin: 24,
       end: 48,
@@ -117,10 +118,11 @@ class _SupportBannerPainter extends CustomPainter {
     textPainter.layout(maxWidth: bannerWidth);
     textPainter.paint(
       canvas,
-      rect.topLeft + Offset(
-        (rect.width - textPainter.width) / 2,
-        (rect.height - textPainter.height) / 2,
-      ),
+      rect.topLeft +
+          Offset(
+            (rect.width - textPainter.width) / 2,
+            (rect.height - textPainter.height) / 2,
+          ),
     );
 
     textPainter.dispose();

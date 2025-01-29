@@ -42,7 +42,8 @@ class ArchiveSection extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: MacosColors.systemRedColor.withValues(alpha:0.1),
+                        color:
+                            MacosColors.systemRedColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Column(

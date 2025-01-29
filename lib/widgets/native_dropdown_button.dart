@@ -66,7 +66,7 @@ class DropdownManager {
 
 class NativeDropdownButton<T> extends StatefulWidget {
   /// The list of items to display in the dropdown.
-  /// 
+  ///
   /// NOTE: For pullsDown functionality, a placeholder empty item must be added
   /// as the first item in the list, since the first item may not display properly
   /// for unknown technical reasons.

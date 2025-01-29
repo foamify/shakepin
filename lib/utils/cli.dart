@@ -1,8 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io' hide Process;
-
-import 'package:flutter/services.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -651,7 +648,7 @@ class Cli {
       filterArgs
           .addAll(['-vf', 'scale=iw*${downScale / 100}:ih*${downScale / 100}']);
       await logger
-          .log('[Process.minifyVideo] Adding downscale filter: ${downScale}%');
+          .log('[Process.minifyVideo] Adding downscale filter: $downScale%');
     }
 
     // Add format-specific encoding parameters

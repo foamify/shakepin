@@ -30,7 +30,7 @@ class _DropHoverState extends State<DropHover> {
               : Border.all(
                   color: CupertinoColors.label
                       .resolveFrom(context)
-                      .withValues(alpha:0.5)),
+                      .withValues(alpha: 0.5)),
           borderRadius: BorderRadius.circular(widget.isHovered ? 8 : 10),
           boxShadow: widget.isHovered
               ? [

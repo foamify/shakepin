@@ -389,9 +389,11 @@ class _MinifySettingsState extends State<MinifySettings> {
       await logger.log('Processing video: $path');
       minifyOneFileProgress.value = 0;
       await logger.log('Reset progress for current video');
-      await minifyVideo(path, 
+      await minifyVideo(
+        path,
         quality: _videoQuality.name,
-        format: _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
+        format:
+            _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
         downScale: _videoDownscale.value, // Add this
       );
       processedFiles.value++;
@@ -409,7 +411,8 @@ class _MinifySettingsState extends State<MinifySettings> {
     await logger.log('Minification process completed successfully');
   }
 
-  Future<void> minifyVideo(String filePath, {required String quality, String? format, required int downScale}) async {
+  Future<void> minifyVideo(String filePath,
+      {required String quality, String? format, required int downScale}) async {
     await logger.log('Starting minification for video: $filePath');
     final stopwatch = Stopwatch()..start();
     await logger.log('Started stopwatch for timing');

@@ -383,8 +383,9 @@ class _LicenseAppState extends State<LicenseApp> {
   }
 
   Future<void> _handleSubmit() async {
-    if (_licenseController.text.isEmpty || _errorType == LicenseError.format)
+    if (_licenseController.text.isEmpty || _errorType == LicenseError.format) {
       return;
+    }
 
     setState(() {
       _isSubmitting = true;

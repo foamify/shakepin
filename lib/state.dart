@@ -111,7 +111,7 @@ void handleModeChanged(AppMode mode) async {
 
 final setupStep = ValueNotifier<SetupStep?>(null);
 final setupSuccess = ValueNotifier<bool?>(null);
-final setupError = ValueNotifier<SetupStep?>(null);  // Add this line
+final setupError = ValueNotifier<SetupStep?>(null); // Add this line
 
 // Update states
 final isCheckingForUpdate = ValueNotifier<bool>(false);
