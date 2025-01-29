@@ -21,7 +21,7 @@ dependencies:
   extended_text: ^14.1.0
   super_sliver_list: ^0.4.1
   path_provider: ^2.1.4
-  url_launcher: ^6.1.10
+  url_launcher: ^6.2.1
   lukehog: ^0.4.1+2
   gradient_borders: ^1.0.1
   flutter_pty: ^0.4.1
@@ -30,6 +30,11 @@ dependencies:
       url: https://github.com/fluttercommunity/plus_plugins.git
       path: packages/package_info_plus/package_info_plus
   auto_updater: ^1.0.0
+  flutter_secure_storage: ^8.0.0
+  http: ^1.1.0
+  device_info_plus: ^10.1.2
+  connectivity_plus: ^6.1.2
+  crypto: ^3.0.6
 dev_dependencies:
   flutter_test:
     sdk: flutter

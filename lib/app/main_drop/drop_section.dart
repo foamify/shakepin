@@ -240,23 +240,23 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                             ),
                                           ),
                                         ),
-                                        SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: GlassButton(
-                                            ghost: true,
-                                            secondary: true,
-                                            padding: EdgeInsets.zero,
-                                            radius: 4,
-                                            onTap: () {},
-                                            child: MacosIcon(
-                                              FluentIcons.settings_16_regular,
-                                              color: MacosColors.labelColor
-                                                  .resolvedColor(context),
-                                              size: 16,
-                                            ),
-                                          ),
-                                        ),
+                                        // SizedBox(
+                                        //   width: 16,
+                                        //   height: 16,
+                                        //   child: GlassButton(
+                                        //     ghost: true,
+                                        //     secondary: true,
+                                        //     padding: EdgeInsets.zero,
+                                        //     radius: 4,
+                                        //     onTap: () {},
+                                        //     child: MacosIcon(
+                                        //       FluentIcons.settings_16_regular,
+                                        //       color: MacosColors.labelColor
+                                        //           .resolvedColor(context),
+                                        //       size: 16,
+                                        //     ),
+                                        //   ),
+                                        // ),
                                       ],
                                     ),
                                   ),

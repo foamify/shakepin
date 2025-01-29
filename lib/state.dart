@@ -11,6 +11,7 @@ final archiveProgress = ValueNotifier<double>(-1);
 final isMinifyApp = ValueNotifier<bool>(false);
 final isAboutApp = ValueNotifier<bool>(false);
 final isLicenseApp = ValueNotifier<bool>(false);
+final isLicenseValid = ValueNotifier<bool>(false);
 
 const isAppStore = appFlavor != 'oss';
 

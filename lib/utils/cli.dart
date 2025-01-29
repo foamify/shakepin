@@ -1062,7 +1062,7 @@ class Cli {
         return;
       }
     } catch (e) {
-      logger.log('[Cli.setup] Somethong not installef: $e');
+      logger.log('[Cli.setup] Somethong not installed: $e');
     }
 
     final completer = Completer<void>();

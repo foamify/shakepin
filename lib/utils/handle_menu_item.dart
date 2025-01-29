@@ -4,6 +4,7 @@ import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
 
 void handleMenuItemClicked(int tag) async {
+  Size? appSize;
   switch (tag) {
     case 1: // show
       await _showApp();
@@ -12,15 +13,27 @@ void handleMenuItemClicked(int tag) async {
     case 3: // about
       isAboutApp.value = true;
       isLicenseApp.value = false;
+      appSize = AppSizes.about;
       _showApp();
     case 4: // reset shared preferences
       await prefs.clear();
     case 5: // input license key
       isLicenseApp.value = true;
       isAboutApp.value = false;
+      appSize = AppSizes.license;
       _showApp();
     default:
       break;
+  }
+
+  if (appSize != null) {
+    dropChannel.setMinimumSize(appSize);
+    final rect = Rect.fromCenter(
+      center: await dropChannel.center(),
+      width: appSize.width,
+      height: appSize.height,
+    );
+    dropChannel.setFrame(rect, animate: true);
   }
 }
 

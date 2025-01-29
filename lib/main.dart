@@ -6,6 +6,7 @@ import 'package:shakepin/app/main_drop_app.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/license_service.dart';
 import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/glass_button.dart';
@@ -15,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   await RustLib.init();
   WidgetsFlutterBinding.ensureInitialized();
+  LicenseService.instance;
   await DropdownChannel.instance.initialize();
 
   initCli();

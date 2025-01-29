@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
+import 'package:flutter/services.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
@@ -146,7 +147,7 @@ class _AboutAppState extends State<AboutApp> {
           MenuAction(
             title: 'Copy Link to Clipboard',
             callback: () async {
-              await dropChannel.writeToClipboard(url);
+              Clipboard.setData(ClipboardData(text: url));
             },
           ),
         ],

@@ -7,9 +7,21 @@ import 'package:flutter/services.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
+import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/widgets/glass_button.dart';
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shakepin/utils/license_service.dart';
+
+enum LicenseError {
+  invalid('Invalid or expired license key'),
+  network('Network error. Please try again'),
+  format('Invalid license format'),
+  unknown('An unexpected error occurred. Please try again');
+
+  final String message;
+  const LicenseError(this.message);
+}
 
 class LicenseApp extends StatefulWidget {
   const LicenseApp({super.key});
@@ -22,6 +34,7 @@ class _LicenseAppState extends State<LicenseApp> {
   final _licenseController = TextEditingController();
   bool _isSubmitting = false;
   String? _errorMessage;
+  LicenseError? _errorType;
 
   // License key format: SKPN_PERP-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
   final _licenseFormat = RegExp(
@@ -44,10 +57,16 @@ class _LicenseAppState extends State<LicenseApp> {
 
   void _validateInput() {
     setState(() {
-      _errorMessage = _licenseController.text.isNotEmpty &&
-              !_licenseFormat.hasMatch(_licenseController.text)
-          ? 'Invalid license format'
-          : null;
+      if (_licenseController.text.isEmpty) {
+        _errorType = null;
+        _errorMessage = null;
+      } else if (!_licenseFormat.hasMatch(_licenseController.text)) {
+        _errorType = LicenseError.format;
+        _errorMessage = _errorType?.message;
+      } else {
+        _errorType = null;
+        _errorMessage = null;
+      }
     });
   }
 
@@ -61,17 +80,70 @@ class _LicenseAppState extends State<LicenseApp> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildAppIcon(),
-                      const SizedBox(height: 24),
-                      _buildTitle(),
-                      const SizedBox(height: 32),
-                      _buildLicenseInput(),
-                      const SizedBox(height: 24),
-                      _buildSubmitButton(),
-                    ],
+                  child: ValueListenableBuilder(
+                    valueListenable: isLicenseValid,
+                    builder: (context, isValid, child) {
+                      if (isValid) {
+                        return Column(
+                          children: [
+                            const SizedBox(height: 24),
+                            _buildAppIcon(),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Thank You!',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Your license has been activated successfully',
+                              style: TextStyle(
+                                fontSize: 13,
+                              ),
+                            ),
+                            const Spacer(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              spacing: 8,
+                              children: [
+                                GlassButton(
+                                  onTap: _handleClose,
+                                  child: const Text('Start Using ShakePin'),
+                                ),
+                                GlassButton(
+                                  padding: const EdgeInsets.all(8),
+                                  radius: 8,
+                                  ghost: true,
+                                  child: const Icon(
+                                    FluentIcons.key_reset_24_regular,
+                                    size: 20,
+                                  ),
+                                  onTap: () => _showDeactivateMenu(context),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _buildManageLink(),
+                          ],
+                        );
+                      }
+                      return Column(
+                        children: [
+                          const SizedBox(height: 24),
+                          _buildAppIcon(),
+                          const SizedBox(height: 24),
+                          _buildTitle(),
+                          const Spacer(),
+                          _buildLicenseInput(),
+                          const SizedBox(height: 24),
+                          _buildSubmitButton(),
+                          const SizedBox(height: 16),
+                          _buildManageLink(),
+                        ],
+                      );
+                    },
                   ),
                 ),
                 _buildDragRegion(),
@@ -81,6 +153,38 @@ class _LicenseAppState extends State<LicenseApp> {
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildManageLink() {
+    return ContextMenuWidget(
+      menuProvider: (context) {
+        return Menu(
+          children: [
+            MenuAction(
+              title: 'Copy link to clipboard',
+              callback: () async {
+                await Clipboard.setData(
+                  ClipboardData(text: _manageUrl.toString()),
+                );
+              },
+            ),
+          ],
+        );
+      },
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => launchUrl(_manageUrl),
+          child: const Text(
+            'Manage license keys →',
+            style: TextStyle(
+              fontSize: 12,
+              decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -101,17 +205,17 @@ class _LicenseAppState extends State<LicenseApp> {
   }
 
   Widget _buildTitle() {
-    return Column(
+    return const Column(
       children: [
-        const Text(
+        Text(
           'Activate ShakePin',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 8),
-        const Text(
+        SizedBox(height: 8),
+        Text(
           'Please enter your license key to remove the watermark',
           style: TextStyle(
             fontSize: 13,
@@ -145,7 +249,6 @@ class _LicenseAppState extends State<LicenseApp> {
                   onSubmitted: (_) => _handleSubmit(),
                   inputFormatters: [
                     UpperCaseTextFormatter(),
-                    LicenseKeyFormatter(),
                   ],
                   onChanged: (value) {
                     if (value.length == 45) {
@@ -156,16 +259,19 @@ class _LicenseAppState extends State<LicenseApp> {
               ),
               const SizedBox(width: 8),
               MacosIconButton(
-                icon: Icon(
-                  CupertinoIcons.doc_on_clipboard,
+                icon: const Icon(
+                  FluentIcons.clipboard_paste_16_regular,
                   size: 16,
                 ),
-                onPressed: _isSubmitting ? null : () async {
-                  final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
-                  if (clipboardData?.text != null) {
-                    _licenseController.text = clipboardData!.text!;
-                  }
-                },
+                onPressed: _isSubmitting
+                    ? null
+                    : () async {
+                        final clipboardData =
+                            await Clipboard.getData(Clipboard.kTextPlain);
+                        if (clipboardData?.text != null) {
+                          _licenseController.text = clipboardData!.text!;
+                        }
+                      },
               ),
             ],
           ),
@@ -180,51 +286,33 @@ class _LicenseAppState extends State<LicenseApp> {
                     color: MacosColors.systemRedColor,
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: MacosColors.systemRedColor,
-                      fontSize: 12,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(
+                              color: MacosColors.systemRedColor,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        if (_errorType != LicenseError.format)
+                          MacosIconButton(
+                            icon: const Icon(
+                              FluentIcons.arrow_clockwise_16_regular,
+                              size: 14,
+                              color: MacosColors.systemRedColor,
+                            ),
+                            onPressed: _handleSubmit,
+                          ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // AI: change style  ...
-              ContextMenuWidget(
-                menuProvider: (context) {
-                  return Menu(
-                    children: [
-                      MenuAction(
-                        title: 'Copy link to clipboard',
-                        callback: () async {
-                          await Clipboard.setData(
-                            ClipboardData(text: _manageUrl.toString()),
-                          );
-                        },
-                      ),
-                    ],
-                  );
-                },
-                // underline text, AI!
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => launchUrl(_manageUrl),
-                    child: const Text(
-                      'Manage license keys →',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ),
-              ),
-              // into like a link. AI!
-            ],
-          ),
         ],
       ),
     );
@@ -233,7 +321,7 @@ class _LicenseAppState extends State<LicenseApp> {
   Widget _buildSubmitButton() {
     return GlassButton(
       onTap: _isSubmitting ? null : _handleSubmit,
-      child: _isSubmitting 
+      child: _isSubmitting
           ? const ProgressCircle(radius: 8)
           : const Text('Activate'),
     );
@@ -295,30 +383,64 @@ class _LicenseAppState extends State<LicenseApp> {
   }
 
   Future<void> _handleSubmit() async {
-    if (_licenseController.text.isEmpty || _errorMessage != null) return;
+    if (_licenseController.text.isEmpty || _errorType == LicenseError.format)
+      return;
 
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
+      _errorType = null;
     });
 
     try {
-      // TODO: Implement secure license validation logic
-      final isValid = await _validateLicense(_licenseController.text);
+      final licenseService = LicenseService.instance;
+      final isActivated =
+          await licenseService.activateLicense(_licenseController.text);
 
-      if (isValid) {
-        // Store license securely
-        handleModeChanged(AppMode.pin);
-        isLicenseApp.value = false;
+      if (isActivated) {
+        // Validate license immediately after activation
+        final isValid = await licenseService.validateLicense();
+
+        if (!isValid) {
+          setState(() {
+            _errorType = LicenseError.invalid;
+            _errorMessage = 'License activation failed validation';
+          });
+          await licenseService.clearLicense(); // Clean up invalid license
+          return;
+        }
+
+        final customerInfo = await licenseService.getCustomerInfo();
+        final licenseInfo = await licenseService.getLicenseInfo();
+
+        logger.log(
+          'License activated and validated for ${customerInfo?.name}, expires: ${licenseInfo?.expiresAt}',
+        );
+
+        licenseService.onLicenseExpiring.listen((expiryDate) {
+          // TODO: Show expiration notification to user
+        });
+
+        isLicenseValid.value = true;
       } else {
         setState(() {
-          _errorMessage = 'Invalid license key';
+          _errorType = LicenseError.invalid;
+          _errorMessage = _errorType?.message;
         });
       }
+    } on LicenseValidationException catch (e) {
+      setState(() {
+        _errorType = e.code == 'NETWORK_ERROR'
+            ? LicenseError.network
+            : LicenseError.invalid;
+        _errorMessage = _errorType?.message;
+      });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Network error. Please try again.';
+        _errorType = LicenseError.unknown;
+        _errorMessage = _errorType?.message;
       });
+      logger.log('License validation error: $e', level: LogLevel.error);
     } finally {
       setState(() {
         _isSubmitting = false;
@@ -326,14 +448,66 @@ class _LicenseAppState extends State<LicenseApp> {
     }
   }
 
-  Future<bool> _validateLicense(String license) async {
-    // TODO: Implement secure license validation with proper encryption
-    // 1. Use HTTPS for communication
-    // 2. Implement rate limiting
-    // 3. Add request signing
-    // 4. Use proper error handling
-    await Future.delayed(const Duration(seconds: 1));
-    return false;
+  void _showDeactivateMenu(BuildContext context) {
+    showMacosAlertDialog(
+      barrierColor: MacosTheme.brightnessOf(context).isDark
+          ? MacosColors.black.withOpacity(0.4)
+          : MacosColors.white.withOpacity(0.4),
+      context: context,
+      builder: (context) => MacosAlertDialog(
+        appIcon: const Icon(
+          FluentIcons.warning_16_regular,
+          color: MacosColors.systemYellowColor,
+          size: 32,
+        ),
+        title: const Text('Deactivate License?'),
+        message: const Text(
+          'This will remove the license from this device. You can reactivate it later.',
+        ),
+        primaryButton: PushButton(
+          controlSize: ControlSize.large,
+          color: MacosColors.systemRedColor,
+          child: const Text('Deactivate'),
+          onPressed: () {
+            Navigator.pop(context);
+            _handleDeactivate();
+          },
+        ),
+        secondaryButton: PushButton(
+          controlSize: ControlSize.large,
+          secondary: true,
+          child: const Text('Cancel'),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleDeactivate() async {
+    try {
+      final licenseService = LicenseService.instance;
+
+      // Call deactivation API
+      final success = await licenseService.deactivateLicense();
+
+      if (success) {
+        // Clear local storage only if API call succeeds
+        await licenseService.clearLicense();
+        isLicenseValid.value = false;
+
+        setState(() {
+          _licenseController.clear();
+          _errorMessage = null;
+          _errorType = null;
+        });
+
+        logger.log('License deactivated successfully');
+      } else {
+        logger.log('Failed to deactivate license', level: LogLevel.error);
+      }
+    } catch (e) {
+      logger.log('Error deactivating license: $e', level: LogLevel.error);
+    }
   }
 
   void _handleClose() {
@@ -351,41 +525,6 @@ class UpperCaseTextFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: newValue.text.toUpperCase(),
       selection: newValue.selection,
-    );
-  }
-}
-
-class LicenseKeyFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    var text = newValue.text.replaceAll(RegExp(r'[^A-Z0-9_]'), '');
-    final buffer = StringBuffer();
-
-    // Handle the prefix
-    if (text.length >= 4 && !text.startsWith('SKPN')) {
-      text = 'SKPN${text.substring(4)}';
-    }
-
-    // Format the text according to the pattern
-    for (int i = 0; i < text.length && i < 41; i++) {
-      if (i == 4) {
-        buffer.write('_');
-      } else if (i == 8) {
-        buffer.write('-');
-      } else if (i > 8 && ((i - 8) % 4 == 0) && (i < 24)) {
-        buffer.write('-');
-      } else if (i == 24) {
-        buffer.write('-');
-      }
-      buffer.write(text[i]);
-    }
-
-    return TextEditingValue(
-      text: buffer.toString(),
-      selection: TextSelection.collapsed(offset: buffer.length),
     );
   }
 }
