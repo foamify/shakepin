@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:shakepin/state.dart';
 
 class SupportBanner extends StatefulWidget {
   const SupportBanner({super.key});
@@ -78,7 +79,7 @@ class _SupportBannerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(
-      -offset.dx - 36,
+      -offset.dx - (appMode() == AppMode.panel ? 47 : 36),
       offset.dy - bannerHeight,
       bannerWidth + 80,
       bannerHeight,
