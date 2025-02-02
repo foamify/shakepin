@@ -1,9 +1,18 @@
 part of '../cli.dart';
 
 enum ArchiveFormat {
-  zip,
-  sevenZip,
-  tar;
+  zip('Zip', 0, 9),
+  sevenZip('7z', 0, 9),
+  tar('Tar', -1, -1); // tar doesn't support compression levels directly
+
+  final String label;
+  final int minCompressionLevel;
+  final int maxCompressionLevel;
+
+  const ArchiveFormat(
+      this.label, this.minCompressionLevel, this.maxCompressionLevel);
+
+  bool get supportsCompression => minCompressionLevel >= 0;
 
   String get extension {
     switch (this) {
@@ -14,6 +23,11 @@ enum ArchiveFormat {
       case ArchiveFormat.tar:
         return '.tar.gz';
     }
+  }
+
+  int validateCompressionLevel(int level) {
+    if (!supportsCompression) return 0;
+    return level.clamp(minCompressionLevel, maxCompressionLevel);
   }
 }
 
@@ -63,6 +77,7 @@ class _CliArchive {
             {bool noThrow})
         run,
     ArchiveFormat format = ArchiveFormat.zip,
+    int compressionLevel = 6,
     EncryptionOptions? encryption,
   }) async {
     if (await dropChannel.isProcessRunning()) {
@@ -71,6 +86,9 @@ class _CliArchive {
     }
     final outputArchive = await _getUniqueArchiveName(outputFolder, format);
     final tempDir = await Directory(outputFolder).createTemp('archived');
+
+    final validCompressionLevel =
+        format.validateCompressionLevel(compressionLevel);
 
     try {
       // Total number of paths
@@ -107,7 +125,8 @@ class _CliArchive {
             '-c',
             '-k',
             '--sequesterRsrc',
-            '--zlibCompressionLevel=9',
+            if (format.supportsCompression)
+              '--zlibCompressionLevel=$validCompressionLevel',
           ];
           if (encryption != null && encryption.password != null) {
             // Use zip with encryption
@@ -115,6 +134,7 @@ class _CliArchive {
               tempDir.path,
               outputArchive,
               encryption.password!,
+              validCompressionLevel,
               run,
             );
           }
@@ -122,28 +142,36 @@ class _CliArchive {
           break;
 
         case ArchiveFormat.sevenZip:
-          compressionArgs = ['a', '-mx=9'];
+          compressionArgs = ['a'];
+          if (format.supportsCompression) {
+            compressionArgs.add('-mx=$validCompressionLevel');
+          }
           if (encryption != null && encryption.password != null) {
-            compressionArgs.addAll(['-p${encryption.password}']);
+            compressionArgs.add('-p${encryption.password}');
           }
           await run('7zz', [...compressionArgs, outputArchive, tempDir.path]);
           break;
 
         case ArchiveFormat.tar:
+          // For tar.gz, we'll use gzip's compression levels
           if (encryption != null && encryption.password != null) {
             await _createEncryptedTarGz(
               tempDir.path,
               outputArchive,
               encryption.password!,
+              // validCompressionLevel,
               run,
             );
           } else {
+            final gzipLevel = validCompressionLevel.clamp(1, 9);
             await run('tar', [
               '-czf',
               outputArchive,
               '-C',
               path.dirname(tempDir.path),
               path.basename(tempDir.path),
+              '--options',
+              'gzip:compression-level=$gzipLevel',
             ]);
           }
           break;
@@ -174,6 +202,7 @@ class _CliArchive {
     String sourcePath,
     String outputPath,
     String password,
+    int compressionLevel,
     Future<ProcessResult> Function(String, List<String>, {bool noThrow}) run,
   ) async {
     // Use zip with password protection
@@ -183,6 +212,7 @@ class _CliArchive {
           '-r',
           '-P',
           password,
+          '-$compressionLevel',
           outputPath,
           '.',
         ],
@@ -196,8 +226,10 @@ class _CliArchive {
     String password,
     Future<ProcessResult> Function(String, List<String>, {bool noThrow}) run,
   ) async {
-    // Create tar.gz and encrypt with gpg
+    // Create tar.gz and encrypt with OpenSSL
     final tempTar = '$outputPath.temp';
+
+    // Create tar.gz first
     await run('tar', [
       '-czf',
       tempTar,
@@ -205,16 +237,23 @@ class _CliArchive {
       path.dirname(sourcePath),
       path.basename(sourcePath),
     ]);
-    await run('gpg', [
-      '--symmetric',
-      '--batch',
-      '--yes',
-      '--passphrase',
-      password,
-      '--output',
-      outputPath,
-      tempTar,
-    ]);
+
+    if (password.isNotEmpty) {
+      // Encrypt using OpenSSL (AES-256-CBC)
+      await run('openssl', [
+        'enc',
+        '-aes-256-cbc',
+        '-salt',
+        '-pbkdf2', // Use PBKDF2 for key derivation (more secure)
+        '-in',
+        tempTar,
+        '-out',
+        outputPath,
+        '-pass',
+        'pass:$password',
+      ]);
+    }
+
     await File(tempTar).delete();
     return outputPath;
   }

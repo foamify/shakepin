@@ -177,12 +177,22 @@ class Cli {
         onProgress: onProgress);
   }
 
-  Future<String?> archiveFiles(List<String> paths, String outputFolder,
-      {void Function(double)? onProgress,
-      void Function(String)? onFileProgress}) async {
+  Future<String?> archiveFiles(
+    List<String> paths, 
+    String outputFolder,
+    {
+      ArchiveFormat format = ArchiveFormat.zip,
+      int compressionLevel = 6,
+      String? password,
+      void Function(double)? onProgress,
+      void Function(String)? onFileProgress
+    }) async {
     return _archive.archiveFiles(
       paths,
       outputFolder,
+      format: format,
+      compressionLevel: compressionLevel,
+      encryption: password != null ? EncryptionOptions(password: password) : null,
       onProgress: onProgress,
       onFileProgress: onFileProgress,
       run: run,

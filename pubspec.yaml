@@ -35,6 +35,7 @@ dependencies:
   device_info_plus: ^10.1.2
   connectivity_plus: ^6.1.2
   crypto: ^3.0.6
+  file_picker: ^8.3.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
