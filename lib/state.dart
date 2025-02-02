@@ -93,8 +93,8 @@ extension AppModeEx on AppMode {
       };
 }
 
-void handleModeChanged(AppMode mode) async {
-  if (mode == appMode()) {
+void handleModeChanged(AppMode mode, {bool force = false}) async {
+  if (mode == appMode() && !force) {
     mode = AppMode.panel;
   }
   final appSize = switch (mode) {

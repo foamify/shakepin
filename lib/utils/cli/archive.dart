@@ -126,7 +126,7 @@ class _CliArchive {
           if (encryption != null && encryption.password != null) {
             compressionArgs.addAll(['-p${encryption.password}']);
           }
-          await run('7z', [...compressionArgs, outputArchive, tempDir.path]);
+          await run('7zz', [...compressionArgs, outputArchive, tempDir.path]);
           break;
 
         case ArchiveFormat.tar:

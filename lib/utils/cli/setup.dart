@@ -36,23 +36,38 @@ class _CliSetup {
 
       // Install required tools
       final toolsToInstall = [
-        ('ffmpeg', SetupStep.checkingFfmpeg, SetupStep.installingFfmpeg),
+        (
+          'sevenzip',
+          SetupStep.checkingSevenZip,
+          SetupStep.installingSevenZip,
+        ),
+        (
+          'ffmpeg',
+          SetupStep.checkingFfmpeg,
+          SetupStep.installingFfmpeg,
+        ),
         (
           'magick',
           SetupStep.checkingImageMagick,
-          SetupStep.installingImageMagick
+          SetupStep.installingImageMagick,
         ),
-        ('yt-dlp', SetupStep.checkingYtDlp, SetupStep.installingYtDlp),
+        (
+          'yt-dlp',
+          SetupStep.checkingYtDlp,
+          SetupStep.installingYtDlp,
+        ),
         (
           'gallery-dl',
           SetupStep.checkingGalleryDl,
-          SetupStep.installingGalleryDl
+          SetupStep.installingGalleryDl,
         ),
       ];
 
       for (final tool in toolsToInstall) {
         updateProgress(tool.$2);
-        final result = await run('which', [tool.$1], noThrow: true);
+        final result = await run(
+            'which', [tool.$1 == 'sevenzip' ? '7zz' : tool.$1],
+            noThrow: true);
         if (result.exitCode != 0) {
           updateProgress(tool.$3);
           final installResult =
@@ -66,6 +81,7 @@ class _CliSetup {
 
       // Verify installations
       final verifyCommands = [
+        'which 7zz',
         'which ffmpeg',
         'which magick',
         'which yt-dlp',
@@ -97,8 +113,11 @@ class _CliSetup {
 enum SetupStep {
   checkingHomebrew(label: 'Checking Homebrew...', progress: 0.1),
   installingHomebrew(label: 'Installing Homebrew...', progress: 0.2),
-  homebrewInstalled(label: 'Homebrew installed', progress: 0.3),
-  checkingFfmpeg(label: 'Checking FFmpeg...', progress: 0.4),
+  homebrewInstalled(label: 'Homebrew installed', progress: 0.25),
+  checkingSevenZip(label: 'Checking 7-Zip...', progress: 0.3),
+  installingSevenZip(label: 'Installing 7-Zip...', progress: 0.35),
+  sevenZipInstalled(label: '7-Zip installed', progress: 0.4),
+  checkingFfmpeg(label: 'Checking FFmpeg...', progress: 0.45),
   installingFfmpeg(label: 'Installing FFmpeg...', progress: 0.5),
   ffmpegInstalled(label: 'FFmpeg installed', progress: 0.6),
   checkingImageMagick(label: 'Checking ImageMagick...', progress: .65),

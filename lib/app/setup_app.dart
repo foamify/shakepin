@@ -118,6 +118,9 @@ class SetupApp extends StatelessWidget {
 
                     handleDefaultMode();
                     cli.cancel();
+                    setupSuccess.value = null;
+                    setupError.value = null;
+                    setupStep.value = null;
                   },
                   child: const Text('Cancel Setup'),
                 ),
@@ -211,7 +214,7 @@ class SetupApp extends StatelessWidget {
               ],
             ),
           );
-        } else {
+        } else if (setupSuccess() == true) {
           content = SizedBox(
             width: 200,
             child: Column(
@@ -232,6 +235,33 @@ class SetupApp extends StatelessWidget {
                     handleDefaultMode();
                   },
                   child: const Text('Start Using ShakePin'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          content = SizedBox(
+            width: 200,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              spacing: 16,
+              children: [
+                const Text(
+                  'Welcome to ShakePin!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Text(
+                  'Let\'s set up your environment before we start.',
+                  textAlign: TextAlign.center,
+                ),
+                GlassButton(
+                  onTap: () {
+                    initCli();
+                  },
+                  child: const Text('Start Setup'),
                 ),
               ],
             ),

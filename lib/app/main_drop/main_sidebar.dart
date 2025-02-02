@@ -24,6 +24,8 @@ class MainSidebar extends StatelessWidget {
       isSetupApp.value = true;
       isAboutApp.value = false;
       isLicenseApp.value = false;
+
+      handleModeChanged(AppMode.pin, force: true);
       return;
     }
     action();
