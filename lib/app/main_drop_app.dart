@@ -184,7 +184,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                                               : _isHoveredTop
                                                   ? -29
                                                   : -24,
-                                          appMode() == AppMode.panel ? -5 : -7,
+                                          appMode() == AppMode.panel ? -6 : -7,
                                           0)
                                       ..scale(_isHoveredTop ? 1.0 : 0.5, 1.0),
                                     child: AnimatedTheme(
