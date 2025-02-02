@@ -171,7 +171,7 @@ class _MiscSettingsState extends State<MiscSettings> {
                                 // },
                               );
                             case AppMode.downloadMedia:
-                              await cli.downloadImage(
+                              await cli.downloadMedia(
                                 selectedItems().first,
                                 onProgress: (progress) {
                                   progressNotifier.value = progress;
