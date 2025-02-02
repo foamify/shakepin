@@ -170,7 +170,7 @@ class _CliMinifyVideo {
 
       dropChannel.addCliErrorCallback(callback);
 
-      final result = await cli.run('ffmpeg', ffmpegArgs);
+      await cli.run('ffmpeg', ffmpegArgs);
 
       dropChannel.removeCliErrorCallback(callback);
 

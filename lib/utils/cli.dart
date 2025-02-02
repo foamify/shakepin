@@ -267,8 +267,22 @@ class Cli {
 
   // MARK: - Utils
 
-  String _formatDuration(Duration duration) {
-    return '${duration.inHours}:${(duration.inMinutes % 60).toString().padLeft(2, '0')}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}.${(duration.inMilliseconds % 1000).toString().padLeft(3, '0')}';
+  /// Gets information about the input image using ImageMagick
+  Future<Map<String, dynamic>> _getImageInfo(String inputPath) async {
+    try {
+      final result = await cli
+          .run('magick', ['identify', '-format', '%w,%h,%m', inputPath]);
+
+      final parts = result.stdout.toString().trim().split(',');
+      return {
+        'width': int.parse(parts[0]),
+        'height': int.parse(parts[1]),
+        'format': parts[2],
+      };
+    } catch (e) {
+      logger.log('Error getting image info: $e');
+      rethrow;
+    }
   }
 
   Future<Duration?> getMediaDuration(String filePath) async {
