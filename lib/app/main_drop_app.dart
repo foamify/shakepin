@@ -54,7 +54,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
     logger.log('Items changed: ${items().length} items');
     if (items().isEmpty) {
       logger.log('Items empty, resetting frame and hiding');
-      handleModeChanged(AppMode.pin);
+      handleDefaultMode();
       resetFrameAndHide();
     }
   }
@@ -66,6 +66,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
       logger.log('Processing first shake detection');
       isShakeDetected = true;
       final appSize = switch (appMode()) {
+        AppMode.panel => AppSizes.panel,
         AppMode.pin => AppSizes.pin,
         AppMode.minify => AppSizes.minify,
         AppMode.archive => AppSizes.archive,
@@ -176,8 +177,14 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                                     curve: Curves.fastEaseInToSlowEaseOut,
                                     transform: (Matrix4.identity())
                                       ..setTranslationRaw(
-                                          _isHoveredTop ? -29 : -24,
-                                          _isHoveredTop ? -7.0 : -7,
+                                          appMode() == AppMode.panel
+                                              ? _isHoveredTop
+                                                  ? 1
+                                                  : 6
+                                              : _isHoveredTop
+                                                  ? -29
+                                                  : -24,
+                                          appMode() == AppMode.panel ? -5 : -7,
                                           0)
                                       ..scale(_isHoveredTop ? 1.0 : 0.5, 1.0),
                                     child: AnimatedTheme(
@@ -210,62 +217,86 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
                                   return Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
+                                    mainAxisAlignment:
+                                        appMode() == AppMode.panel
+                                            ? MainAxisAlignment.center
+                                            : MainAxisAlignment.start,
                                     children: [
-                                      switch (appMode()) {
-                                        AppMode.pin => SizedBox(
-                                            width: MediaQuery.sizeOf(context)
-                                                    .width -
-                                                48 -
-                                                8,
-                                            height: MediaQuery.sizeOf(context)
-                                                    .height -
-                                                9,
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                bottom: 8.0,
-                                                left: 8.0,
-                                                right: 8.0,
+                                      AnimatedOpacity(
+                                        duration: Durations.long1,
+                                        curve: Curves.easeOutCubic,
+                                        opacity:
+                                            appMode() == AppMode.panel ? 0 : 1,
+                                        child: Offstage(
+                                          offstage: appMode() == AppMode.panel,
+                                          child: switch (appMode()) {
+                                            AppMode.pin ||
+                                            AppMode.panel =>
+                                              SizedBox(
+                                                width:
+                                                    MediaQuery.sizeOf(context)
+                                                            .width -
+                                                        48 -
+                                                        8,
+                                                height:
+                                                    MediaQuery.sizeOf(context)
+                                                            .height -
+                                                        9,
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                    bottom: 8.0,
+                                                    left: 8.0,
+                                                    right: 8.0,
+                                                  ),
+                                                  child: dropSection,
+                                                ),
                                               ),
-                                              child: dropSection,
-                                            ),
-                                          ),
-                                        AppMode.minify => SizedBox(
-                                            width: MediaQuery.sizeOf(context)
-                                                    .width -
-                                                48 -
-                                                8,
-                                            height: MediaQuery.sizeOf(context)
-                                                    .height -
-                                                9,
-                                            child: MinifySection(
-                                              dropSection: dropSection,
-                                            ),
-                                          ),
-                                        AppMode.archive => SizedBox(
-                                            width: MediaQuery.sizeOf(context)
-                                                    .width -
-                                                48 -
-                                                8,
-                                            height: MediaQuery.sizeOf(context)
-                                                    .height -
-                                                9,
-                                            child: ArchiveSection(
-                                              dropSection: dropSection,
-                                            ),
-                                          ),
-                                        _ => SizedBox(
-                                            width: MediaQuery.sizeOf(context)
-                                                    .width -
-                                                48 -
-                                                8,
-                                            height: MediaQuery.sizeOf(context)
-                                                    .height -
-                                                9,
-                                            child: MiscSection(
-                                              dropSection: dropSection,
-                                            ),
-                                          ),
-                                      },
+                                            AppMode.minify => SizedBox(
+                                                width:
+                                                    MediaQuery.sizeOf(context)
+                                                            .width -
+                                                        48 -
+                                                        8,
+                                                height:
+                                                    MediaQuery.sizeOf(context)
+                                                            .height -
+                                                        9,
+                                                child: MinifySection(
+                                                  dropSection: dropSection,
+                                                ),
+                                              ),
+                                            AppMode.archive => SizedBox(
+                                                width:
+                                                    MediaQuery.sizeOf(context)
+                                                            .width -
+                                                        48 -
+                                                        8,
+                                                height:
+                                                    MediaQuery.sizeOf(context)
+                                                            .height -
+                                                        9,
+                                                child: ArchiveSection(
+                                                  dropSection: dropSection,
+                                                ),
+                                              ),
+                                            _ => SizedBox(
+                                                width:
+                                                    MediaQuery.sizeOf(context)
+                                                            .width -
+                                                        48 -
+                                                        8,
+                                                height:
+                                                    MediaQuery.sizeOf(context)
+                                                            .height -
+                                                        9,
+                                                child: MiscSection(
+                                                  dropSection: dropSection,
+                                                ),
+                                              ),
+                                          },
+                                        ),
+                                      ),
                                       SizedBox(
                                         height:
                                             MediaQuery.sizeOf(context).height -

@@ -120,7 +120,7 @@ class MainSidebar extends StatelessWidget {
               SideButton(
                 label: 'misc',
                 selected: switch (selectedMode) {
-                  AppMode.pin || AppMode.minify || AppMode.archive => false,
+                  AppMode.panel || AppMode.pin || AppMode.minify || AppMode.archive => false,
                   _ => true,
                 },
                 tooltip: 'Drop files here to open other tools',

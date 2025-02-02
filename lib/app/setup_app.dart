@@ -115,7 +115,8 @@ class SetupApp extends StatelessWidget {
                   secondary: true,
                   onTap: () {
                     isSetupApp.value = false;
-                    handleModeChanged(AppMode.pin);
+
+                    handleDefaultMode();
                     cli.cancel();
                   },
                   child: const Text('Cancel Setup'),
@@ -227,7 +228,8 @@ class SetupApp extends StatelessWidget {
                 GlassButton(
                   onTap: () {
                     isSetupApp.value = false;
-                    handleModeChanged(AppMode.pin);
+
+                    handleDefaultMode();
                   },
                   child: const Text('Start Using ShakePin'),
                 ),
@@ -273,7 +275,8 @@ class SetupApp extends StatelessWidget {
                     ),
                     onPressed: () {
                       isSetupApp.value = false;
-                      handleModeChanged(AppMode.pin);
+
+                      handleDefaultMode();
                     },
                     backgroundColor: CupertinoColors.label
                         .resolveFrom(context)

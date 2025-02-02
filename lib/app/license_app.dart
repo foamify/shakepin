@@ -8,6 +8,7 @@ import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
+import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/glass_button.dart';
 import 'package:super_context_menu/super_context_menu.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -513,7 +514,8 @@ class _LicenseAppState extends State<LicenseApp> {
 
   void _handleClose() {
     isLicenseApp.value = false;
-    handleModeChanged(AppMode.pin);
+    handleDefaultMode();
+    resetFrameAndHide();
   }
 }
 

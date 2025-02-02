@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:shakepin/utils/cli.dart';
@@ -59,9 +60,10 @@ final isMiscApp = ValueNotifier<bool>(false);
 // Update the existing variables or add if not present:
 late final SharedPreferences prefs;
 
-final appMode = ValueNotifier<AppMode>(AppMode.pin);
+final appMode = ValueNotifier<AppMode>(AppMode.panel);
 
 enum AppMode {
+  panel._(),
   pin._(),
   minify._(),
   archive._(),
@@ -87,18 +89,21 @@ extension AppModeEx on AppMode {
         AppMode.convertToWav => isVideoFile(path) || isAudioFile(path),
         AppMode.downloadVideo || AppMode.downloadMedia => isUrl(path),
         AppMode.pin => true,
+        AppMode.panel => true, // won't be used anyway
       };
 }
 
 void handleModeChanged(AppMode mode) async {
+  if (mode == appMode()) {
+    mode = AppMode.panel;
+  }
   final appSize = switch (mode) {
+    AppMode.panel => AppSizes.panel,
     AppMode.pin => AppSizes.pin,
     AppMode.minify => AppSizes.minify,
     AppMode.archive => AppSizes.archive,
     _ => AppSizes.misc,
   };
-
-  appMode.value = mode;
 
   dropChannel.setMinimumSize(appSize);
   final rect = Rect.fromCenter(
@@ -107,7 +112,15 @@ void handleModeChanged(AppMode mode) async {
     height: appSize.height,
   );
   dropChannel.setFrame(rect, animate: true);
+
+  if (appMode() == AppMode.panel) {
+    await Future.delayed(Durations.short2);
+  }
+
+  appMode.value = mode;
 }
+
+void handleDefaultMode() => handleModeChanged(AppMode.panel);
 
 final setupStep = ValueNotifier<SetupStep?>(null);
 final setupSuccess = ValueNotifier<bool?>(null);

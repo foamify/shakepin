@@ -1,10 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_haptic_feedback/macos_haptic_feedback.dart';
+import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 
 sealed class AppSizes {
+  static const panel = Size(66, 234);
   static const archive = Size(240 + 48 + 12 + 16, 240 + 64);
   static const minify = Size(240 + 48 + 12 + 16, 468);
   static const about = Size(360, 360);
@@ -154,10 +156,13 @@ extension IterableExtension<T> on Iterable<String> {
 }
 
 void resetFrameAndHide() async {
+  await Future.delayed(Durations.short1);
+  final width =
+      appMode() == AppMode.panel ? AppSizes.panel.width : AppSizes.pin.width;
   await dropChannel.setFrame(
     Rect.fromCenter(
       center: await dropChannel.center(),
-      width: AppSizes.pin.width,
+      width: width,
       height: 48,
     ),
     animate: true,

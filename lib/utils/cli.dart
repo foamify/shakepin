@@ -1107,10 +1107,14 @@ class Cli {
 
       // Verify all installations
       final List<String> verifyCommands = [
-        'ffmpeg -version',
-        'magick -version',
-        'yt-dlp --version',
-        'gallery-dl --version'
+        // 'ffmpeg -version',
+        // 'magick -version',
+        // 'yt-dlp --version',
+        // 'gallery-dl --version'
+        'which ffmpeg',
+        'which magick',
+        'which yt-dlp',
+        'which gallery-dl',
       ];
 
       for (final cmd in verifyCommands) {
