@@ -73,6 +73,7 @@ class MainSidebar extends StatelessWidget {
                 tooltip: 'Drop images and videos here to minify their size',
                 onDragPerform: (paths) => handleAction(() {
                   final addedPaths = {...paths.videoPaths, ...paths.imagePaths};
+                  onModeChanged(AppMode.minify);
                   items.value = {
                     ...items(),
                     ...addedPaths,
@@ -81,7 +82,6 @@ class MainSidebar extends StatelessWidget {
                     ...selectedItems(),
                     ...addedPaths,
                   };
-                  onModeChanged(AppMode.minify);
                 }),
                 onShowTooltip: onShowTooltip,
                 onHideTooltip: onHideTooltip,
