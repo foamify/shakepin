@@ -93,3 +93,28 @@ class _CliSetup {
     }
   }
 }
+
+enum SetupStep {
+  checkingHomebrew(label: 'Checking Homebrew...', progress: 0.1),
+  installingHomebrew(label: 'Installing Homebrew...', progress: 0.2),
+  homebrewInstalled(label: 'Homebrew installed', progress: 0.3),
+  checkingFfmpeg(label: 'Checking FFmpeg...', progress: 0.4),
+  installingFfmpeg(label: 'Installing FFmpeg...', progress: 0.5),
+  ffmpegInstalled(label: 'FFmpeg installed', progress: 0.6),
+  checkingImageMagick(label: 'Checking ImageMagick...', progress: .65),
+  installingImageMagick(label: 'Installing ImageMagick...', progress: 0.7),
+  imageMagickInstalled(label: 'ImageMagick installed', progress: 0.8),
+  checkingYtDlp(label: 'Checking yt-dlp...', progress: 0.85),
+  installingYtDlp(label: 'Installing yt-dlp...', progress: 0.9),
+  ytDlpInstalled(label: 'yt-dlp installed', progress: 0.95),
+  checkingGalleryDl(label: 'Checking gallery-dl...', progress: 0.96),
+  installingGalleryDl(label: 'Installing gallery-dl...', progress: 0.98),
+  galleryDlInstalled(label: 'gallery-dl installed', progress: 0.99),
+  finishingUp(label: 'Finishing up...', progress: 1.0),
+  ;
+
+  final String label;
+  final double progress;
+
+  const SetupStep({required this.label, required this.progress});
+}
