@@ -250,4 +250,14 @@ Started: ${_formatDateTime(DateTime.now())}
       return null;
     }
   }
+
+  Future<void> openLogsFolder() async {
+    if (!_initialized) return;
+
+    try {
+      await Process.run('open', [_logsDirectory.path]);
+    } catch (e) {
+      _logError('Failed to open logs folder', e);
+    }
+  }
 }

@@ -190,13 +190,25 @@ class _AboutAppState extends State<AboutApp> {
 
   Widget _buildLinks() {
     return Column(
-      spacing: 10,
+      spacing: 5,
       children: [
         _buildLinkText('Twitter/X', 'https://github.com/damywise'),
         _buildLinkText('Website', 'https://damywise.com'),
         _buildLinkText('GitHub', 'https://github.com/foamify/shakepin'),
+        GlassButton(
+          ghost: true,
+          onTap: _openLogsFolder,
+          child: Text(
+            'Open Logs Folder →',
+            style: MacosTheme.of(context).typography.footnote,
+          ),
+        ),
       ],
     );
+  }
+
+  Future<void> _openLogsFolder() async {
+    await logger.openLogsFolder();
   }
 
   Widget _buildLinkText(String title, String url) {
