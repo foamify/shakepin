@@ -4,6 +4,7 @@ rm -rf ./dist/ShakePin.dmg
 
 cd dist
 ditto ../macos/packaging/dmg/appdmg.json config.json
+ditto ../macos/packaging/dmg/background.png background.png
 appdmg config.json ShakePin.dmg
 cd ..
 

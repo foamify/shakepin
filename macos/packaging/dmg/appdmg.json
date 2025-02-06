@@ -1,5 +1,6 @@
 {
     "title": "ShakePin",
+    "background": "background.png",
     "contents": [
       { "x": 192, "y": 150, "type": "file", "path": "ShakePin.app" },
       { "x": 448, "y": 150, "type": "link", "path": "/Applications" }
