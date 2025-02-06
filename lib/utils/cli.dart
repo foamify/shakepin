@@ -10,6 +10,7 @@ import 'package:shakepin/utils/logger.dart';
 part 'cli/archive.dart';
 part 'cli/convert_to_wav.dart';
 part 'cli/convert_to_ico.dart';
+part 'cli/convert_to_gif.dart';
 part 'cli/download_media.dart';
 part 'cli/minify_image.dart';
 part 'cli/minify_video.dart';
@@ -39,6 +40,7 @@ class Cli {
   final _archive = _CliArchive();
   final _convertToWav = _CliConvertToWav();
   final _convertToIco = _CliConvertToIco();
+  final _convertToGif = _CliConvertToGif();
   final _downloadMedia = _CliDownloadMedia();
   final _minifyImage = _CliMinifyImage();
   final _minifyVideo = _CliMinifyVideo();
@@ -141,6 +143,24 @@ class Cli {
   Future<String?> convertToIco(String inputPath,
       {void Function(double)? onProgress}) async {
     return _convertToIco.convertToIco(inputPath, onProgress: onProgress);
+  }
+
+  // MARK: - Convert to GIF
+
+  Future<String?> convertToGif(
+    String inputPath, {
+    int quality = 90,
+    int fps = 30,
+    int downScale = 100,
+    void Function(double)? onProgress,
+  }) async {
+    return _convertToGif.convertToGif(
+      inputPath,
+      quality: quality,
+      fps: fps,
+      downScale: downScale,
+      onProgress: onProgress,
+    );
   }
 
   // MARK: - Minify Image

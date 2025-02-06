@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/app/sections/minify_section/minify_state.dart';
@@ -20,10 +21,27 @@ class MinifySettings extends StatefulWidget {
 class _MinifySettingsState extends State<MinifySettings> {
   var _videoQuality = VideoQuality.goodQuality;
   var _videoFormat = VideoFormat.sameAsInput;
-  var _videoDownscale = VideoDownscale.sameAsInput; // Add this
+  var _videoDownscale = VideoDownscale.sameAsInput;
   var _imageQuality = ImageQuality.normal;
   var _imageFormat = ImageFormat.sameAsInput;
-  var _imageDownscale = ImageDownscale.sameAsInput; // Add this line
+  var _imageDownscale = ImageDownscale.sameAsInput;
+  var _gifQuality = GifQuality.high;
+  var _gifFps = 24;
+  var initialGifFpsGestureValue = 0.0;
+  var initialDy = 0.0;
+  final _gifFpsController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _gifFpsController.text = _gifFps.toString();
+  }
+
+  @override
+  void dispose() {
+    _gifFpsController.dispose();
+    super.dispose();
+  }
 
   bool get disabled =>
       !selectedItems().containsImage && !selectedItems().containsVideo;
@@ -62,27 +80,29 @@ class _MinifySettingsState extends State<MinifySettings> {
                       margin: const EdgeInsets.only(bottom: 8),
                       child: Column(
                         children: [
-                          Row(
-                            children: [
-                              const Text('Video quality'),
-                              const Spacer(),
-                              NativeDropdownButton(
-                                value: _videoQuality,
-                                items: VideoQuality.values
-                                    .map((quality) =>
-                                        NativeDropdownItem<VideoQuality>(
-                                            value: quality,
-                                            label: quality.name))
-                                    .toList(),
-                                onChanged: (quality) =>
-                                    setState(() => _videoQuality = quality!),
-                                child: Text(_videoQuality.name),
-                              ),
-                            ],
-                          ),
-                          Divider(
-                              color: MacosColors.systemGrayColor
-                                  .withValues(alpha: .2)),
+                          if (_videoFormat != VideoFormat.gif) ...[
+                            Row(
+                              children: [
+                                const Text('Video quality'),
+                                const Spacer(),
+                                NativeDropdownButton(
+                                  value: _videoQuality,
+                                  items: VideoQuality.values
+                                      .map((quality) =>
+                                          NativeDropdownItem<VideoQuality>(
+                                              value: quality,
+                                              label: quality.name))
+                                      .toList(),
+                                  onChanged: (quality) =>
+                                      setState(() => _videoQuality = quality!),
+                                  child: Text(_videoQuality.name),
+                                ),
+                              ],
+                            ),
+                            Divider(
+                                color: MacosColors.systemGrayColor
+                                    .withValues(alpha: .2)),
+                          ],
                           Row(
                             children: [
                               const Text('Video format'),
@@ -120,6 +140,93 @@ class _MinifySettingsState extends State<MinifySettings> {
                               ),
                             ],
                           ),
+                          if (_videoFormat == VideoFormat.gif) ...[
+                            Divider(
+                                color: MacosColors.systemGrayColor
+                                    .withValues(alpha: .2)),
+                            Row(
+                              children: [
+                                const Text('GIF quality'),
+                                const Spacer(),
+                                NativeDropdownButton(
+                                  value: _gifQuality,
+                                  items: GifQuality.values
+                                      .map((quality) =>
+                                          NativeDropdownItem<GifQuality>(
+                                              value: quality,
+                                              label: quality.name))
+                                      .toList(),
+                                  onChanged: (quality) =>
+                                      setState(() => _gifQuality = quality!),
+                                  child: Text(_gifQuality.name),
+                                ),
+                              ],
+                            ),
+                            Divider(
+                                color: MacosColors.systemGrayColor
+                                    .withValues(alpha: .2)),
+                            GestureDetector(
+                              onPanDown: (details) {
+                                initialGifFpsGestureValue = _gifFps.toDouble();
+                                initialDy = details.globalPosition.dy;
+                              },
+                              onPanUpdate: (details) {
+                                final dy =
+                                    -(details.globalPosition.dy - initialDy) *
+                                        60 /
+                                        400;
+
+                                final fps = (initialGifFpsGestureValue + dy)
+                                    .clamp(1, 60);
+
+                                if (initialGifFpsGestureValue + dy > 60 ||
+                                    _gifFps + dy < 1) {
+                                  initialGifFpsGestureValue =
+                                      _gifFps.toDouble();
+                                  initialDy = details.globalPosition.dy;
+                                }
+
+                                if (fps != _gifFps) {
+                                  setState(() {
+                                    _gifFps = fps.round();
+                                    _gifFpsController.text =
+                                        fps.round().toString();
+                                  });
+                                }
+                              },
+                              child: Row(
+                                children: [
+                                  const Text('GIF framerate'),
+                                  const Spacer(),
+                                  IntrinsicWidth(
+                                    child: MacosTextField(
+                                      placeholder: '60',
+                                      keyboardType: TextInputType.number,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                      maxLength: 2,
+                                      controller: _gifFpsController,
+                                      onChanged: (value) {
+                                        final fps = int.tryParse(value);
+                                        if (fps != null &&
+                                            fps >= 1 &&
+                                            fps <= 60) {
+                                          setState(() => _gifFps = fps);
+                                        } else {
+                                          _gifFpsController.text =
+                                              _gifFps.toString();
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text('FPS',
+                                      style: TextStyle(fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -389,13 +496,28 @@ class _MinifySettingsState extends State<MinifySettings> {
       await logger.log('Processing video: $path');
       minifyOneFileProgress.value = 0;
       await logger.log('Reset progress for current video');
-      await minifyVideo(
-        path,
-        quality: _videoQuality.name,
-        format:
-            _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
-        downScale: _videoDownscale.value, // Add this
-      );
+
+      if (_videoFormat == VideoFormat.gif) {
+        await cli.convertToGif(
+          path,
+          quality: _gifQuality.value,
+          fps: _gifFps,
+          onProgress: (progress) {
+            minifyOneFileProgress.value = progress;
+          },
+          downScale: _videoDownscale.value,
+        );
+      } else {
+        await minifyVideo(
+          path,
+          quality: _videoQuality.name,
+          format: _videoFormat == VideoFormat.sameAsInput
+              ? null
+              : _videoFormat.name,
+          downScale: _videoDownscale.value,
+        );
+      }
+
       processedFiles.value++;
       logger
           .log('Incremented processed files count to: ${processedFiles.value}');
@@ -467,7 +589,7 @@ class _MinifySettingsState extends State<MinifySettings> {
         format:
             _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
         enableHardwareAcceleration: tryHardwareAcceleration,
-        downScale: _videoDownscale.value, // Add this
+        downScale: _videoDownscale.value,
         onProgress: (progress) async {
           minifyOneFileProgress.value = progress;
           await logger.log(
@@ -549,7 +671,7 @@ class _MinifySettingsState extends State<MinifySettings> {
         fileExtension:
             _imageFormat == ImageFormat.sameAsInput ? null : _imageFormat.name,
         quality: _imageQuality.value,
-        downScale: _imageDownscale.value, // Add this line
+        downScale: _imageDownscale.value,
         onProgress: onProgress,
       );
 

@@ -159,3 +159,15 @@ extension VideoDownscaleExtension on VideoDownscale {
     };
   }
 }
+
+enum GifQuality {
+  low(value: 60),
+  medium(value: 80),
+  high(value: 90),
+  highest(value: 100);
+
+  final int value;
+  const GifQuality({required this.value});
+}
+
+// Remove GifFps enum since we'll use a slider instead

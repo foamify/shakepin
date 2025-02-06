@@ -61,6 +61,11 @@ class _CliSetup {
           SetupStep.checkingGalleryDl,
           SetupStep.installingGalleryDl,
         ),
+        (
+          'gifski',
+          SetupStep.checkingGifski,
+          SetupStep.installingGifski,
+        ),
       ];
 
       for (final tool in toolsToInstall) {
@@ -86,6 +91,7 @@ class _CliSetup {
         'which magick',
         'which yt-dlp',
         'which gallery-dl',
+        'which gifski',
       ];
 
       for (final cmd in verifyCommands) {
@@ -111,24 +117,27 @@ class _CliSetup {
 }
 
 enum SetupStep {
-  checkingHomebrew(label: 'Checking Homebrew...', progress: 0.1),
-  installingHomebrew(label: 'Installing Homebrew...', progress: 0.2),
-  homebrewInstalled(label: 'Homebrew installed', progress: 0.25),
-  checkingSevenZip(label: 'Checking 7-Zip...', progress: 0.3),
-  installingSevenZip(label: 'Installing 7-Zip...', progress: 0.35),
-  sevenZipInstalled(label: '7-Zip installed', progress: 0.4),
-  checkingFfmpeg(label: 'Checking FFmpeg...', progress: 0.45),
-  installingFfmpeg(label: 'Installing FFmpeg...', progress: 0.5),
-  ffmpegInstalled(label: 'FFmpeg installed', progress: 0.6),
-  checkingImageMagick(label: 'Checking ImageMagick...', progress: .65),
-  installingImageMagick(label: 'Installing ImageMagick...', progress: 0.7),
-  imageMagickInstalled(label: 'ImageMagick installed', progress: 0.8),
-  checkingYtDlp(label: 'Checking yt-dlp...', progress: 0.85),
-  installingYtDlp(label: 'Installing yt-dlp...', progress: 0.9),
-  ytDlpInstalled(label: 'yt-dlp installed', progress: 0.95),
-  checkingGalleryDl(label: 'Checking gallery-dl...', progress: 0.96),
-  installingGalleryDl(label: 'Installing gallery-dl...', progress: 0.98),
-  galleryDlInstalled(label: 'gallery-dl installed', progress: 0.99),
+  checkingHomebrew(label: 'Checking Homebrew...', progress: 0.05),
+  installingHomebrew(label: 'Installing Homebrew...', progress: 0.10),
+  homebrewInstalled(label: 'Homebrew installed', progress: 0.15),
+  checkingSevenZip(label: 'Checking 7-Zip...', progress: 0.20),
+  installingSevenZip(label: 'Installing 7-Zip...', progress: 0.25),
+  sevenZipInstalled(label: '7-Zip installed', progress: 0.30),
+  checkingFfmpeg(label: 'Checking FFmpeg...', progress: 0.35),
+  installingFfmpeg(label: 'Installing FFmpeg...', progress: 0.40),
+  ffmpegInstalled(label: 'FFmpeg installed', progress: 0.45),
+  checkingImageMagick(label: 'Checking ImageMagick...', progress: 0.50),
+  installingImageMagick(label: 'Installing ImageMagick...', progress: 0.55),
+  imageMagickInstalled(label: 'ImageMagick installed', progress: 0.60),
+  checkingYtDlp(label: 'Checking yt-dlp...', progress: 0.65),
+  installingYtDlp(label: 'Installing yt-dlp...', progress: 0.70),
+  ytDlpInstalled(label: 'yt-dlp installed', progress: 0.75),
+  checkingGalleryDl(label: 'Checking gallery-dl...', progress: 0.80),
+  installingGalleryDl(label: 'Installing gallery-dl...', progress: 0.85),
+  galleryDlInstalled(label: 'gallery-dl installed', progress: 0.90),
+  checkingGifski(label: 'Checking gifski...', progress: 0.92),
+  installingGifski(label: 'Installing gifski...', progress: 0.95),
+  gifskiInstalled(label: 'gifski installed', progress: 0.98),
   finishingUp(label: 'Finishing up...', progress: 1.0),
   ;
 
