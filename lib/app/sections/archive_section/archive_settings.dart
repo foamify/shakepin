@@ -52,7 +52,6 @@ class _ArchiveSettingsState extends State<ArchiveSettings> {
           ),
           padding: const EdgeInsets.all(8),
           child: Column(
-            spacing: 4,
             children: [
               Row(
                 children: [
@@ -75,7 +74,9 @@ class _ArchiveSettingsState extends State<ArchiveSettings> {
                   ),
                 ],
               ),
-              if (selectedFormat.supportsCompression)
+              if (selectedFormat.supportsCompression) ...[
+                Divider(
+                    color: MacosColors.systemGrayColor.withValues(alpha: .2)),
                 Row(
                   children: [
                     const Text('Compression level'),
@@ -99,6 +100,7 @@ class _ArchiveSettingsState extends State<ArchiveSettings> {
                     ),
                   ],
                 ),
+              ],
               // Temporary disable, not working yet
               // Row(
               //   children: [
@@ -115,6 +117,8 @@ class _ArchiveSettingsState extends State<ArchiveSettings> {
               //     ),
               //   ],
               // ),
+
+              Divider(color: MacosColors.systemGrayColor.withValues(alpha: .2)),
               Row(
                 children: [
                   const Text('Output path'),
