@@ -3,6 +3,14 @@
     <channel>
         <title>ShakePin</title>
         <item>
+            <title>Version 0.3.5 - Fix image compression</title>
+            <pubDate>Sat, 08 Feb 2025 00:12:22 +0700</pubDate>
+            <sparkle:version>0.3.5</sparkle:version>
+            <sparkle:shortVersionString>0.3.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>10.15</sparkle:minimumSystemVersion>
+            <enclosure url="ShakePin-v0.3.5.zip" length="27623324" type="application/octet-stream" sparkle:edSignature="+wzSv62d9dvhZrYyL18DioLUImmmu/dHA299SSAf3Ml8oxE20qidDs0vK8m06T2KVCQwhOutquHi0/JXOIE4Dg=="/>
+        </item>
+        <item>
             <title>Version 0.3.4 - Gifski</title>
             <pubDate>Thu, 06 Feb 2025 09:01:08 +0700</pubDate>
             <sparkle:version>0.3.4</sparkle:version>
@@ -17,15 +25,6 @@
             <sparkle:shortVersionString>0.3.3</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>10.15</sparkle:minimumSystemVersion>
             <enclosure url="ShakePin-v0.3.3.zip" length="27472593" type="application/octet-stream" sparkle:edSignature="9D3VeSeKwZvohW9cjZECRzHsM6+ee8Dv7fT/IaApBk7MIvOlbkRHKbuAGbgrXOar1rFnLe6uyF0oLj6EIeePCg=="/>
-        </item>
-        <item>
-            <title>Version 0.3.2 - Workaround CLI Setup Issues</title>
-            <link>https://damywise.com</link>
-            <pubDate>Thu, 30 Jan 2025 07:05:51 +0700</pubDate>
-            <sparkle:version>0.3.2</sparkle:version>
-            <sparkle:shortVersionString>0.3.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>10.15</sparkle:minimumSystemVersion>
-            <enclosure url="ShakePin-v0.3.2.zip" length="27547556" type="application/octet-stream" sparkle:edSignature="pXXUvAET7UjZEih0MzP6jBX4B1wncHNbnsYuONuGsHytOdHlRen95jWMfVBXtHklK9O2ZwkWy2l4IGdty3IHDQ=="/>
         </item>
     </channel>
 </rss>
