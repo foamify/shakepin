@@ -68,7 +68,7 @@ class _CliMinifyImage {
 
       dropChannel.addCliErrorCallback(callback);
 
-      final result = await cli.run('magick', args.map((e) => "'$e'").toList());
+      final result = await cli.run('magick', args);
       logger.log('Process completed with exit code: ${result.exitCode}');
       logger.log('Output: ${result.stdout}');
       logger.log('Error: ${result.stderr}');
