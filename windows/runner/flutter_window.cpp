@@ -59,12 +59,10 @@ void CALLBACK HandleDragHook(
   {
   case EVENT_SYSTEM_MOVESIZESTART:
     g_is_moving_or_resizing = true;
-    printf("Move/resize started\n");
     return;
 
   case EVENT_SYSTEM_MOVESIZEEND:
     g_is_moving_or_resizing = false;
-    printf("Move/resize ended\n");
     return;
   }
 
@@ -88,9 +86,6 @@ void CALLBACK HandleDragHook(
 
   switch (event)
   {
-  case EVENT_OBJECT_FOCUS:
-    printf("Focus changed\n");
-    break;
 
   case EVENT_OBJECT_LOCATIONCHANGE:
   {
@@ -151,25 +146,6 @@ void CALLBACK HandleDragHook(
         std::make_unique<flutter::EncodableValue>(args));
   }
   break;
-
-  case EVENT_OBJECT_DRAGSTART:
-    printf("Drag operation started\n");
-    break;
-  case EVENT_OBJECT_DRAGCANCEL:
-    printf("Drag operation cancelled\n");
-    break;
-  case EVENT_OBJECT_DRAGCOMPLETE:
-    printf("Drag operation completed\n");
-    break;
-  case EVENT_OBJECT_DRAGENTER:
-    printf("Drag entered target\n");
-    break;
-  case EVENT_OBJECT_DRAGLEAVE:
-    printf("Drag left target\n");
-    break;
-  case EVENT_OBJECT_DRAGDROPPED:
-    printf("Item dropped\n");
-    break;
   }
 }
 
