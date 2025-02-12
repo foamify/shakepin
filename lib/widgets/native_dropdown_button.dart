@@ -224,11 +224,15 @@ class _NativeDropdownButtonState<T> extends State<NativeDropdownButton<T>>
         child: MouseRegion(
           onEnter: (_) {
             setState(() => _isHovered = true);
-            _updateNativeControl();
+            if (Platform.isMacOS) {
+              _updateNativeControl();
+            }
           },
           onExit: (_) {
             setState(() => _isHovered = false);
-            _updateNativeControl(remove: true);
+            if (Platform.isMacOS) {
+              _updateNativeControl(remove: true);
+            }
           },
           child: Stack(
             children: [

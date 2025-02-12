@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -122,6 +124,10 @@ class DropChannel {
 
   final List<CliOutputCallback> _cliOutputCallbacks = [];
   final List<CliErrorCallback> _cliErrorCallbacks = [];
+
+  // Add these properties for Windows process tracking
+  Process? _currentProcess;
+  bool _isProcessRunning = false;
 
   void addCliOutputCallback(CliOutputCallback callback) {
     _cliOutputCallbacks.add(callback);
@@ -408,9 +414,58 @@ class DropChannel {
   Future<ProcessResult> startProcess(
       String command, List<String> arguments) async {
     try {
+      if (Platform.isWindows) {
+        if (_isProcessRunning) {
+          throw FlutterError('A process is already running');
+        }
+
+        _isProcessRunning = true;
+        final completer = Completer<ProcessResult>();
+        
+        try {
+          final process = await Process.start(command, arguments, runInShell: true);
+          _currentProcess = process;
+          
+          var stdout = StringBuffer();
+          var stderr = StringBuffer();
+
+          process.stdout.transform(utf8.decoder).listen((data) {
+            stdout.write(data);
+            for (final callback in _cliOutputCallbacks) {
+              callback(data);
+            }
+          });
+
+          process.stderr.transform(utf8.decoder).listen((data) {
+            stderr.write(data);
+            for (final callback in _cliErrorCallbacks) {
+              callback(data);
+            }
+          });
+
+          final exitCode = await process.exitCode;
+          _isProcessRunning = false;
+          _currentProcess = null;
+
+          completer.complete(ProcessResult(
+            process.pid,
+            exitCode,
+            stdout.toString(),
+            stderr.toString(),
+          ));
+        } catch (e) {
+          _isProcessRunning = false;
+          _currentProcess = null;
+          completer.completeError(e);
+        }
+
+        return await completer.future;
+      }
+
+      // Existing macOS implementation
       final result = await _channel.invokeMethod('startProcess', {
         'command': command,
-        'arguments': arguments.map((e) => "'$e'").toList(),
+        'arguments': arguments,
       });
 
       return ProcessResult(
@@ -420,28 +475,45 @@ class DropChannel {
         result['error'] as String,
       );
     } on PlatformException catch (e) {
+      _isProcessRunning = false;
+      _currentProcess = null;
       throw FlutterError('Error starting process: ${e.message}');
     } catch (e) {
+      _isProcessRunning = false;
+      _currentProcess = null;
       throw FlutterError('Unexpected error starting process: $e');
     }
   }
 
   Future<bool> cancelProcess() async {
     try {
-      final result = await _channel.invokeMethod('cancelProcess');
-      return result as bool;
-    } on PlatformException catch (e) {
-      throw FlutterError('Error canceling process: ${e.message}');
+      if (Platform.isWindows) {
+        if (_currentProcess != null) {
+          _currentProcess!.kill();
+          _isProcessRunning = false;
+          _currentProcess = null;
+          return true;
+        }
+        return false;
+      }
+
+      // Existing macOS implementation
+      return await _channel.invokeMethod('cancelProcess');
     } catch (e) {
-      throw FlutterError('Unexpected error canceling process: $e');
+      logger.log('Error canceling process: $e');
+      return false;
     }
   }
 
   Future<bool> isProcessRunning() async {
     try {
-      final result = await _channel.invokeMethod('isProcessRunning');
-      return result as bool;
-    } on PlatformException {
+      if (Platform.isWindows) {
+        return _isProcessRunning;
+      }
+
+      // Existing macOS implementation
+      return await _channel.invokeMethod('isProcessRunning');
+    } catch (e) {
       return false;
     }
   }

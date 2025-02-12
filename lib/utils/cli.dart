@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' hide Process;
+import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -57,23 +57,30 @@ class Cli {
     logger.log('Process canceled');
   }
 
-  // Future<ProcessResult> executeNativeProcess(
-  //     String command, List<String> arguments) async {
-  //   try {
-  //     logger.log('[Native Process] Starting: $command ${arguments.join(' ')}');
-  //     final result = await executeNativeProcess(command, arguments);
-  //     logger
-  //         .log('[Native Process] Completed with exit code: ${result.exitCode}');
-  //     if (result.exitCode != 0) {
-  //       logger.log('[Native Process] Error output: ${result.stderr}');
-  //     }
-  //     return result;
-  //   } catch (e) {
-  //     logger.log('[Native Process] Error: $e');
-  //     cancel();
-  //     rethrow;
-  //   }
-  // }
+  String _normalizePath(String filePath) {
+    if (Platform.isWindows) {
+      // Keep Windows backslashes but ensure proper escaping
+      return filePath.replaceAll('/', '\\');
+    }
+    return filePath;
+  }
+
+  String _normalizeExecutablePath(String command) {
+    if (Platform.isWindows) {
+      // Handle Windows executable paths
+      if (!command.toLowerCase().endsWith('.exe')) {
+        command = '$command.exe';
+      }
+
+      // If path starts with /drive_letter/, convert to DRIVE_LETTER:\
+      if (RegExp(r'^/[a-zA-Z]/').hasMatch(command)) {
+        command = '${command[1].toUpperCase()}:${command.substring(2)}'.replaceAll('/', '\\');
+      }
+
+      return command;
+    }
+    return command;
+  }
 
   /// Executes a one-off native process with basic error handling and logging
   Future<ProcessResult> run(
@@ -81,27 +88,37 @@ class Cli {
     List<String> arguments, {
     bool noThrow = false,
   }) async {
+    command = _normalizeExecutablePath(command);
+
+    // Handle path arguments separately from other arguments
+    final normalizedArgs = arguments.map((arg) {
+      if (arg.contains('\\') || arg.contains('/')) {
+        return _normalizePath(arg);
+      }
+      return arg;
+    }).toList();
+
     logger.log(
-        '[Native Process] Starting: $command ${arguments.map((e) => "'$e'").join(' ')}');
+        '[Native Process] Starting: $command ${normalizedArgs.map((e) => "'$e'").join(' ')}');
 
     // Check if another process is running
     if (await dropChannel.isProcessRunning()) {
       const error = 'Another process is already running';
       logger.log('[Native Process] Error: $error');
-      throw ProcessException(command, arguments, error, -1);
+      throw ProcessException(command, normalizedArgs, error, -1);
     }
 
     try {
       final result = await dropChannel.startProcess(
         command,
-        arguments,
+        normalizedArgs,
       );
 
       if (result.exitCode != 0 && !noThrow) {
         final error =
             'Process failed with exit code: ${result.exitCode}\nError: ${result.stderr}';
         logger.log('[Native Process] $error');
-        throw ProcessException(command, arguments, error, result.exitCode);
+        throw ProcessException(command, normalizedArgs, error, result.exitCode);
       }
 
       logger.log('[Native Process] Completed successfully');
@@ -197,22 +214,19 @@ class Cli {
         onProgress: onProgress);
   }
 
-  Future<String?> archiveFiles(
-    List<String> paths, 
-    String outputFolder,
-    {
-      ArchiveFormat format = ArchiveFormat.zip,
+  Future<String?> archiveFiles(List<String> paths, String outputFolder,
+      {ArchiveFormat format = ArchiveFormat.zip,
       int compressionLevel = 6,
       String? password,
       void Function(double)? onProgress,
-      void Function(String)? onFileProgress
-    }) async {
+      void Function(String)? onFileProgress}) async {
     return _archive.archiveFiles(
       paths,
       outputFolder,
       format: format,
       compressionLevel: compressionLevel,
-      encryption: password != null ? EncryptionOptions(password: password) : null,
+      encryption:
+          password != null ? EncryptionOptions(password: password) : null,
       onProgress: onProgress,
       onFileProgress: onFileProgress,
       run: run,
@@ -291,21 +305,23 @@ class Cli {
   }
 
   Future<Duration?> getMediaDuration(String filePath) async {
+    final normalizedPath = _normalizePath(filePath);
     final args = [
       '-v',
-      'quiet',
+      'error',
       '-show_entries',
       'format=duration',
       '-of',
       'default=noprint_wrappers=1:nokey=1',
-      filePath,
+      normalizedPath,
     ];
 
     try {
-      logger.log('Getting media duration for: $filePath');
+      logger.log('Getting media duration for: $normalizedPath');
       final result = await run(
         'ffprobe',
         args,
+        noThrow: true, // Add this to handle errors more gracefully
       );
 
       final duration = double.tryParse(result.stdout.toString().trim());

@@ -1,6 +1,8 @@
 part of '../cli.dart';
 
 class _CliSetup {
+  bool get isWindows => Platform.isWindows;
+
   Future<void> setup({
     required Function(SetupStep step) onProgress,
     required Function(String error, SetupStep step) onError,
@@ -9,6 +11,232 @@ class _CliSetup {
             {bool noThrow})
         run,
   }) async {
+    logger.log('[_CliSetup] Starting setup...');
+    final stopwatch = Stopwatch()..start();
+
+    void updateProgress(SetupStep step) {
+      logger.log('[_CliSetup] Progress: ${step.label} (${step.progress})');
+      onProgress(step);
+    }
+
+    try {
+      if (isWindows) {
+        await _setupWindows(updateProgress, onError, onSuccess, run);
+      } else {
+        await _setupMacOS(updateProgress, onError, onSuccess, run);
+      }
+
+      updateProgress(SetupStep.finishingUp);
+      stopwatch.stop();
+      logger.log(
+          '[_CliSetup] Setup completed in ${stopwatch.elapsed.inSeconds}s');
+      onSuccess();
+    } catch (e) {
+      logger.log('[_CliSetup] Error: $e');
+      onError(e.toString(), setupStep.value ?? SetupStep.checkingHomebrew);
+    }
+  }
+
+  Future<void> _setupWindows(
+    Function(SetupStep) updateProgress,
+    Function(String, SetupStep) onError,
+    Function() onSuccess,
+    Future<ProcessResult> Function(String, List<String>, {bool noThrow}) run,
+  ) async {
+    Future<bool> checkCommandExists(String command, {List<String>? altPaths}) async {
+      try {
+        // Try normal PATH first
+        var result = await Process.run('where.exe', [command], runInShell: true);
+        if (result.exitCode == 0) return true;
+
+        // Check alternative paths if provided
+        if (altPaths != null) {
+          for (final path in altPaths) {
+            final fullPath = '$path\\$command';
+            if (await File(fullPath).exists()) {
+              // Add to PATH if found
+              final currentPath = Platform.environment['PATH'] ?? '';
+              final pathCmd = 'setx PATH "$path;$currentPath"';
+              await Process.run('cmd', ['/c', pathCmd], runInShell: true);
+              return true;
+            }
+          }
+        }
+        return false;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    Future<bool> acceptSourceAgreements() async {
+      try {
+        final result = await Process.run(
+          'winget',
+          ['source', 'reset', '--force'],
+          runInShell: true,
+        );
+        return result.exitCode == 0;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    SetupStep getCheckingStep(String command) {
+      final toolName = command.toLowerCase().replaceAll('.exe', '');
+      if (toolName.contains('7z')) return SetupStep.checkingSevenZip;
+      if (toolName.contains('ffmpeg')) return SetupStep.checkingFfmpeg;
+      if (toolName.contains('magick')) return SetupStep.checkingImageMagick;
+      if (toolName.contains('yt-dlp')) return SetupStep.checkingYtDlp;
+      if (toolName.contains('gallery-dl')) return SetupStep.checkingGalleryDl;
+      if (toolName.contains('gifski')) return SetupStep.checkingGifski;
+      throw Exception('Unknown tool: $command');
+    }
+
+    SetupStep getInstallingStep(String command) {
+      final toolName = command.toLowerCase().replaceAll('.exe', '');
+      if (toolName.contains('7z')) return SetupStep.installingSevenZip;
+      if (toolName.contains('ffmpeg')) return SetupStep.installingFfmpeg;
+      if (toolName.contains('magick')) return SetupStep.installingImageMagick;
+      if (toolName.contains('yt-dlp')) return SetupStep.installingYtDlp;
+      if (toolName.contains('gallery-dl')) return SetupStep.installingGalleryDl;
+      if (toolName.contains('gifski')) return SetupStep.installingGifski;
+      throw Exception('Unknown tool: $command');
+    }
+
+    Future<bool> installPackage(String packageId, String command) async {
+      // First try to install silently
+      var installResult = await Process.run(
+        'winget',
+        ['install', '--silent', '--exact', '--id', packageId],
+        runInShell: true,
+      );
+      
+      final output = '${installResult.stdout}\n${installResult.stderr}'.toLowerCase();
+      
+      // Check if package is already installed - this is actually a success case
+      if (output.contains('already installed') || 
+          output.contains('no available upgrade found')) {
+        return true;
+      }
+      
+      // If silent install fails, try interactive
+      if (installResult.exitCode != 0) {
+        installResult = await Process.run(
+          'winget',
+          ['install', '--exact', '--id', packageId],
+          runInShell: true,
+        );
+        
+        // Check again for successful installation
+        if (installResult.exitCode == 0 || 
+            output.contains('already installed') ||
+            output.contains('no available upgrade found')) {
+          return true;
+        }
+      }
+      
+      return false;
+    }
+
+    try {
+      // Check winget
+      updateProgress(SetupStep.checkingPackageManager);
+      if (!await checkCommandExists('winget')) {
+        onError(
+            'Winget not found. Please install the latest Windows App Installer from the Microsoft Store.',
+            SetupStep.checkingPackageManager);
+        return;
+      }
+
+      // Accept source agreements first
+      await acceptSourceAgreements();
+
+      // Windows tool mappings (package-id : command-to-check : alternative paths)
+      final toolsToInstall = {
+        '7zip.7zip': (
+          '7z.exe',
+          [
+            'C:\\Program Files\\7-Zip',
+            'C:\\Program Files (x86)\\7-Zip',
+          ]
+        ),
+        'GyanD.FFmpeg': (
+          'ffmpeg.exe',
+          [
+            'C:\\ffmpeg\\bin',
+          ]
+        ),
+        'ImageMagick.ImageMagick': (
+          'magick.exe',
+          [
+            'C:\\Program Files\\ImageMagick-7.0.11-Q16',
+            'C:\\Program Files\\ImageMagick*',
+          ]
+        ),
+        'yt-dlp.yt-dlp': (
+          'yt-dlp.exe',
+          [
+            'C:\\Users\\${Platform.environment['USERNAME']}\\AppData\\Local\\Microsoft\\WinGet\\Packages',
+          ]
+        ),
+        'mikf.gallery-dl': (
+          'gallery-dl.exe',
+          [
+            'C:\\Users\\${Platform.environment['USERNAME']}\\AppData\\Local\\Programs\\gallery-dl',
+          ]
+        ),
+        // '???': (
+        //   'gifski.exe',
+        //   [
+        //     'C:\\Users\\${Platform.environment['USERNAME']}\\AppData\\Local\\Microsoft\\WinGet\\Packages',
+        //   ]
+        // ),
+      };
+
+      for (final entry in toolsToInstall.entries) {
+        final packageId = entry.key;
+        final command = entry.value.$1;
+        final altPaths = entry.value.$2;
+        
+        final checkingStep = getCheckingStep(command);
+        updateProgress(checkingStep);
+        
+        if (!await checkCommandExists(command, altPaths: altPaths)) {
+          final installingStep = getInstallingStep(command);
+          updateProgress(installingStep);
+              
+          if (!await installPackage(packageId, command)) {
+            onError(
+              'Failed to install $packageId. Please try installing manually: winget install --id $packageId', 
+              installingStep
+            );
+            return;
+          }
+          
+          // Verify installation with alternative paths
+          if (!await checkCommandExists(command, altPaths: altPaths)) {
+            onError(
+              'Installation completed but command $command not found. Please ensure the program is installed and try restarting the application.',
+              installingStep
+            );
+            return;
+          }
+        }
+      }
+
+      onSuccess();
+    } catch (e) {
+      logger.log('[_CliSetup] Error: $e');
+      onError(e.toString(), setupStep.value ?? SetupStep.checkingPackageManager);
+    }
+  }
+
+  Future<void> _setupMacOS(
+    Function(SetupStep) onProgress,
+    Function(String, SetupStep) onError,
+    Function() onSuccess,
+    Future<ProcessResult> Function(String, List<String>, {bool noThrow}) run,
+  ) async {
     logger.log('[_CliSetup] Starting setup...');
     final stopwatch = Stopwatch()..start();
 
@@ -117,6 +345,7 @@ class _CliSetup {
 }
 
 enum SetupStep {
+  checkingPackageManager(label: 'Checking package manager...', progress: 0.05),
   checkingHomebrew(label: 'Checking Homebrew...', progress: 0.05),
   installingHomebrew(label: 'Installing Homebrew...', progress: 0.10),
   homebrewInstalled(label: 'Homebrew installed', progress: 0.15),
