@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_haptic_feedback/macos_haptic_feedback.dart';
@@ -159,11 +161,20 @@ void resetFrameAndHide() async {
   await Future.delayed(Durations.short1);
   final width =
       appMode() == AppMode.panel ? AppSizes.panel.width : AppSizes.pin.width;
+  final height = Platform.isMacOS ? 48.0 : 65.0;
+  if (Platform.isWindows) {
+    await dropChannel.setMinimumSize(
+      Size(
+        width,
+        height,
+      ),
+    );
+  }
   await dropChannel.setFrame(
     Rect.fromCenter(
       center: await dropChannel.center(),
       width: width,
-      height: 48,
+      height: height,
     ),
     animate: true,
   );

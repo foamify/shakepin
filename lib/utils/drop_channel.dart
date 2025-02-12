@@ -1,11 +1,16 @@
 import 'dart:io';
+import 'dart:ui';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:screen_retriever/screen_retriever.dart';
 import 'package:shakepin/app/sections/minify_section/minify_state.dart';
+import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/handle_menu_item.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:shakepin/utils/logger.dart';
+import 'package:window_manager/window_manager.dart';
 
 typedef ShakeDetectedCallback = void Function(double x, double y);
 typedef DraggingSessionEndedCallback = void Function(int operation);
@@ -94,6 +99,20 @@ class DropChannel {
             callback(call.arguments);
           }
 
+        case 'locationChange':
+          final args = call.arguments as Map;
+          for (final listener in listeners) {
+            listener.onLocationChange(
+              hwnd: args['hwnd'] as int,
+              idObject: args['idObject'] as int,
+              idChild: args['idChild'] as int,
+              thread: args['thread'] as int,
+              time: args['time'] as int,
+              isShiftPressed: args['isShiftPressed'] as bool,
+            );
+          }
+          break;
+
         default:
           logger.log('DropChannel: unknown method ${call.method}');
       }
@@ -145,6 +164,10 @@ class DropChannel {
   }
 
   Future<void> hide() async {
+    if (Platform.isWindows) {
+      await windowManager.hide();
+      return;
+    }
     await _channel.invokeMethod('hide');
   }
 
@@ -164,6 +187,73 @@ class DropChannel {
       {required bool animate,
       bool usePosition = true,
       bool useSize = true}) async {
+    if (Platform.isWindows) {
+      // Get the current mouse position and screen info
+      final mousePosition = await screenRetriever.getCursorScreenPoint();
+      final screens = await screenRetriever.getAllDisplays();
+      final screen = screens.firstWhere(
+          (element) => (element.visiblePosition! & element.visibleSize!)
+              .contains(mousePosition),
+          orElse: () => screens.first);
+      if (screen == null) {
+        throw FlutterError('Unable to determine current screen');
+      }
+
+      // Constrain the frame to the screen bounds
+      final screenFrame = screen.visiblePosition! & screen.visibleSize!;
+      final double constrainedX = usePosition
+          ? (rect.left).clamp(
+              screenFrame.left, screenFrame.right - (useSize ? rect.width : 0))
+          : rect.left;
+      final double constrainedY = usePosition
+          ? (rect.top).clamp(
+              screenFrame.top, screenFrame.bottom - (useSize ? rect.height : 0))
+          : rect.top;
+
+      final bounds = Rect.fromLTWH(
+          constrainedX,
+          constrainedY,
+          useSize ? rect.width : rect.width,
+          useSize ? rect.height : rect.height);
+      if (animate) {
+        final current = await windowManager.getBounds();
+        const duration = Durations.short4;
+        final startTime = DateTime.now();
+        const curve = Curves.fastEaseInToSlowEaseOut;
+
+        while (true) {
+          final elapsed = DateTime.now().difference(startTime);
+          if (elapsed >= duration) break;
+
+          final progress = elapsed.inMilliseconds / duration.inMilliseconds;
+          // Ease out cubic interpolation
+          final t = curve.transform(progress);
+
+          final interpolatedPosition = usePosition
+              ? Offset.lerp(current.topLeft, bounds.topLeft, t)!
+              : current.topLeft;
+          final interpolatedSize =
+              useSize ? Size.lerp(current.size, bounds.size, t)! : current.size;
+
+          await windowManager.setBounds(
+            null,
+            position: usePosition ? interpolatedPosition : null,
+            size: useSize ? interpolatedSize : null,
+          );
+
+          await Future.delayed(const Duration(milliseconds: 16)); // ~60fps
+        }
+      }
+
+      // Set final position
+      await windowManager.setBounds(
+        null,
+        position: usePosition ? bounds.topLeft : null,
+        size: useSize ? bounds.size : null,
+      );
+      return;
+    }
+
     await _channel.invokeMethod('setFrame', [
       usePosition ? rect.left : null,
       usePosition ? rect.top : null,
@@ -174,31 +264,77 @@ class DropChannel {
   }
 
   Future<void> setMinimumSize(Size size) async {
+    if (Platform.isWindows) {
+      await windowManager.setMinimumSize(size);
+      return;
+    }
     await _channel.invokeMethod('setMinimumSize', [size.width, size.height]);
   }
 
   Future<void> setVisible(bool visible) async {
+    if (Platform.isWindows) {
+      print('setVisible to $visible');
+      const duration = Durations.short4;
+      final startTime = DateTime.now();
+      const curve = Curves.fastEaseInToSlowEaseOut;
+      final startOpacity = visible ? 0.0 : 1.0;
+      final endOpacity = visible ? 1.0 : 0.0;
+
+      while (true) {
+        final elapsed = DateTime.now().difference(startTime);
+        if (elapsed >= duration) break;
+
+        final progress = elapsed.inMilliseconds / duration.inMilliseconds;
+        final t = curve.transform(progress);
+        final opacity = lerpDouble(startOpacity, endOpacity, t)!;
+        await windowManager.setOpacity(opacity);
+        await Future.delayed(const Duration(milliseconds: 16));
+      }
+
+      await windowManager.setOpacity(endOpacity);
+      if (visible) {
+        handleModeChanged(appMode());
+      }
+      return;
+    }
     await _channel.invokeMethod('setVisible', visible);
   }
 
   Future<void> orderFront() async {
+    if (Platform.isWindows) {
+      await windowManager.focus();
+      return;
+    }
     await _channel.invokeMethod('orderFront');
   }
 
   Future<void> removeDropTarget(String label) async {
+    if (Platform.isWindows) {
+      return;
+    }
     await _channel.invokeMethod('removeDropTarget', [label]);
   }
 
   Future<void> setDropTarget(Rect rect, String label) async {
+    if (Platform.isWindows) {
+      return;
+    }
     await _channel.invokeMethod(
         'setDropTarget', [rect.left, rect.top, rect.width, rect.height, label]);
   }
 
   Future<bool> isVisible() async {
+    if (Platform.isWindows) {
+      return await windowManager.isVisible();
+    }
     return await _channel.invokeMethod('isVisible');
   }
 
   Future<Offset> center() async {
+    if (Platform.isWindows) {
+      final bounds = await windowManager.getBounds();
+      return bounds.center;
+    }
     final List<dynamic> args = await _channel.invokeMethod('center');
     return Offset(args[0] as double, args[1] as double);
   }
@@ -232,10 +368,18 @@ class DropChannel {
   }
 
   Future<void> hidePopover() async {
+    if (Platform.isWindows) {
+      return;
+    }
     await _channel.invokeMethod('hidePopover');
   }
 
   Future<String> getAppVersion() async {
+    if (Platform.isWindows) {
+      //TODO: Implement this for Windows
+      print('getAppVersion not implemented for Windows');
+      return 'UNKNOWN';
+    }
     try {
       final String version = await _channel.invokeMethod('getAppVersion');
       return version;
@@ -299,6 +443,10 @@ class DropChannel {
   }
 
   void startDragging() async {
+    if (Platform.isWindows) {
+      await windowManager.startDragging();
+      return;
+    }
     _channel.invokeMethod('startDragging');
   }
 
@@ -309,17 +457,6 @@ class DropChannel {
       throw FlutterError('Error setting shift key check: ${e.message}');
     } catch (e) {
       throw FlutterError('Unexpected error setting shift key check: $e');
-    }
-  }
-
-  Future<bool> writeToClipboard(String text) async {
-    try {
-      final result = await _channel.invokeMethod('writeToClipboard', text);
-      return result as bool;
-    } on PlatformException catch (e) {
-      throw FlutterError('Error writing to clipboard: ${e.message}');
-    } catch (e) {
-      throw FlutterError('Unexpected error writing to clipboard: $e');
     }
   }
 
@@ -349,4 +486,12 @@ mixin class DragDropListener {
   void onDragPerform(List<String> paths) {}
   void shakeDetected(Offset position) {}
   void onDragSessionEnded(DropOperation operation) {}
+  void onLocationChange({
+    required int hwnd,
+    required int idObject,
+    required int idChild,
+    required int thread,
+    required int time,
+    required bool isShiftPressed,
+  }) {}
 }

@@ -61,6 +61,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
 
   @override
   void shakeDetected(Offset position) async {
+    print('Shake detected at position: $position');
     logger.log('Shake detected at position: $position');
     if (!isShakeDetected) {
       logger.log('Processing first shake detection');
@@ -337,7 +338,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
               offstage: !isSetupApp(),
               child: const SetupApp(),
             ),
-            if (!isLicenseValid()) const SupportBanner(),
+            // if (!isLicenseValid()) const SupportBanner(),
           ],
         );
       },
