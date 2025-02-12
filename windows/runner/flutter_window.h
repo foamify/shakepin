@@ -25,6 +25,10 @@ class FlutterWindow : public Win32Window {
 
   UINT_PTR drag_timer_ = 0;  // Add this line
 
+  // Add these methods:
+  void StartDrag(const std::vector<std::wstring>& filePaths);
+  static LRESULT CALLBACK DragDropHookProc(int nCode, WPARAM wParam, LPARAM lParam);
+
  protected:
   // Win32Window:
   bool OnCreate() override;
@@ -43,6 +47,11 @@ class FlutterWindow : public Win32Window {
   HWINEVENTHOOK drag_hook_ = nullptr;
 
   HWND window_handle_ = nullptr; // Add this line
+
+  // Add these members:
+  HHOOK mouse_hook_;
+  bool is_dragging_;
+  std::vector<std::wstring> drag_files_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

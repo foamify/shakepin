@@ -176,6 +176,10 @@ class DropChannel {
   }
 
   Future<void> performDragSession(List<String> fileURLs) async {
+    if (Platform.isWindows) {
+      await _channel.invokeMethod('startDrag', fileURLs);
+      return;
+    }
     await _channel.invokeMethod('performDragSession', fileURLs);
   }
 

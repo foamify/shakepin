@@ -5,12 +5,14 @@
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
 #include <windows.h>
+#include <shlobj_core.h>
 
 #include <memory>
 
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
+#include "drag_drop_impl.h"
 
 HWND g_flutter_window = nullptr;
 bool g_is_moving_or_resizing = false; // Add this line
@@ -171,6 +173,37 @@ void CALLBACK HandleDragHook(
   }
 }
 
+void FlutterWindow::StartDrag(const std::vector<std::wstring>& filePaths) {
+  drag_files_ = filePaths;
+  is_dragging_ = true;
+
+  // Create data object
+  ShellDataObject* dataObj = new ShellDataObject(filePaths);
+  
+  // Start drag-drop operation
+  DWORD dwEffect;
+  HRESULT hr = SHDoDragDrop(
+      nullptr,                // Optional window handle
+      dataObj,               // IDataObject instance
+      nullptr,               // Optional IDropSource instance
+      DROPEFFECT_COPY,       // Allowed effects
+      &dwEffect);            // Resultant effect
+
+  is_dragging_ = false;
+  dataObj->Release();
+
+  // Send result back to Flutter
+  if (drag_channel_) {
+    flutter::EncodableMap args = flutter::EncodableMap();
+    args[flutter::EncodableValue("result")] = flutter::EncodableValue((int)hr);
+    args[flutter::EncodableValue("effect")] = flutter::EncodableValue((int)dwEffect);
+    
+    drag_channel_->InvokeMethod(
+        "dragComplete",
+        std::make_unique<flutter::EncodableValue>(args));
+  }
+}
+
 bool FlutterWindow::OnCreate()
 {
   if (!Win32Window::OnCreate())
@@ -219,6 +252,28 @@ bool FlutterWindow::OnCreate()
       flutter_controller_->engine()->messenger(),
       "click.shakepin.macos/drop",
       &flutter::StandardMethodCodec::GetInstance());
+
+  // Set up drag channel handler
+  drag_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<>& call,
+             std::unique_ptr<flutter::MethodResult<>> result) {
+        if (call.method_name() == "startDrag") {
+          if (auto* arguments = std::get_if<flutter::EncodableList>(call.arguments())) {
+            std::vector<std::wstring> filePaths;
+            for (const auto& arg : *arguments) {
+              if (auto* path = std::get_if<std::string>(&arg)) {
+                filePaths.push_back(std::wstring(path->begin(), path->end()));
+              }
+            }
+            StartDrag(filePaths);
+            result->Success();
+          } else {
+            result->Error("INVALID_ARGUMENTS", "Expected list of file paths");
+          }
+        } else {
+          result->NotImplemented();
+        }
+      });
 
   // Install drag-drop hook
   drag_hook_ = SetWinEventHook(
