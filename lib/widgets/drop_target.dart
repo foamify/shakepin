@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/utils.dart';
-import 'package:desktop_drop/desktop_drop.dart' as drop;
 
 class DropTarget extends StatefulWidget {
   const DropTarget({
@@ -59,19 +58,19 @@ class _DropTargetState extends State<DropTarget> implements DragDropListener {
 
   @override
   Widget build(BuildContext context) {
-    if (Platform.isWindows) {
-      return drop.DropTarget(
-        onDragEntered: (details) =>
-            widget.onDragEnter?.call(details.globalPosition),
-        onDragExited: (_) => widget.onDragExited?.call(),
-        child: widget.child,
-        onDragDone: (details) {
-          print(details.files.map((e) => e.path).toList());
-          widget.onDragPerform?.call(details.files.map((e) => e.path).toList());
-          widget.onDragConclude?.call();
-        },
-      );
-    }
+    // if (Platform.isWindows) {
+    //   return drop.DropTarget(
+    //     onDragEntered: (details) =>
+    //         widget.onDragEnter?.call(details.globalPosition),
+    //     onDragExited: (_) => widget.onDragExited?.call(),
+    //     child: widget.child,
+    //     onDragDone: (details) {
+    //       print(details.files.map((e) => e.path).toList());
+    //       widget.onDragPerform?.call(details.files.map((e) => e.path).toList());
+    //       widget.onDragConclude?.call();
+    //     },
+    //   );
+    // }
     return widget.child;
   }
 

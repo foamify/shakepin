@@ -1,7 +1,7 @@
 name: shakepin
 description: "Pin, minify, and archive your files with unparalleled ease"
 publish_to: "none"
-version: 0.3.5
+version: 0.3.6
 environment:
   sdk: ^3.5.3
 dependencies:
@@ -24,7 +24,6 @@ dependencies:
   url_launcher: ^6.2.1
   lukehog: ^0.4.1+2
   gradient_borders: ^1.0.1
-  flutter_pty: ^0.4.1
   package_info_plus:
     git:
       url: https://github.com/fluttercommunity/plus_plugins.git
@@ -37,10 +36,13 @@ dependencies:
   crypto: ^3.0.6
   file_picker: ^8.3.1
   window_manager: ^0.4.3
-  tray_manager: ^0.3.2
   flutter_acrylic: ^1.1.4
   screen_retriever: ^0.2.0
-  desktop_drop: ^0.5.0
+  tray_manager: ^0.3.2
+  dotted_border: ^2.1.0
+  pointer_lock:
+    git: https://github.com/helgoboss/pointer_lock.git
+  video_player: ^2.9.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

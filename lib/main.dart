@@ -137,18 +137,20 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MacosApp(
       debugShowCheckedModeBanner: false,
       home: DragToResizeArea(
-        enableResizeEdges: const [
-          ResizeEdge.topLeft,
-          ResizeEdge.topRight,
-          ResizeEdge.bottomLeft,
-          ResizeEdge.bottomRight,
-          ResizeEdge.left,
-          ResizeEdge.bottom,
-          ResizeEdge.right,
-        ],
+        enableResizeEdges: Platform.isMacOS
+            ? []
+            : const [
+                ResizeEdge.topLeft,
+                ResizeEdge.topRight,
+                ResizeEdge.bottomLeft,
+                ResizeEdge.bottomRight,
+                ResizeEdge.left,
+                ResizeEdge.bottom,
+                ResizeEdge.right,
+              ],
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(32)),
           child: MacosApp(

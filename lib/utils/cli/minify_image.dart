@@ -6,6 +6,10 @@ class _CliMinifyImage {
     String? fileExtension,
     int quality = 95,
     required int downScale,
+    int cropLeft = 0,
+    int cropRight = 0,
+    int cropTop = 0,
+    int cropBottom = 0,
     void Function(double)? onProgress,
   }) async {
     logger.log('=== Starting Image Minification Process ===');
@@ -38,13 +42,32 @@ class _CliMinifyImage {
       inputPath,
     ];
 
+    // Add crop arguments if any crop value is non-zero
+    if (cropLeft > 0 || cropRight > 0 || cropTop > 0 || cropBottom > 0) {
+      args.addAll([
+        '-crop',
+        '+${cropLeft}+${cropTop}', 
+        '-crop',
+        '-${cropRight}-${cropBottom}',
+      ]);
+      logger.log('Applying crop values: L:$cropLeft R:$cropRight T:$cropTop B:$cropBottom');
+    }
+
     if (downScale > 1) {
       args.addAll(['-resize', '$downScale%']);
       logger.log(
           'Applying downscale factor: $downScale ($downScale% of original size)');
     }
 
-    args.addAll(['-quality', quality.toString(), '-monitor', outputPath]);
+    // Only add quality argument if not lossless (quality < 100)
+    if (quality < 100) {
+      args.addAll(['-quality', quality.toString()]);
+      logger.log('Applying quality: $quality');
+    } else {
+      logger.log('Using lossless quality (no compression)');
+    }
+
+    args.addAll(['-monitor', outputPath]);
 
     logger.log('ImageMagick command arguments: $args');
 

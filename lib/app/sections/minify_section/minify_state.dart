@@ -7,6 +7,7 @@ final processedFiles = ValueNotifier<int>(0);
 final totalFiles = ValueNotifier<int>(0);
 final minifiedFiles = ValueNotifier<List<MinifiedFile>>([]);
 final errorMessages = ValueNotifier<List<String>>([]);
+final cropData = ValueNotifier<Map<String, CropValues>>({});
 
 class MinifiedFile {
   final String originalPath;
@@ -30,12 +31,36 @@ class MinifiedFile {
   String get minifiedFileName => path.basename(minifiedPath);
 }
 
+class CropValues {
+  final int left;
+  final int right;
+  final int top;
+  final int bottom;
+  final int width;
+  final int height;
+
+  CropValues({
+    required this.left,
+    required this.right,
+    required this.top,
+    required this.bottom,
+    required this.width,
+    required this.height,
+  });
+
+  @override
+  String toString() {
+    return 'CropValues{left: $left, right: $right, top: $top, bottom: $bottom, width: $width, height: $height}';
+  }
+}
+
 enum ImageQuality {
   lowest,
   low,
   normal,
   high,
-  highest;
+  highest,
+  lossless; // Add this new value
 
   String get name => switch (this) {
         ImageQuality.lowest => 'Lowest',
@@ -43,6 +68,7 @@ enum ImageQuality {
         ImageQuality.normal => 'Normal',
         ImageQuality.high => 'High',
         ImageQuality.highest => 'Highest',
+        ImageQuality.lossless => 'Lossless', // Add this case
       };
 
   int get value => switch (this) {
@@ -51,6 +77,7 @@ enum ImageQuality {
         ImageQuality.normal => 80,
         ImageQuality.high => 90,
         ImageQuality.highest => 95,
+        ImageQuality.lossless => 100, // Add this case
       };
 }
 

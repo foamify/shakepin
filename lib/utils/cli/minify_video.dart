@@ -7,6 +7,10 @@ class _CliMinifyVideo {
     String quality = 'medium',
     bool enableHardwareAcceleration = true,
     int downScale = 100,
+    int cropLeft = 0,
+    int cropRight = 0,
+    int cropTop = 0,
+    int cropBottom = 0,
     void Function(double)? onProgress,
   }) async {
     await logger.log('[Process.minifyVideo] Starting video minification');
@@ -41,11 +45,26 @@ class _CliMinifyVideo {
     ]);
 
     List<String> filterArgs = [];
+    
+    // Build complex filter for scaling and cropping
+    String filter = '';
+    if (cropLeft > 0 || cropRight > 0 || cropTop > 0 || cropBottom > 0) {
+      final cropInfo = cropData()[inputPath];
+      if (cropInfo != null) {
+        final cropWidth = cropInfo.width - cropLeft - cropRight;
+        final cropHeight = cropInfo.height - cropTop - cropBottom;
+        filter += 'crop=${cropWidth}:${cropHeight}:${cropLeft}:${cropTop},';
+        await logger.log('[Process.minifyVideo] Adding crop filter: ${cropWidth}x${cropHeight}:${cropLeft}:${cropTop}');
+      }
+    }
+    
     if (downScale < 100) {
-      filterArgs
-          .addAll(['-vf', 'scale=iw*${downScale / 100}:ih*${downScale / 100}']);
-      await logger
-          .log('[Process.minifyVideo] Adding downscale filter: $downScale%');
+      filter += 'scale=iw*${downScale / 100}:ih*${downScale / 100}';
+      await logger.log('[Process.minifyVideo] Adding downscale filter: $downScale%');
+    }
+
+    if (filter.isNotEmpty) {
+      filterArgs.addAll(['-vf', filter.replaceAll(RegExp(r',$'), '')]);
     }
 
     switch (format.toLowerCase()) {

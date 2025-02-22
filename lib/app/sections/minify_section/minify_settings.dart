@@ -31,15 +31,26 @@ class _MinifySettingsState extends State<MinifySettings> {
   var initialDy = 0.0;
   final _gifFpsController = TextEditingController();
 
+  // Add crop state variables
+  final _leftCrop = ValueNotifier<int>(0);
+  final _rightCrop = ValueNotifier<int>(0);
+  final _topCrop = ValueNotifier<int>(0);
+  final _bottomCrop = ValueNotifier<int>(0);
+
   @override
   void initState() {
     super.initState();
     _gifFpsController.text = _gifFps.toString();
+    selectedItems.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _gifFpsController.dispose();
+    _leftCrop.dispose();
+    _rightCrop.dispose();
+    _topCrop.dispose();
+    _bottomCrop.dispose();
     super.dispose();
   }
 
@@ -302,6 +313,40 @@ class _MinifySettingsState extends State<MinifySettings> {
                                 child: Text(_imageDownscale.name),
                               ),
                             ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  // Add new crop container here
+                  if (selectedItems().containsImage ||
+                      selectedItems().containsVideo)
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: MacosColors.systemGrayColor
+                                .withValues(alpha: .2)),
+                        borderRadius: BorderRadius.circular(6),
+                        color: MacosColors.controlColor
+                            .resolvedColor(context)
+                            .withValues(alpha: .03),
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          const Text('Crop Media'),
+                          const Spacer(),
+                          SizedBox(
+                            width: 112,
+                            child: GlassButton(
+                              radius: 6,
+                              padding: const EdgeInsets.symmetric(vertical: 3),
+                              onTap: () {
+                                isCropApp.value = true;
+                                showApp();
+                              },
+                              child: const Text('Open Cropper'),
+                            ),
                           ),
                         ],
                       ),
@@ -583,6 +628,16 @@ class _MinifySettingsState extends State<MinifySettings> {
       // Enable hardware acceleration for VP9 if available
       const bool tryHardwareAcceleration = true;
 
+      // Get crop values if they exist
+      final cropValues = cropData()[filePath];
+      final cropLeft = cropValues?.left ?? 0;
+      final cropRight = cropValues?.right ?? 0;
+      final cropTop = cropValues?.top ?? 0;
+      final cropBottom = cropValues?.bottom ?? 0;
+
+      await logger.log(
+          'Crop values - L:$cropLeft R:$cropRight T:$cropTop B:$cropBottom');
+
       final minifiedPath = await cli.minifyVideo(
         filePath,
         quality: _videoQuality.name,
@@ -590,6 +645,10 @@ class _MinifySettingsState extends State<MinifySettings> {
             _videoFormat == VideoFormat.sameAsInput ? null : _videoFormat.name,
         enableHardwareAcceleration: tryHardwareAcceleration,
         downScale: _videoDownscale.value,
+        cropLeft: cropLeft,
+        cropRight: cropRight,
+        cropTop: cropTop,
+        cropBottom: cropBottom,
         onProgress: (progress) async {
           minifyOneFileProgress.value = progress;
           await logger.log(
@@ -654,17 +713,22 @@ class _MinifySettingsState extends State<MinifySettings> {
     try {
       await logger.log(
           'Beginning image minification with quality: ${_imageQuality.value}');
-      cli;
-      await logger.log('Output path set to: $filePath');
-      await logger.log(
-          'Format setting: ${_imageFormat == ImageFormat.sameAsInput ? 'same as input' : _imageFormat.name}');
+
       onProgress(progress) async {
         minifyOneFileProgress.value = progress;
         await logger.log(
             'Image minification progress: ${(progress * 100).toStringAsFixed(2)}%');
       }
 
-      await logger.log('Set progress');
+      // Get crop values if they exist
+      final cropValues = cropData()[filePath];
+      final cropLeft = cropValues?.left ?? 0;
+      final cropRight = cropValues?.right ?? 0;
+      final cropTop = cropValues?.top ?? 0;
+      final cropBottom = cropValues?.bottom ?? 0;
+
+      await logger.log(
+          'Crop values - L:$cropLeft R:$cropRight T:$cropTop B:$cropBottom');
 
       final minifiedPath = await cli.minifyImage(
         filePath,
@@ -673,6 +737,10 @@ class _MinifySettingsState extends State<MinifySettings> {
         quality: _imageQuality.value,
         downScale: _imageDownscale.value,
         onProgress: onProgress,
+        cropLeft: cropLeft,
+        cropRight: cropRight,
+        cropTop: cropTop,
+        cropBottom: cropBottom,
       );
 
       if (minifiedPath == null) {

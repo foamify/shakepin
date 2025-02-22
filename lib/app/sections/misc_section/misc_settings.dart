@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/cli.dart';
@@ -18,6 +19,10 @@ class MiscSettings extends StatefulWidget {
 
 class _MiscSettingsState extends State<MiscSettings> {
   final progressNotifier = ValueNotifier(-1.0);
+  AudioFormat selectedFormat = AudioFormat.wav;
+  int selectedSampleRate = 16000;
+
+  static final List<int> sampleRates = [8000, 16000, 22050, 44100, 48000];
 
   @override
   Widget build(BuildContext context) {
@@ -35,32 +40,30 @@ class _MiscSettingsState extends State<MiscSettings> {
           ),
           padding: const EdgeInsets.all(8),
           child: Column(
-            spacing: 8,
             children: [
+              // Tool selector row
               ValueListenableBuilder<AppMode>(
                 valueListenable: appMode,
                 builder: (context, appMode, _) {
                   return Row(
                     children: [
-                      const Text('Select tool '),
+                      const Text('Select tool'),
                       const Spacer(),
-                      IntrinsicWidth(
-                        child: NativeDropdownButton<String>(
-                          items: AppMode.values
-                              .where((e) => e.label != null)
-                              .map((e) {
-                            return NativeDropdownItem(
-                              value: e.name,
-                              label: e.label!,
-                            );
-                          }).toList(),
-                          value: appMode.name,
-                          child: Text(appMode.label!),
-                          onChanged: (value) {
-                            handleModeChanged(AppMode.values
-                                .firstWhere((e) => e.name == value));
-                          },
-                        ),
+                      NativeDropdownButton<String>(
+                        items: AppMode.values
+                            .where((e) => e.label != null)
+                            .map((e) {
+                          return NativeDropdownItem(
+                            value: e.name,
+                            label: e.label!,
+                          );
+                        }).toList(),
+                        value: appMode.name,
+                        child: Text(appMode.label!),
+                        onChanged: (value) {
+                          handleModeChanged(AppMode.values
+                              .firstWhere((e) => e.name == value));
+                        },
                       ),
                     ],
                   );
@@ -69,6 +72,87 @@ class _MiscSettingsState extends State<MiscSettings> {
             ],
           ),
         ),
+        AnimatedSize(
+          duration: Durations.long1,
+          curve: Curves.fastEaseInToSlowEaseOut,
+          child: SizedBox(
+            width: double.infinity,
+            child: ValueListenableBuilder<AppMode>(
+              valueListenable: appMode,
+              builder: (context, currentMode, _) {
+                if (currentMode == AppMode.extractAudio) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                          color: MacosColors.systemGrayColor
+                              .withValues(alpha: .2)),
+                      borderRadius: BorderRadius.circular(6),
+                      color: MacosColors.controlColor
+                          .resolvedColor(context)
+                          .withValues(alpha: .03),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            const Text('Output Format'),
+                            const Spacer(),
+                            NativeDropdownButton<String>(
+                              items: AudioFormat.values.map((format) {
+                                return NativeDropdownItem(
+                                  value: format.extension,
+                                  label: format.extension.toUpperCase(),
+                                );
+                              }).toList(),
+                              value: selectedFormat.extension,
+                              child:
+                                  Text(selectedFormat.extension.toUpperCase()),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedFormat =
+                                      AudioFormat.values.firstWhere(
+                                    (format) => format.extension == value,
+                                  );
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        Divider(
+                            color: MacosColors.systemGrayColor
+                                .withValues(alpha: .2)),
+                        Row(
+                          children: [
+                            const Text('Sample Rate'),
+                            const Spacer(),
+                            NativeDropdownButton<int>(
+                              items: sampleRates.map((rate) {
+                                return NativeDropdownItem(
+                                  value: rate,
+                                  label: '${rate}Hz',
+                                );
+                              }).toList(),
+                              value: selectedSampleRate,
+                              child: Text('${selectedSampleRate}Hz'),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedSampleRate = value!;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ),
+        // Warning message
         const Row(
           spacing: 8,
           children: [
@@ -86,6 +170,7 @@ class _MiscSettingsState extends State<MiscSettings> {
             ),
           ],
         ),
+        // Process button and progress container
         Container(
           decoration: BoxDecoration(
             border: Border.all(
@@ -149,16 +234,14 @@ class _MiscSettingsState extends State<MiscSettings> {
                           switch (appMode()) {
                             case AppMode.convertToIco:
                               await cli.convertToIco(selectedItems().first);
-                            case AppMode.convertToWav:
-                              logger.log('Converting to wav');
-                              await cli.convertToWav(
-                                selectedItems().first,
+                            case AppMode.extractAudio:
+                              await cli.extractAudio(
+                                selectedItems().toList(),
+                                format: selectedFormat,
+                                sampleRate: selectedSampleRate,
                                 onProgress: (progress) {
                                   progressNotifier.value = progress;
                                 },
-                                // onError: () {
-                                //   progressNotifier.value = -1;
-                                // },
                               );
                             case AppMode.downloadVideo:
                               await cli.downloadVideo(
@@ -166,9 +249,6 @@ class _MiscSettingsState extends State<MiscSettings> {
                                 onProgress: (progress) {
                                   progressNotifier.value = progress;
                                 },
-                                // onError: () {
-                                //   progressNotifier.value = -1;
-                                // },
                               );
                             case AppMode.downloadMedia:
                               await cli.downloadMedia(
@@ -176,9 +256,6 @@ class _MiscSettingsState extends State<MiscSettings> {
                                 onProgress: (progress) {
                                   progressNotifier.value = progress;
                                 },
-                                // onError: () {
-                                //   progressNotifier.value = -1;
-                                // },
                               );
                             default:
                               logger.log('Unsupported app mode: ${appMode()}');

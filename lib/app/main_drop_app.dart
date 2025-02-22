@@ -2,6 +2,7 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/app/about_app.dart';
+import 'package:shakepin/app/crop_app.dart';
 import 'package:shakepin/app/license_app.dart';
 import 'package:shakepin/app/sections/archive_section/archive_section.dart';
 import 'package:shakepin/app/main_drop/drop_section.dart';
@@ -135,6 +136,7 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
         isLicenseApp,
         isLicenseValid,
         isSetupApp,
+        isCropApp,
       ]),
       builder: (context, _) {
         return Stack(
@@ -336,6 +338,10 @@ class _MainDropAppState extends State<MainDropApp> with DragDropListener {
             Offstage(
               offstage: !isSetupApp(),
               child: const SetupApp(),
+            ),
+            Offstage(
+              offstage: !isCropApp(),
+              child: const CropApp(),
             ),
             if (!isLicenseValid()) const SupportBanner(),
           ],

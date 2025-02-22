@@ -3,18 +3,20 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:shakepin/app/sections/minify_section/minify_state.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
 
 part 'cli/archive.dart';
-part 'cli/convert_to_wav.dart';
+part 'cli/extract_audio.dart';
 part 'cli/convert_to_ico.dart';
 part 'cli/convert_to_gif.dart';
 part 'cli/download_media.dart';
 part 'cli/minify_image.dart';
 part 'cli/minify_video.dart';
 part 'cli/setup.dart';
+part 'cli/video_utils.dart';
 
 final carriageReturn = Platform.isWindows ? '\r\n' : '\n';
 
@@ -38,13 +40,14 @@ class Cli {
   }
 
   final _archive = _CliArchive();
-  final _convertToWav = _CliConvertToWav();
+  final _extractAudio = _CliExtractAudio();
   final _convertToIco = _CliConvertToIco();
   final _convertToGif = _CliConvertToGif();
   final _downloadMedia = _CliDownloadMedia();
   final _minifyImage = _CliMinifyImage();
   final _minifyVideo = _CliMinifyVideo();
   final _setup = _CliSetup();
+  final _videoUtils = _CliVideoUtils();
 
   void init() {}
 
@@ -74,7 +77,8 @@ class Cli {
 
       // If path starts with /drive_letter/, convert to DRIVE_LETTER:\
       if (RegExp(r'^/[a-zA-Z]/').hasMatch(command)) {
-        command = '${command[1].toUpperCase()}:${command.substring(2)}'.replaceAll('/', '\\');
+        command = '${command[1].toUpperCase()}:${command.substring(2)}'
+            .replaceAll('/', '\\');
       }
 
       return command;
@@ -111,7 +115,9 @@ class Cli {
     try {
       final result = await dropChannel.startProcess(
         command,
-        normalizedArgs,
+        Platform.isWindows
+            ? normalizedArgs
+            : normalizedArgs.map((e) => "'$e'").toList(),
       );
 
       if (result.exitCode != 0 && !noThrow) {
@@ -143,16 +149,6 @@ class Cli {
   Future<void> downloadMedia(String urlString,
       {void Function(double)? onProgress}) async {
     await _downloadMedia.downloadMedia(urlString, onProgress: onProgress);
-  }
-
-  // MARK: - Convert to WAV
-
-  Future<void> convertToWav(String inputPath,
-      {Duration? startTime,
-      Duration? endTime,
-      void Function(double)? onProgress}) async {
-    await _convertToWav.convertToWav(inputPath,
-        startTime: startTime, endTime: endTime, onProgress: onProgress);
   }
 
   // MARK: - Convert to ICO
@@ -187,6 +183,10 @@ class Cli {
     String? fileExtension,
     int quality = 95,
     required int downScale,
+    int cropLeft = 0,
+    int cropRight = 0,
+    int cropTop = 0,
+    int cropBottom = 0,
     void Function(double)? onProgress,
   }) async {
     return _minifyImage.minifyImage(
@@ -194,24 +194,39 @@ class Cli {
       fileExtension: fileExtension,
       quality: quality,
       downScale: downScale,
+      cropLeft: cropLeft,
+      cropRight: cropRight,
+      cropTop: cropTop,
+      cropBottom: cropBottom,
       onProgress: onProgress,
     );
   }
 
   // MARK: - Minify Video
 
-  Future<String?> minifyVideo(String inputPath,
-      {String? format,
-      String quality = 'medium',
-      bool enableHardwareAcceleration = true,
-      int downScale = 100,
-      void Function(double)? onProgress}) async {
-    return _minifyVideo.minifyVideo(inputPath,
-        format: format,
-        quality: quality,
-        enableHardwareAcceleration: enableHardwareAcceleration,
-        downScale: downScale,
-        onProgress: onProgress);
+  Future<String?> minifyVideo(String inputPath, {
+    String? format,
+    String quality = 'medium', 
+    bool enableHardwareAcceleration = true,
+    int downScale = 100,
+    int cropLeft = 0,
+    int cropRight = 0, 
+    int cropTop = 0,
+    int cropBottom = 0,
+    void Function(double)? onProgress,
+  }) async {
+    return _minifyVideo.minifyVideo(
+      inputPath,
+      format: format,
+      quality: quality,
+      enableHardwareAcceleration: enableHardwareAcceleration,
+      downScale: downScale,
+      cropLeft: cropLeft,
+      cropRight: cropRight,
+      cropTop: cropTop,
+      cropBottom: cropBottom,
+      onProgress: onProgress,
+    );
   }
 
   Future<String?> archiveFiles(List<String> paths, String outputFolder,
@@ -362,6 +377,26 @@ class Cli {
       run: run,
     );
   }
+
+  Future<List<String>> extractAudio(
+    List<String> paths, {
+    AudioFormat format = AudioFormat.wav,
+    int? sampleRate,
+    Duration? startTime,
+    Duration? endTime,
+    void Function(double)? onProgress,
+  }) =>
+      _extractAudio.extractAudio(
+        paths,
+        format: format,
+        sampleRate: sampleRate,
+        startTime: startTime,
+        endTime: endTime,
+        onProgress: onProgress,
+      );
+
+  Future<({int width, int height})?> getVideoResolution(String path) =>
+      _videoUtils.getVideoResolution(path);
 }
 
 void initCli() {

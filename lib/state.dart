@@ -13,6 +13,7 @@ final archiveProgress = ValueNotifier<double>(-1);
 final isAboutApp = ValueNotifier<bool>(false);
 final isLicenseApp = ValueNotifier<bool>(false);
 final isLicenseValid = ValueNotifier<bool>(false);
+final isCropApp = ValueNotifier<bool>(false);
 
 final isSetupApp = ValueNotifier<bool>(false);
 
@@ -68,7 +69,7 @@ enum AppMode {
   minify._(),
   archive._(),
   // Start of misc apps
-  convertToWav._('Extract Audio'),
+  extractAudio._('Extract Audio'), // Changed from convertToWav
   convertToIco._('Convert to ICO'),
   downloadVideo._('Download Video'),
   downloadMedia._('Download Media'),
@@ -86,7 +87,8 @@ extension AppModeEx on AppMode {
           (isImageFile(path) || isVideoFile(path)) && !isUrl(path),
         AppMode.archive => !isUrl(path),
         AppMode.convertToIco => isImageFile(path),
-        AppMode.convertToWav => isVideoFile(path) || isAudioFile(path),
+        AppMode.extractAudio =>
+          isVideoFile(path) || isAudioFile(path), // Updated from convertToWav
         AppMode.downloadVideo || AppMode.downloadMedia => isUrl(path),
         AppMode.pin => true,
         AppMode.panel => true, // won't be used anyway

@@ -3,6 +3,14 @@
     <channel>
         <title>ShakePin</title>
         <item>
+            <title>Version 0.3.6 - Crop Image and Video</title>
+            <pubDate>Tue, 11 Mar 2025 21:48:10 +0700</pubDate>
+            <sparkle:version>0.3.6</sparkle:version>
+            <sparkle:shortVersionString>0.3.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>10.15</sparkle:minimumSystemVersion>
+            <enclosure url="ShakePin-v0.3.6.zip" length="28212270" type="application/octet-stream" sparkle:edSignature="R2itTfvD2v7nyJsCUVlytyc4LHC1KdvqJnj3uM3HSWD6iM8k1J+tH5F90YAW7FbmzkjncXixyNfkiau0Zr+yCg=="/>
+        </item>
+        <item>
             <title>Version 0.3.5 - Fix image compression</title>
             <pubDate>Sat, 08 Feb 2025 00:12:22 +0700</pubDate>
             <sparkle:version>0.3.5</sparkle:version>
@@ -17,14 +25,6 @@
             <sparkle:shortVersionString>0.3.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>10.15</sparkle:minimumSystemVersion>
             <enclosure url="ShakePin-v0.3.4.zip" length="27623686" type="application/octet-stream" sparkle:edSignature="uoqkBlaRG074rAJ4LxDQXumPBQKwY/9Zl8cYehCaoQ5+dtlLvIc88WWiNLlfpGkTmyrLu0OlE2PPyfTkEdTKAQ=="/>
-        </item>
-        <item>
-            <title>Version 0.3.3 - Compact Panel Mode</title>
-            <pubDate>Sun, 02 Feb 2025 17:41:22 +0700</pubDate>
-            <sparkle:version>0.3.3</sparkle:version>
-            <sparkle:shortVersionString>0.3.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>10.15</sparkle:minimumSystemVersion>
-            <enclosure url="ShakePin-v0.3.3.zip" length="27472593" type="application/octet-stream" sparkle:edSignature="9D3VeSeKwZvohW9cjZECRzHsM6+ee8Dv7fT/IaApBk7MIvOlbkRHKbuAGbgrXOar1rFnLe6uyF0oLj6EIeePCg=="/>
         </item>
     </channel>
 </rss>

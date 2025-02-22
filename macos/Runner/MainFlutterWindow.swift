@@ -34,6 +34,10 @@ class MainFlutterWindow: NSWindow {
   private var processHandler: ProcessHandler!
   private var shiftKeyCheckEnabled = true  // Add this property
 
+  var tooltipChannel: FlutterMethodChannel!
+  var tooltipTags: [String: NSView.ToolTipTag] = [:]
+  var tooltipMap: [NSView.ToolTipTag: String] = [:]
+
   override func awakeFromNib() {
     cleanup()
     flutterViewController = FlutterViewController()
@@ -57,6 +61,8 @@ class MainFlutterWindow: NSWindow {
     setupMenuBar()
 
     processHandler = ProcessHandler(channel: channel)
+
+    setupTooltipChannel()
 
     super.awakeFromNib()
   }
@@ -1008,6 +1014,78 @@ class MainFlutterWindow: NSWindow {
           FlutterError(code: "SHARE_ERROR", message: "Unable to show share picker", details: nil))
       }
     }
+  }
+
+  func setupTooltipChannel() {
+    tooltipChannel = FlutterMethodChannel(
+      name: "click.shakepin.macos/tooltip",
+      binaryMessenger: flutterViewController.engine.binaryMessenger)
+    tooltipChannel.setMethodCallHandler(handleTooltipMethodCall)
+  }
+
+  func handleTooltipMethodCall(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "updateTooltip":
+      guard let args = call.arguments as? [String: Any],
+        let tooltipId = args["tooltipId"] as? String,
+        let x = args["x"] as? CGFloat,
+        let y = args["y"] as? CGFloat,
+        let width = args["width"] as? CGFloat,
+        let height = args["height"] as? CGFloat,
+        let text = args["text"] as? String,
+        let remove = args["remove"] as? Bool
+      else {
+        result(FlutterError(code: "INVALID_ARGUMENTS", 
+                           message: "Invalid arguments for updateTooltip", 
+                           details: nil))
+        return
+      }
+
+      if remove {
+        if let tag = tooltipTags[tooltipId] {
+          self.contentView?.removeToolTip(tag)
+          tooltipTags.removeValue(forKey: tooltipId)
+          tooltipMap.removeValue(forKey: tag)
+        }
+        result(nil)
+        return
+      }
+
+      let flutterViewHeight = flutterViewController.view.frame.height
+      let tooltipRect = NSRect(x: x, 
+                              y: flutterViewHeight - y - height, 
+                              width: width, 
+                              height: height)
+
+      if let existingTag = tooltipTags[tooltipId] {
+        self.contentView?.removeToolTip(existingTag)
+        tooltipMap.removeValue(forKey: existingTag)
+      }
+
+      let tag = self.contentView?.addToolTip(tooltipRect, 
+                                            owner: self, 
+                                            userData: Unmanaged.passRetained(text as NSString).toOpaque())
+      
+      if let tag = tag {
+        tooltipTags[tooltipId] = tag
+        tooltipMap[tag] = text
+      }
+
+      result(nil)
+
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+}
+
+// Add this extension to handle tooltip text requests
+extension MainFlutterWindow: NSViewToolTipOwner {
+  func view(_ view: NSView, 
+           stringForToolTip tag: NSView.ToolTipTag, 
+           point: NSPoint, 
+           userData data: UnsafeMutableRawPointer?) -> String {
+    return tooltipMap[tag] ?? ""
   }
 }
 

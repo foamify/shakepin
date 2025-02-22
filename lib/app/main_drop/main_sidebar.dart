@@ -161,7 +161,7 @@ class MainSidebar extends StatelessWidget {
     paths ??= selectedItems().toList();
 
     if (paths.videoPaths.isNotEmpty) {
-      onModeChanged(AppMode.convertToWav);
+      onModeChanged(AppMode.extractAudio);
       return;
     }
     if (paths.imagePaths.isNotEmpty) {
@@ -169,7 +169,7 @@ class MainSidebar extends StatelessWidget {
       return;
     }
     if (paths.audioPaths.isNotEmpty) {
-      onModeChanged(AppMode.convertToWav);
+      onModeChanged(AppMode.extractAudio);
       return;
     }
     if (paths.urls.isNotEmpty) {
@@ -177,6 +177,6 @@ class MainSidebar extends StatelessWidget {
       return;
     }
 
-    onModeChanged(AppMode.convertToWav);
+    onModeChanged(AppMode.extractAudio);
   }
 }

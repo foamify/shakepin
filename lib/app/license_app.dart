@@ -41,7 +41,9 @@ class _LicenseAppState extends State<LicenseApp> {
   final _licenseFormat = RegExp(
       r'^SKPN_PERP-[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$');
 
-  final _manageUrl = Uri.parse('https://polar.sh/purchases/license-keys');
+  final _manageUrl = Uri.parse('https://polar.sh/damywise/portal');
+  final _purchaseUrl = Uri.parse(
+      'https://buy.polar.sh/polar_cl_LsNCrveU8b9nh7Xe3OM1D7NygG9UT3QlGpWjB4LYXR0');
 
   @override
   void initState() {
@@ -158,34 +160,70 @@ class _LicenseAppState extends State<LicenseApp> {
   }
 
   Widget _buildManageLink() {
-    return ContextMenuWidget(
-      menuProvider: (context) {
-        return Menu(
-          children: [
-            MenuAction(
-              title: 'Copy link to clipboard',
-              callback: () async {
-                await Clipboard.setData(
-                  ClipboardData(text: _manageUrl.toString()),
-                );
-              },
-            ),
-          ],
-        );
-      },
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () => launchUrl(_manageUrl),
-          child: const Text(
-            'Manage license keys →',
-            style: TextStyle(
-              fontSize: 12,
-              decoration: TextDecoration.underline,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      spacing: 8,
+      children: [
+        ContextMenuWidget(
+          menuProvider: (context) {
+            return Menu(
+              children: [
+                MenuAction(
+                  title: 'Copy manage link to clipboard',
+                  callback: () async {
+                    await Clipboard.setData(
+                      ClipboardData(text: _manageUrl.toString()),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => launchUrl(_manageUrl),
+              child: const Text(
+                'Manage license keys →',
+                style: TextStyle(
+                  fontSize: 12,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
             ),
           ),
         ),
-      ),
+        const Text('or', style: TextStyle(fontSize: 12)),
+        ContextMenuWidget(
+          menuProvider: (context) {
+            return Menu(
+              children: [
+                MenuAction(
+                  title: 'Copy purchase link to clipboard',
+                  callback: () async {
+                    await Clipboard.setData(
+                      ClipboardData(text: _purchaseUrl.toString()),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => launchUrl(_purchaseUrl),
+              child: const Text(
+                'Buy license →',
+                style: TextStyle(
+                  fontSize: 12,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -464,7 +502,7 @@ class _LicenseAppState extends State<LicenseApp> {
         ),
         title: const Text('Deactivate License?'),
         message: const Text(
-          'This will remove the license from this device. You can reactivate it later.',
+          'This action will remove the license from the device. You can reactivate it later.',
         ),
         primaryButton: PushButton(
           controlSize: ControlSize.large,

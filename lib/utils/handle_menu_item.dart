@@ -7,63 +7,20 @@ void handleMenuItemClicked(int tag) async {
   Size? appSize;
   switch (tag) {
     case 1: // show
-      await _showApp();
+      await showApp();
     case 2: // hide
-      await _hideApp();
+      await hideApp();
     case 3: // about
       isAboutApp.value = true;
       isLicenseApp.value = false;
-      appSize = AppSizes.about;
-      _showApp();
+      showApp();
     case 4: // reset shared preferences
       await prefs.clear();
     case 5: // input license key
       isLicenseApp.value = true;
       isAboutApp.value = false;
-      appSize = AppSizes.license;
-      _showApp();
+      showApp();
     default:
       break;
   }
-
-  if (appSize != null) {
-    dropChannel.setMinimumSize(appSize);
-    final rect = Rect.fromCenter(
-      center: await dropChannel.center(),
-      width: appSize.width,
-      height: appSize.height,
-    );
-    dropChannel.setFrame(rect, animate: true);
-  }
-}
-
-Future<void> _showApp() async {
-  final center = await dropChannel.center();
-  Size appSize;
-
-  if (isAboutApp()) {
-    appSize = AppSizes.about;
-  } else {
-    appSize = switch (appMode()) {
-      AppMode.panel => AppSizes.panel,
-      AppMode.minify => AppSizes.minify,
-      AppMode.pin => AppSizes.pin,
-      AppMode.archive => AppSizes.archive,
-      _ => AppSizes.misc,
-    };
-  }
-
-  await dropChannel.setFrame(
-    Rect.fromCenter(
-      center: center,
-      width: appSize.width,
-      height: appSize.height,
-    ),
-    animate: true,
-  );
-  await dropChannel.setVisible(true);
-}
-
-Future<void> _hideApp() async {
-  resetFrameAndHide();
 }

@@ -14,6 +14,7 @@ sealed class AppSizes {
   static const about = Size(360, 360);
   static const license = Size(360, 450);
   static const misc = Size(240 + 48 + 12 + 16, 468);
+  static const crop = Size(980,680);
 
   static const pin = Size(240 + 48 + 12 + 16, 240);
 }
@@ -183,4 +184,39 @@ void resetFrameAndHide() async {
   await Future.delayed(Durations.short4);
   await dropChannel.setVisible(false);
   logger.log('Window hidden successfully');
+}
+
+Future<void> showApp() async {
+  final center = await dropChannel.center();
+  Size appSize;
+
+  if (isAboutApp()) {
+    appSize = AppSizes.about;
+  } else if (isLicenseApp()) {
+    appSize = AppSizes.license;
+  } else if (isCropApp()) {
+    appSize = AppSizes.crop;
+  } else {
+    appSize = switch (appMode()) {
+      AppMode.panel => AppSizes.panel,
+      AppMode.minify => AppSizes.minify,
+      AppMode.pin => AppSizes.pin,
+      AppMode.archive => AppSizes.archive,
+      _ => AppSizes.misc,
+    };
+  }
+
+  await dropChannel.setFrame(
+    Rect.fromCenter(
+      center: center,
+      width: appSize.width,
+      height: appSize.height,
+    ),
+    animate: true,
+  );
+  await dropChannel.setVisible(true);
+}
+
+Future<void> hideApp() async {
+  resetFrameAndHide();
 }
