@@ -348,13 +348,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: []
   );
 
-/// async 2.11.0
+/// async 2.12.0
 const _async = Package(
     name: 'async',
     description: "Utility functions and classes related to the 'dart:async' library.",
-    repository: 'https://github.com/dart-lang/async',
+    repository: 'https://github.com/dart-lang/core/tree/main/pkgs/async',
     authors: [],
-    version: '2.11.0',
+    version: '2.12.0',
     license: '''Copyright 2015, the Dart project authors. 
 
 Redistribution and use in source and binary forms, with or without
@@ -519,13 +519,13 @@ SOFTWARE.''',
     dependencies: [PackageRef('flutter'), PackageRef('plugin_platform_interface')]
   );
 
-/// boolean_selector 2.1.1
+/// boolean_selector 2.1.2
 const _boolean_selector = Package(
     name: 'boolean_selector',
     description: "A flexible syntax for boolean expressions, based on a simplified version of Dart's expression syntax.",
-    repository: 'https://github.com/dart-lang/boolean_selector',
+    repository: 'https://github.com/dart-lang/tools/tree/main/pkgs/boolean_selector',
     authors: [],
-    version: '2.1.1',
+    version: '2.1.2',
     license: '''Copyright 2016, the Dart project authors.
 
 Redistribution and use in source and binary forms, with or without
@@ -591,13 +591,13 @@ SOFTWARE.''',
     dependencies: [PackageRef('args'), PackageRef('meta')]
   );
 
-/// characters 1.3.0
+/// characters 1.4.0
 const _characters = Package(
     name: 'characters',
     description: 'String replacement with operations that are Unicode/grapheme cluster aware.',
-    repository: 'https://github.com/dart-lang/characters',
+    repository: 'https://github.com/dart-lang/core/tree/main/pkgs/characters',
     authors: [],
-    version: '1.3.0',
+    version: '1.4.0',
     license: '''Copyright 2019, the Dart project authors. 
 
 Redistribution and use in source and binary forms, with or without
@@ -630,13 +630,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: []
   );
 
-/// clock 1.1.1
+/// clock 1.1.2
 const _clock = Package(
     name: 'clock',
     description: 'A fakeable wrapper for dart:core clock APIs.',
-    repository: 'https://github.com/dart-lang/clock',
+    repository: 'https://github.com/dart-lang/tools/tree/main/pkgs/clock',
     authors: [],
-    version: '1.1.1',
+    version: '1.1.2',
     license: '''Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -843,13 +843,13 @@ const _clock = Package(
     dependencies: []
   );
 
-/// collection 1.19.0
+/// collection 1.19.1
 const _collection = Package(
     name: 'collection',
     description: 'Collections and utilities functions and classes related to collections.',
-    repository: 'https://github.com/dart-lang/collection',
+    repository: 'https://github.com/dart-lang/core/tree/main/pkgs/collection',
     authors: [],
-    version: '1.19.0',
+    version: '1.19.1',
     license: '''Copyright 2015, the Dart project authors. 
 
 Redistribution and use in source and binary forms, with or without
@@ -1675,13 +1675,13 @@ SOFTWARE.''',
     dependencies: [PackageRef('collection'), PackageRef('meta')]
   );
 
-/// extended_text 14.1.0
+/// extended_text 15.0.2
 const _extended_text = Package(
     name: 'extended_text',
     description: 'Extended official text to build special text like inline image or @somebody quickly,it also support custom background,custom over flow,gradient and custom selection toolbar and handles.',
     repository: 'https://github.com/fluttercandies/extended_text',
     authors: [],
-    version: '14.1.0',
+    version: '15.0.2',
     license: '''MIT License
 
 Copyright (c) 2019 zmtzawqlp
@@ -1708,13 +1708,13 @@ SOFTWARE.''',
     dependencies: [PackageRef('extended_text_library'), PackageRef('flutter')]
   );
 
-/// extended_text_library 12.0.0
+/// extended_text_library 12.0.1
 const _extended_text_library = Package(
     name: 'extended_text_library',
     description: 'package library for extended_text and extended_text_field,provide common base class.',
     repository: 'https://github.com/fluttercandies/extended_text_library',
     authors: [],
-    version: '12.0.0',
+    version: '12.0.1',
     license: '''MIT License
 
 Copyright (c) 2019 zmtzawqlp
@@ -1741,13 +1741,13 @@ SOFTWARE.''',
     dependencies: [PackageRef('flutter')]
   );
 
-/// fake_async 1.3.1
+/// fake_async 1.3.2
 const _fake_async = Package(
     name: 'fake_async',
     description: 'Fake asynchronous events such as timers and microtasks for deterministic testing.',
-    repository: 'https://github.com/dart-lang/fake_async',
+    repository: 'https://github.com/dart-lang/test/tree/master/pkgs/fake_async',
     authors: [],
-    version: '1.3.1',
+    version: '1.3.2',
     license: '''Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -2638,13 +2638,13 @@ SOFTWARE.''',
     dependencies: [PackageRef('flutter')]
   );
 
-/// flutter 3.27.4
+/// flutter 3.29.2
 const _flutter = Package(
     name: 'flutter',
     description: 'A framework for writing Flutter applications',
     homepage: 'https://flutter.dev',
     authors: [],
-    version: '3.27.4',
+    version: '3.29.2',
     license: '''Copyright 2014 The Flutter Authors. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification,
@@ -3451,13 +3451,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: [PackageRef('meta')]
   );
 
-/// leak_tracker 10.0.7
+/// leak_tracker 10.0.8
 const _leak_tracker = Package(
     name: 'leak_tracker',
     description: 'A framework for memory leak tracking for Dart and Flutter applications.',
     repository: 'https://github.com/dart-lang/leak_tracker/tree/main/pkgs/leak_tracker',
     authors: [],
-    version: '10.0.7',
+    version: '10.0.8',
     license: '''Copyright 2022, the Dart project authors.
 
 Redistribution and use in source and binary forms, with or without
@@ -3490,13 +3490,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: []
   );
 
-/// leak_tracker_flutter_testing 3.0.8
+/// leak_tracker_flutter_testing 3.0.9
 const _leak_tracker_flutter_testing = Package(
     name: 'leak_tracker_flutter_testing',
     description: 'An internal package to test leak tracking with Flutter.',
     repository: 'https://github.com/dart-lang/leak_tracker/tree/main/pkgs/leak_tracker_flutter_testing',
     authors: [],
-    version: '3.0.8',
+    version: '3.0.9',
     license: '''Copyright 2022, the Dart project authors.
 
 Redistribution and use in source and binary forms, with or without
@@ -3820,13 +3820,13 @@ SOFTWARE.''',
     dependencies: [PackageRef('flutter')]
   );
 
-/// matcher 0.12.16+1
+/// matcher 0.12.17
 const _matcher = Package(
     name: 'matcher',
     description: 'Support for specifying test expectations via an extensible Matcher class. Also includes a number of built-in Matcher implementations for common cases.',
-    repository: 'https://github.com/dart-lang/matcher',
+    repository: 'https://github.com/dart-lang/test/tree/master/pkgs/matcher',
     authors: [],
-    version: '0.12.16+1',
+    version: '0.12.17',
     license: '''Copyright 2014, the Dart project authors. 
 
 Redistribution and use in source and binary forms, with or without
@@ -4105,13 +4105,13 @@ SOFTWARE.''',
     dependencies: [PackageRef('flutter')]
   );
 
-/// meta 1.15.0
+/// meta 1.16.0
 const _meta = Package(
     name: 'meta',
     description: "Annotations used to express developer intentions that can't otherwise be deduced by statically analyzing source code.",
     repository: 'https://github.com/dart-lang/sdk/tree/main/pkg/meta',
     authors: [],
-    version: '1.15.0',
+    version: '1.16.0',
     license: '''Copyright 2016, the Dart project authors.
 
 Redistribution and use in source and binary forms, with or without
@@ -4642,13 +4642,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: [PackageRef('flutter'), PackageRef('meta'), PackageRef('plugin_platform_interface')]
   );
 
-/// path 1.9.0
+/// path 1.9.1
 const _path = Package(
     name: 'path',
     description: 'A string-based path manipulation library. All of the path operations you know and love, with solid support for Windows, POSIX (Linux and Mac OS X), and the web.',
-    repository: 'https://github.com/dart-lang/path',
+    repository: 'https://github.com/dart-lang/core/tree/main/pkgs/path',
     authors: [],
-    version: '1.9.0',
+    version: '1.9.1',
     license: '''Copyright 2014, the Dart project authors. 
 
 Redistribution and use in source and binary forms, with or without
@@ -5607,13 +5607,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: []
   );
 
-/// source_span 1.10.0
+/// source_span 1.10.1
 const _source_span = Package(
     name: 'source_span',
     description: 'Provides a standard representation for source code locations and spans.',
-    repository: 'https://github.com/dart-lang/source_span',
+    repository: 'https://github.com/dart-lang/tools/tree/main/pkgs/source_span',
     authors: [],
-    version: '1.10.0',
+    version: '1.10.1',
     license: '''Copyright 2014, the Dart project authors. 
 
 Redistribution and use in source and binary forms, with or without
@@ -5680,13 +5680,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: []
   );
 
-/// stack_trace 1.12.0
+/// stack_trace 1.12.1
 const _stack_trace = Package(
     name: 'stack_trace',
     description: 'A package for manipulating stack traces and printing them readably.',
-    repository: 'https://github.com/dart-lang/stack_trace',
+    repository: 'https://github.com/dart-lang/tools/tree/main/pkgs/stack_trace',
     authors: [],
-    version: '1.12.0',
+    version: '1.12.1',
     license: '''Copyright 2014, the Dart project authors.
 
 Redistribution and use in source and binary forms, with or without
@@ -5719,13 +5719,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: []
   );
 
-/// stream_channel 2.1.2
+/// stream_channel 2.1.4
 const _stream_channel = Package(
     name: 'stream_channel',
     description: 'An abstraction for two-way communication channels based on the Dart Stream class.',
-    repository: 'https://github.com/dart-lang/stream_channel',
+    repository: 'https://github.com/dart-lang/tools/tree/main/pkgs/stream_channel',
     authors: [],
-    version: '2.1.2',
+    version: '2.1.4',
     license: '''Copyright 2015, the Dart project authors. 
 
 Redistribution and use in source and binary forms, with or without
@@ -5758,13 +5758,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: []
   );
 
-/// string_scanner 1.3.0
+/// string_scanner 1.4.1
 const _string_scanner = Package(
     name: 'string_scanner',
     description: 'A class for parsing strings using a sequence of patterns.',
-    repository: 'https://github.com/dart-lang/string_scanner',
+    repository: 'https://github.com/dart-lang/tools/tree/main/pkgs/string_scanner',
     authors: [],
-    version: '1.3.0',
+    version: '1.4.1',
     license: '''Copyright 2014, the Dart project authors. 
 
 Redistribution and use in source and binary forms, with or without
@@ -5893,13 +5893,13 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.'''
     dependencies: [PackageRef('flutter'), PackageRef('collection'), PackageRef('logging')]
   );
 
-/// term_glyph 1.2.1
+/// term_glyph 1.2.2
 const _term_glyph = Package(
     name: 'term_glyph',
     description: 'Useful Unicode glyphs and ASCII substitutes.',
-    repository: 'https://github.com/dart-lang/term_glyph',
+    repository: 'https://github.com/dart-lang/tools/tree/main/pkgs/term_glyph',
     authors: [],
-    version: '1.2.1',
+    version: '1.2.2',
     license: '''Copyright 2017, the Dart project authors. 
 
 Redistribution and use in source and binary forms, with or without
@@ -5932,13 +5932,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: []
   );
 
-/// test_api 0.7.3
+/// test_api 0.7.4
 const _test_api = Package(
     name: 'test_api',
     description: 'The user facing API for structuring Dart tests and checking expectations.',
     repository: 'https://github.com/dart-lang/test/tree/master/pkgs/test_api',
     authors: [],
-    version: '0.7.3',
+    version: '0.7.4',
     license: '''Copyright 2018, the Dart project authors. 
 
 Redistribution and use in source and binary forms, with or without
@@ -6996,13 +6996,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.''',
     dependencies: [PackageRef('flutter'), PackageRef('video_player_platform_interface'), PackageRef('web')]
   );
 
-/// vm_service 14.3.0
+/// vm_service 14.3.1
 const _vm_service = Package(
     name: 'vm_service',
     description: 'A library to communicate with a service implementing the Dart VM service protocol.',
     repository: 'https://github.com/dart-lang/sdk/tree/main/pkg/vm_service',
     authors: [],
-    version: '14.3.0',
+    version: '14.3.1',
     license: '''Copyright 2015, the Dart project authors.
 
 Redistribution and use in source and binary forms, with or without

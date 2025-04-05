@@ -18,7 +18,7 @@ dependencies:
     git:
       url: https://github.com/foamify/libcaesium_dart.git
   path: any
-  extended_text: ^14.1.0
+  extended_text: ^15.0.2
   super_sliver_list: ^0.4.1
   path_provider: ^2.1.4
   url_launcher: ^6.2.1

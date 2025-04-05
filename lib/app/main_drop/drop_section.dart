@@ -621,7 +621,7 @@ enum DropAction {
   // This is required because for some reason the first item in pullsDown dropdown is not shown
   _('_'),
   removeSelected('Remove All Selected Items'),
-  copyLink('Copy ShakePin Link'),
+  copyLink('Copy Share Link'),
   unselectAl('Unselect All Items'),
   selectAll('Select All Items'),
   ;
