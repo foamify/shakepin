@@ -7,6 +7,8 @@ final processedFiles = ValueNotifier<int>(0);
 final totalFiles = ValueNotifier<int>(0);
 final minifiedFiles = ValueNotifier<List<MinifiedFile>>([]);
 final errorMessages = ValueNotifier<List<String>>([]);
+final retryTrigger = ValueNotifier<String?>(null);
+final isShowingAlert = ValueNotifier<bool>(false);
 final cropData = ValueNotifier<Map<String, CropValues>>({});
 
 class MinifiedFile {

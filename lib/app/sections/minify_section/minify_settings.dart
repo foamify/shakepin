@@ -9,6 +9,7 @@ import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/widgets/glass_button.dart';
+import 'package:shakepin/widgets/cli_aware_button.dart';
 import 'package:shakepin/widgets/native_dropdown_button.dart';
 
 class MinifySettings extends StatefulWidget {
@@ -30,6 +31,9 @@ class _MinifySettingsState extends State<MinifySettings> {
   var initialGifFpsGestureValue = 0.0;
   var initialDy = 0.0;
   final _gifFpsController = TextEditingController();
+  
+  // Store listener reference for proper disposal
+  late VoidCallback _retryListener;
 
   // Add crop state variables
   final _leftCrop = ValueNotifier<int>(0);
@@ -42,6 +46,15 @@ class _MinifySettingsState extends State<MinifySettings> {
     super.initState();
     _gifFpsController.text = _gifFps.toString();
     selectedItems.addListener(() => setState(() {}));
+    
+    // Listen for retry trigger
+    _retryListener = () {
+      if (retryTrigger.value == 'minify') {
+        retryTrigger.value = null; // Reset trigger
+        minifyFiles(); // Retry the minification
+      }
+    };
+    retryTrigger.addListener(_retryListener);
   }
 
   @override
@@ -51,11 +64,28 @@ class _MinifySettingsState extends State<MinifySettings> {
     _rightCrop.dispose();
     _topCrop.dispose();
     _bottomCrop.dispose();
+    retryTrigger.removeListener(_retryListener); // Clean up retry listener
     super.dispose();
   }
 
   bool get disabled =>
       !selectedItems().containsImage && !selectedItems().containsVideo;
+
+  List<String> _getRequiredTools() {
+    final tools = <String>{};
+    
+    // Check if we have video files that need ffmpeg
+    if (items().videoPaths.isNotEmpty) {
+      tools.add('ffmpeg');
+    }
+    
+    // Check if we have image files that need imagemagick
+    if (items().imagePaths.isNotEmpty) {
+      tools.add('imagemagick');
+    }
+    
+    return tools.toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -404,85 +434,39 @@ class _MinifySettingsState extends State<MinifySettings> {
                                     ),
                                   ],
                                 )
-                              : GlassButton(
+                              : CliAwareButton(
+                                  requiredTools: _getRequiredTools(),
                                   radius: 16,
-                                  onTap: disabled
-                                      ? null
-                                      : () async {
-                                          // await cli.setup(
-                                          //   onProgress: (step, progress) {
-                                          //     logger.log(
-                                          //         '[Cli.setup] $step: ${(progress * 100).toStringAsFixed(1)}%');
-                                          //   },
-                                          //   onError: (error) {
-                                          //     logger.log('[Cli.setup] $error');
-                                          //   },
-                                          //   onSuccess: () async {
-                                          //     logger
-                                          //         .log('[Cli.setup] Setup completed');
-
-                                          //     await logger
-                                          //         .log('Minify button pressed');
-                                          //     if (items().isEmpty) {
-                                          //       await logger.log(
-                                          //           'Minify button pressed but items list is empty');
-                                          //       await logger.log(
-                                          //           'Action aborted - no files to process');
-                                          //       return;
-                                          //     }
-                                          //     await logger.log(
-                                          //         'Minify button pressed with ${items().length} items');
-                                          //     await logger.log('Files breakdown:');
-                                          //     await logger.log(
-                                          //         '- Video files: ${items().videoPaths.length}');
-                                          //     await logger.log(
-                                          //         '- Image files: ${items().imagePaths.length}');
-                                          //     await logger.log('Selected settings:');
-                                          //     await logger.log(
-                                          //         '- Video quality: ${_videoQuality.name}');
-                                          //     await logger.log(
-                                          //         '- Video format: ${_videoFormat.name}');
-                                          //     await logger.log(
-                                          //         '- Image quality: ${_imageQuality.name}');
-                                          //     await logger.log(
-                                          //         '- Image format: ${_imageFormat.name}');
-                                          //     await logger.log(
-                                          //         'Starting minification process...');
-                                          //     minifyFiles();
-                                          //   },
-                                          // );
-                                          // return;
-
-                                          await logger
-                                              .log('Minify button pressed');
-                                          if (items().isEmpty) {
-                                            await logger.log(
-                                                'Minify button pressed but items list is empty');
-                                            await logger.log(
-                                                'Action aborted - no files to process');
-                                            return;
-                                          }
-                                          await logger.log(
-                                              'Minify button pressed with ${items().length} items');
-                                          await logger.log('Files breakdown:');
-                                          await logger.log(
-                                              '- Video files: ${items().videoPaths.length}');
-                                          await logger.log(
-                                              '- Image files: ${items().imagePaths.length}');
-                                          await logger
-                                              .log('Selected settings:');
-                                          await logger.log(
-                                              '- Video quality: ${_videoQuality.name}');
-                                          await logger.log(
-                                              '- Video format: ${_videoFormat.name}');
-                                          await logger.log(
-                                              '- Image quality: ${_imageQuality.name}');
-                                          await logger.log(
-                                              '- Image format: ${_imageFormat.name}');
-                                          await logger.log(
-                                              'Starting minification process...');
-                                          minifyFiles();
-                                        },
+                                  disabled: disabled,
+                                  onTap: () async {
+                                    await logger.log('Minify button pressed');
+                                    if (items().isEmpty) {
+                                      await logger.log(
+                                          'Minify button pressed but items list is empty');
+                                      await logger.log(
+                                          'Action aborted - no files to process');
+                                      return;
+                                    }
+                                    await logger.log(
+                                        'Minify button pressed with ${items().length} items');
+                                    await logger.log('Files breakdown:');
+                                    await logger.log(
+                                        '- Video files: ${items().videoPaths.length}');
+                                    await logger.log(
+                                        '- Image files: ${items().imagePaths.length}');
+                                    await logger.log('Selected settings:');
+                                    await logger.log(
+                                        '- Video quality: ${_videoQuality.name}');
+                                    await logger.log(
+                                        '- Video format: ${_videoFormat.name}');
+                                    await logger.log(
+                                        '- Image quality: ${_imageQuality.name}');
+                                    await logger.log(
+                                        '- Image format: ${_imageFormat.name}');
+                                    await logger.log(
+                                        'Starting minification process...');
+                                    minifyFiles();
+                                  },
                                   child: const Text('Compress',
                                       style: TextStyle(fontSize: 14)),
                                 ),
@@ -587,21 +571,19 @@ class _MinifySettingsState extends State<MinifySettings> {
       await logger.log('Output path set to: $filePath');
       await logger.log('Checking for ffprobe availability...');
 
-      final whichResult = await cli.run('which', ['ffprobe']);
-      await logger.log(
-          'which ffprobe command executed with exit code: ${whichResult.exitCode}');
+      final isFFprobeAvailable = await cli.isFFprobeAvailable();
+      await logger.log('FFprobe availability check result: $isFFprobeAvailable');
 
-      if (whichResult.exitCode != 0) {
+      if (!isFFprobeAvailable) {
         await logger.log('ffprobe not found in PATH');
         throw Exception(
-            'ffprobe not found in PATH. Please ensure FFmpeg is installed.');
+            'FFmpeg is not installed or not found in PATH. Please install FFmpeg to compress videos.');
       }
 
-      final ffprobePath = (whichResult.stdout as String).trim();
-      await logger.log('Found ffprobe at path: $ffprobePath');
+      await logger.log('FFprobe is available, proceeding with video processing');
 
       await logger.log('Executing ffprobe to get video duration...');
-      final probeResult = await cli.run(ffprobePath, [
+      final probeResult = await cli.run('ffprobe', [
         '-v',
         'error',
         '-show_entries',

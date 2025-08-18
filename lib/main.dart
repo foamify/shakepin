@@ -15,6 +15,8 @@ import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/license_service.dart';
 import 'package:shakepin/utils/utils.dart';
+import 'package:shakepin/services/settings_service.dart';
+import 'package:shakepin/services/cli_tool_availability_service.dart';
 import 'package:shakepin/widgets/native_dropdown_button.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tray_manager/tray_manager.dart';
@@ -27,7 +29,15 @@ void main() async {
   await DropdownChannel.instance.initialize();
 
   prefs = await SharedPreferences.getInstance();
-  initCli();
+  await initCli();
+  
+  // Initialize CLI tool availability service
+  await cliToolAvailability.initialize();
+  
+  // Initialize settings service for native-Flutter communication
+  if (Platform.isMacOS) {
+    await SettingsService.initialize();
+  }
 
   if (Platform.isWindows) {
     await windowManager.ensureInitialized();

@@ -11,6 +11,8 @@ import 'package:shakepin/widgets/drop_target.dart';
 import 'package:shakepin/widgets/glass_button.dart';
 import 'package:shakepin/widgets/native_dropdown_button.dart';
 import 'package:super_sliver_list/super_sliver_list.dart';
+import 'package:shakepin/services/settings_service.dart';
+
 
 class DropSection extends StatefulWidget {
   const DropSection({super.key});
@@ -239,23 +241,24 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
                                             ),
                                           ),
                                         ),
-                                        // SizedBox(
-                                        //   width: 16,
-                                        //   height: 16,
-                                        //   child: GlassButton(
-                                        //     ghost: true,
-                                        //     secondary: true,
-                                        //     padding: EdgeInsets.zero,
-                                        //     radius: 4,
-                                        //     onTap: () {},
-                                        //     child: MacosIcon(
-                                        //       FluentIcons.settings_16_regular,
-                                        //       color: MacosColors.labelColor
-                                        //           .resolvedColor(context),
-                                        //       size: 16,
-                                        //     ),
-                                        //   ),
-                                        // ),
+                                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: GlassButton(
+                            secondary: true,
+                            padding: EdgeInsets.zero,
+                            radius: 4,
+                            onTap: () {
+                              SettingsService.openSettings();
+                            },
+                            child: MacosIcon(
+                              FluentIcons.settings_16_regular,
+                              color: MacosColors.labelColor
+                                  .resolvedColor(context),
+                              size: 12,
+                            ),
+                          ),
+                        ),
                                       ],
                                     ),
                                   ),
@@ -604,6 +607,8 @@ class _DropSectionState extends State<DropSection> with DragDropListener {
     items.remove(path);
     selectedItems.value = Set.from(selectedItems())..remove(path);
   }
+
+
 
   @override
   void dispose() {

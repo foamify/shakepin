@@ -15,6 +15,7 @@ final isLicenseApp = ValueNotifier<bool>(false);
 final isLicenseValid = ValueNotifier<bool>(false);
 final isCropApp = ValueNotifier<bool>(false);
 
+
 final isSetupApp = ValueNotifier<bool>(false);
 
 const isAppStore = appFlavor != 'oss';
@@ -31,7 +32,7 @@ Future<void> loadOutputDirectory() async {
   if (outputDirectory.value == null) {
     final String? selectedDirectory = await getDirectoryPath();
     if (selectedDirectory != null) {
-      updateOutputDirectory(selectedDirectory);
+      updateOutputDirectory(selectedDirectory); 
     }
   }
 }

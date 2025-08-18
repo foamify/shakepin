@@ -16,7 +16,12 @@ class _CliVideoUtils {
         '-of',
         'csv=s=x:p=0',
         path
-      ]);
+      ], noThrow: true);
+
+      if (result.exitCode != 0) {
+        await logger.log('[Process.getVideoResolution] ffprobe failed with exit code: ${result.exitCode}');
+        return null;
+      }
 
       final parts = (result.stdout as String).trim().split('x');
       if (parts.length == 2) {
@@ -52,7 +57,12 @@ class _CliVideoUtils {
         '-of',
         'csv=p=0',
         path
-      ]);
+      ], noThrow: true);
+
+      if (result.exitCode != 0) {
+        await logger.log('[Process.getVideoKeyframes] ffprobe failed with exit code: ${result.exitCode}');
+        return [];
+      }
 
       final keyframes = (result.stdout as String)
           .trim()
@@ -76,7 +86,7 @@ class _CliVideoUtils {
     try {
       await logger.log(
           '[Process.extractFrame] Extracting frame at ${timestamp.inSeconds}s from: $path');
-      await cli.run('ffmpeg', [
+      final result = await cli.run('ffmpeg', [
         '-ss',
         '${timestamp.inMilliseconds / 1000}',
         '-i',
@@ -86,7 +96,12 @@ class _CliVideoUtils {
         '-q:v',
         '2',
         outputPath
-      ]);
+      ], noThrow: true);
+
+      if (result.exitCode != 0) {
+        await logger.log('[Process.extractFrame] ffmpeg failed with exit code: ${result.exitCode}');
+        return null;
+      }
       await logger
           .log('[Process.extractFrame] Extracted frame to: $outputPath');
       return outputPath;

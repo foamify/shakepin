@@ -38,6 +38,9 @@ class MainFlutterWindow: NSWindow {
   var tooltipTags: [String: NSView.ToolTipTag] = [:]
   var tooltipMap: [NSView.ToolTipTag: String] = [:]
 
+  var settingsChannel: FlutterMethodChannel?
+  var settingsWindowController: NSWindowController?
+
   override func awakeFromNib() {
     cleanup()
     flutterViewController = FlutterViewController()
@@ -64,7 +67,104 @@ class MainFlutterWindow: NSWindow {
 
     setupTooltipChannel()
 
+    // Settings channel for showing native Settings window
+    settingsChannel = FlutterMethodChannel(
+      name: "click.shakepin.macos/settings",
+      binaryMessenger: flutterViewController.engine.binaryMessenger
+    )
+    
+    // Connect the settings bridge to the channel
+    SettingsBridge.shared.setChannel(settingsChannel!)
+    
+    settingsChannel?.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
+      guard let self = self else { return }
+      switch call.method {
+      case "showSettings":
+        NSLog("[SETTINGS] showSettings called from Flutter")
+        self.showSettingsWindow()
+        NSLog("[SETTINGS] showSettingsWindow completed")
+        result(nil)
+      case "getSetting":
+        NSLog("[SETTINGS] getSetting called from Flutter")
+        if let key = call.arguments as? String {
+          NSLog("[SETTINGS] getSetting - key: %@", key)
+          let value = SettingsBridge.shared.getSetting(key: key)
+          NSLog("[SETTINGS] getSetting - returning value: %@", String(describing: value))
+          result(value)
+        } else {
+          NSLog("[SETTINGS] getSetting - Invalid arguments: %@", String(describing: call.arguments))
+          result(FlutterError(code: "INVALID_ARGUMENT", message: "Key must be a string", details: nil))
+        }
+      case "setSetting":
+        NSLog("[SETTINGS] setSetting called from Flutter")
+        if let args = call.arguments as? [String: Any],
+           let key = args["key"] as? String,
+           let value = args["value"] {
+          NSLog("[SETTINGS] setSetting - key: %@, value: %@", key, String(describing: value))
+          SettingsBridge.shared.setSetting(key: key, value: value)
+          self.handleSettingChange(key: key, value: value)
+          result(nil)
+        } else {
+          NSLog("[SETTINGS] setSetting - Invalid arguments: %@", String(describing: call.arguments))
+          result(FlutterError(code: "INVALID_ARGUMENT", message: "Invalid arguments for setSetting", details: nil))
+        }
+      case "getAllSettings":
+        NSLog("[SETTINGS] getAllSettings called from Flutter")
+        let settings = [
+          "launchAtLogin": SettingsBridge.shared.getSetting(key: "launchAtLogin") ?? false,
+          "showMenuBarIcon": SettingsBridge.shared.getSetting(key: "showMenuBarIcon") ?? true,
+          "theme": SettingsBridge.shared.getSetting(key: "theme") ?? "System",
+          "enableAnalytics": SettingsBridge.shared.getSetting(key: "enableAnalytics") ?? true,
+          "enableBetaFeatures": SettingsBridge.shared.getSetting(key: "enableBetaFeatures") ?? false
+        ]
+        NSLog("[SETTINGS] getAllSettings - returning: %@", String(describing: settings))
+        result(settings)
+      case "settingChanged":
+        NSLog("[SETTINGS] settingChanged called from Flutter")
+        if let args = call.arguments as? [String: Any],
+           let key = args["key"] as? String,
+           let value = args["value"] {
+          NSLog("[SETTINGS] settingChanged - key: %@, value: %@", key, String(describing: value))
+          self.handleSettingChange(key: key, value: value)
+        } else {
+          NSLog("[SETTINGS] settingChanged - Invalid arguments: %@", String(describing: call.arguments))
+        }
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
     super.awakeFromNib()
+  }
+
+  @objc func openSettingsMenuItem(_ sender: Any?) {
+    showSettingsWindow()
+  }
+
+  func showSettingsWindow() {
+    NSLog("[SETTINGS] showSettingsWindow method called")
+    
+    if let controller = settingsWindowController, controller.window?.isVisible == true {
+      NSLog("[SETTINGS] Settings window already visible, bringing to front")
+      controller.showWindow(self)
+      NSApp.activate(ignoringOtherApps: true)
+      return
+    }
+    
+    NSLog("[SETTINGS] Creating new settings window")
+    let vc = SettingsHostingController()
+    let window = NSWindow(contentViewController: vc)
+    window.title = "Settings"
+    window.styleMask = NSWindow.StyleMask([.titled, .closable, .miniaturizable])
+    window.setContentSize(NSSize(width: 640, height: 480))
+    window.center()
+    let controller = NSWindowController(window: window)
+    self.settingsWindowController = controller
+    NSLog("[SETTINGS] About to show settings window")
+    controller.showWindow(self)
+    NSApp.activate(ignoringOtherApps: true)
+    NSLog("[SETTINGS] Settings window should now be visible")
   }
 
   override func order(_ place: NSWindow.OrderingMode, relativeTo otherWin: Int) {
@@ -549,6 +649,9 @@ class MainFlutterWindow: NSWindow {
             details: nil))
       }
 
+    case "showNativeAlert":
+      showNativeAlert(call: call, result: result)
+
     default:
       result(FlutterMethodNotImplemented)
     }
@@ -904,36 +1007,149 @@ class MainFlutterWindow: NSWindow {
   private func setupMenuBar() {
     // this is done natively because calling it from dart causes crash for some reason.
     // maybe next time try to add future.delayed to it.
-    statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-
-    let menu = NSMenu()
-    let menuItems = [
-      ("Show", 1),
-      ("Hide", 2),
-      ("About Shakepin", 3),
-      ("Manage License", 5),
-      ("Quit", -1),
-    ]
-
-    for (title, tag) in menuItems {
-      let item = NSMenuItem(title: title, action: #selector(menuItemClicked), keyEquivalent: "")
-      item.target = self
-      item.tag = tag
-
-      // Highlight the "Mange License" item with background color
-      if tag == 5 {
-        item.attributedTitle = NSAttributedString(
-          string: title,
-          attributes: [
-            .font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize),
-            .foregroundColor: NSColor.systemBlue,
-          ]
-        )
+    print("[SETTINGS] setupMenuBar called")
+    NSLog("[SETTINGS] setupMenuBar called")
+    let showMenuBarIcon = SettingsBridge.shared.getSetting(key: "showMenuBarIcon") as? Bool ?? true
+    print("[SETTINGS] showMenuBarIcon value from SettingsBridge: \(showMenuBarIcon)")
+    NSLog("[SETTINGS] showMenuBarIcon value from SettingsBridge: %@", showMenuBarIcon ? "true" : "false")
+    
+    if showMenuBarIcon {
+      NSLog("[SETTINGS] Creating status item because showMenuBarIcon is true")
+      if statusItem == nil {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        NSLog("[SETTINGS] Created new status item")
+      } else {
+        NSLog("[SETTINGS] Status item already exists")
       }
+      
+      let menu = NSMenu()
+      let menuItems = [
+        ("Show", 1),
+        ("Hide", 2),
+        ("About Shakepin", 3),
+        ("Manage License", 5),
+        ("Quit", -1),
+      ]
 
-      menu.addItem(item)
+      for (title, tag) in menuItems {
+        let item = NSMenuItem(title: title, action: #selector(menuItemClicked), keyEquivalent: "")
+        item.target = self
+        item.tag = tag
+
+        // Highlight the "Mange License" item with background color
+        if tag == 5 {
+          item.attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+              .font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize),
+              .foregroundColor: NSColor.systemBlue,
+            ]
+          )
+        }
+
+        menu.addItem(item)
+      }
+      statusItem.menu = menu
+      
+      // Set the button image for the status item
+      if let button = statusItem.button {
+        // Try to load the tray icon from bundle resources
+        if let imagePath = Bundle.main.path(forResource: "tray_icon", ofType: "png"),
+           let originalImage = NSImage(contentsOfFile: imagePath) {
+          // Create a properly sized image for menu bar
+          let image = NSImage(size: NSSize(width: 18, height: 18))
+          image.lockFocus()
+          originalImage.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18))
+          image.unlockFocus()
+          // Set template rendering mode for proper menu bar appearance
+          image.isTemplate = true
+          button.image = image
+          NSLog("[SETTINGS] Status item button image loaded from bundle")
+        } else if let originalImage = NSImage(named: "tray_icon") {
+          // Create a properly sized image for menu bar
+          let image = NSImage(size: NSSize(width: 18, height: 18))
+          image.lockFocus()
+          originalImage.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18))
+          image.unlockFocus()
+          image.isTemplate = true
+          button.image = image
+          NSLog("[SETTINGS] Status item button image set from assets")
+        } else {
+          // Use a simple system symbol as fallback
+          if let systemImage = NSImage(systemSymbolName: "app.badge", accessibilityDescription: "ShakePin") {
+            button.image = systemImage
+            NSLog("[SETTINGS] Status item button set to system symbol")
+          } else {
+            button.title = "SP"
+            NSLog("[SETTINGS] Status item button set to text fallback")
+          }
+        }
+      }
+      
+      NSLog("[SETTINGS] Status item created and menu configured")
+    } else {
+      // Hide the status item if showMenuBarIcon is false
+      NSLog("[SETTINGS] Hiding status item because showMenuBarIcon is false")
+      if statusItem != nil {
+        NSStatusBar.system.removeStatusItem(statusItem)
+        statusItem = nil
+        NSLog("[SETTINGS] Status item removed")
+      } else {
+        NSLog("[SETTINGS] Status item was already nil")
+      }
     }
-    statusItem.menu = menu
+  }
+  
+  private func handleSettingChange(key: String, value: Any) {
+    print("[SETTINGS] handleSettingChange called with key: \(key), value: \(value)")
+    NSLog("[SETTINGS] handleSettingChange called with key: %@, value: %@", key, String(describing: value))
+    switch key {
+    case "showMenuBarIcon":
+      if let showIcon = value as? Bool {
+        print("[SETTINGS] Processing showMenuBarIcon change to: \(showIcon)")
+        NSLog("[SETTINGS] Processing showMenuBarIcon change to: %@", showIcon ? "true" : "false")
+        if showIcon {
+          // Show the menu bar icon
+          NSLog("[SETTINGS] Should show icon - current statusItem: %@", statusItem == nil ? "nil" : "exists")
+          // Always recreate the status item to ensure it's properly visible
+          if statusItem != nil {
+            NSStatusBar.system.removeStatusItem(statusItem)
+            statusItem = nil
+            NSLog("[SETTINGS] Removed existing status item before recreating")
+          }
+          NSLog("[SETTINGS] Creating new status item")
+          setupMenuBar()
+        } else {
+          // Hide the menu bar icon
+          NSLog("[SETTINGS] Should hide icon - removing statusItem")
+          if statusItem != nil {
+            NSStatusBar.system.removeStatusItem(statusItem)
+            statusItem = nil
+            NSLog("[SETTINGS] Status item removed")
+          } else {
+            NSLog("[SETTINGS] Status item was already nil")
+          }
+        }
+      } else {
+        NSLog("[SETTINGS] showMenuBarIcon value is not a Bool: %@", String(describing: value))
+      }
+    case "launchAtLogin":
+      // Handle launch at login setting
+      NSLog("[SETTINGS] Handling launchAtLogin setting change")
+      break
+    case "theme":
+      // Handle theme changes if needed
+      NSLog("[SETTINGS] Handling theme setting change")
+      break
+    default:
+      NSLog("[SETTINGS] Ignoring setting change for key: %@", key)
+      break
+    }
+  }
+  
+  func handleSettingChangeFromBridge(key: String, value: Any) {
+    NSLog("[SETTINGS] handleSettingChangeFromBridge called with key: %@, value: %@", key, String(describing: value))
+    handleSettingChange(key: key, value: value)
   }
 
   @objc func menuItemClicked(_ sender: NSMenuItem) {
@@ -1077,6 +1293,53 @@ class MainFlutterWindow: NSWindow {
       result(FlutterMethodNotImplemented)
     }
   }
+  
+  private func showNativeAlert(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard let args = call.arguments as? [String: Any],
+          let title = args["title"] as? String,
+          let message = args["message"] as? String else {
+      result(FlutterError(code: "INVALID_ARGUMENTS", message: "Invalid arguments", details: nil))
+      return
+    }
+    
+    let alertStyle = args["style"] as? String ?? "warning"
+    let buttons = args["buttons"] as? [String] ?? ["OK"]
+    
+    DispatchQueue.main.async {
+      let alert = NSAlert()
+      alert.messageText = title
+      alert.informativeText = message
+      
+      // Set alert style
+      switch alertStyle {
+      case "critical":
+        alert.alertStyle = .critical
+      case "informational":
+        alert.alertStyle = .informational
+      default:
+        alert.alertStyle = .warning
+      }
+      
+      // Add buttons
+      for buttonTitle in buttons {
+        alert.addButton(withTitle: buttonTitle)
+      }
+      
+      // Show alert as sheet if window is available, otherwise as modal
+      if let window = self.isVisible ? self : NSApp.mainWindow {
+        alert.beginSheetModal(for: window) { response in
+          let buttonIndex = response.rawValue - 1000 // NSAlert button responses start at 1000
+          let selectedButton = buttonIndex < buttons.count ? buttons[buttonIndex] : buttons[0]
+          result(selectedButton)
+        }
+      } else {
+        let response = alert.runModal()
+        let buttonIndex = response.rawValue - 1000
+        let selectedButton = buttonIndex < buttons.count ? buttons[buttonIndex] : buttons[0]
+        result(selectedButton)
+      }
+    }
+  }
 }
 
 // Add this extension to handle tooltip text requests
@@ -1197,15 +1460,16 @@ class ProcessHandler {
 
   func startProcess(command: String, arguments: [String], result: @escaping FlutterResult) {
     NSLog("Starting process with command: \(command) and arguments: \(arguments)")
-    cleanup()
+    // Don't cleanup existing processes to allow concurrent execution
 
     let process = Process()
     let outputPipe = Pipe()
     let errorPipe = Pipe()
 
-    self.currentProcess = process
-    self.currentOutputPipe = outputPipe
-    self.currentErrorPipe = errorPipe
+    // Don't store in instance variables to allow concurrent processes
+    // self.currentProcess = process
+    // self.currentOutputPipe = outputPipe
+    // self.currentErrorPipe = errorPipe
 
     let fullCommand = ([command] + arguments).joined(separator: " ")
     NSLog("Full command to execute: \(fullCommand)")
@@ -1247,7 +1511,9 @@ class ProcessHandler {
 
     process.terminationHandler = { process in
       NSLog("Process terminated with status: \(process.terminationStatus)")
-      self.cleanup()
+      // Clean up local pipes instead of calling instance cleanup
+      outputPipe.fileHandleForReading.readabilityHandler = nil
+      errorPipe.fileHandleForReading.readabilityHandler = nil
       DispatchQueue.main.async {
         result([
           "exitCode": process.terminationStatus,
@@ -1257,24 +1523,13 @@ class ProcessHandler {
       }
     }
 
-    do {
-      NSLog("Attempting to launch process")
-      process.launch()
+    // Launch process (non-throwing in current SDKs) and set process group id
+    NSLog("Attempting to launch process")
+    process.launch()
 
-      let pgid = process.processIdentifier
-      let pgidResult = setpgid(pgid, pgid)
-      NSLog("Process launched - PID: \(pgid), PGID set result: \(pgidResult)")
-
-    } catch {
-      NSLog("Failed to launch process: \(error.localizedDescription)")
-      self.cleanup()
-      result(
-        FlutterError(
-          code: "PROCESS_ERROR",
-          message: error.localizedDescription,
-          details: nil
-        ))
-    }
+    let pgid = process.processIdentifier
+    let pgidResult = setpgid(pgid, pgid)
+    NSLog("Process launched - PID: \(pgid), PGID set result: \(pgidResult)")
   }
 
   func cleanup() {

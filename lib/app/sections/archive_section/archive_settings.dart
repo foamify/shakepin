@@ -2,9 +2,11 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
+import 'package:shakepin/app/sections/minify_section/minify_state.dart';
 import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/glass_button.dart';
+import 'package:shakepin/widgets/cli_aware_button.dart';
 import 'package:path/path.dart' as path;
 import 'package:shakepin/widgets/native_dropdown_button.dart';
 
@@ -22,17 +24,64 @@ class _ArchiveSettingsState extends State<ArchiveSettings> {
   final passwordController = TextEditingController();
   String? customOutputPath;
 
+  List<String> _getRequiredTools() {
+    final tools = <String>{};
+    
+    // 7z is needed for 7z format
+    if (selectedFormat == ArchiveFormat.sevenZip) {
+      tools.add('7z');
+    }
+    
+    return tools.toList();
+  }
+
+  Future<void> _performArchiveOperation() async {
+    final items = selectedItems().toList();
+    if (items.isEmpty) return;
+    
+    progressNotifier.value = 0;
+    final outputDir = customOutputPath ?? path.dirname(items.first);
+    
+    try {
+      await cli.archiveFiles(
+        items,
+        outputDir,
+        format: selectedFormat,
+        compressionLevel: compressionLevel,
+        password: passwordController.text.isEmpty
+            ? null
+            : passwordController.text,
+        onProgress: (progress) {
+          progressNotifier.value = progress;
+        },
+      );
+    } catch (e) {
+      errorMessages.value = ['Archive operation failed: $e'];
+    }
+    progressNotifier.value = -1;
+  }
+
   @override
   void initState() {
     progressNotifier.addListener(() {
       setState(() {});
     });
+    
+    // Listen for retry triggers
+    retryTrigger.addListener(() {
+      if (retryTrigger.value == 'archive') {
+        retryTrigger.value = null; // Reset trigger
+        _performArchiveOperation();
+      }
+    });
+    
     super.initState();
   }
 
   @override
   void dispose() {
     passwordController.dispose();
+    progressNotifier.dispose();
     super.dispose();
   }
 
@@ -211,28 +260,11 @@ class _ArchiveSettingsState extends State<ArchiveSettings> {
                 ValueListenableBuilder(
                   valueListenable: selectedItems,
                   builder: (context, items, _) {
-                    return GlassButton(
+                    return CliAwareButton(
+                      requiredTools: _getRequiredTools(),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      onTap: items.isEmpty
-                          ? null
-                          : () async {
-                              progressNotifier.value = 0;
-                              final outputDir =
-                                  customOutputPath ?? path.dirname(items.first);
-                              await cli.archiveFiles(
-                                items.toList(),
-                                outputDir,
-                                format: selectedFormat,
-                                compressionLevel: compressionLevel,
-                                password: passwordController.text.isEmpty
-                                    ? null
-                                    : passwordController.text,
-                                onProgress: (progress) {
-                                  progressNotifier.value = progress;
-                                },
-                              );
-                              progressNotifier.value = -1;
-                            },
+                      disabled: items.isEmpty,
+                      onTap: _performArchiveOperation,
                       radius: 16,
                       child: const Text('Archive Files'),
                     );

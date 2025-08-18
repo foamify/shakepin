@@ -2,10 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:macos_ui/macos_ui.dart';
 import 'package:shakepin/state.dart';
+import 'package:shakepin/app/sections/minify_section/minify_state.dart';
 import 'package:shakepin/utils/cli.dart';
 import 'package:shakepin/utils/logger.dart';
 import 'package:shakepin/utils/utils.dart';
 import 'package:shakepin/widgets/glass_button.dart';
+import 'package:shakepin/widgets/cli_aware_button.dart';
 import 'package:shakepin/widgets/native_dropdown_button.dart';
 
 //TODO: set output path
@@ -23,6 +25,93 @@ class _MiscSettingsState extends State<MiscSettings> {
   int selectedSampleRate = 16000;
 
   static final List<int> sampleRates = [8000, 16000, 22050, 44100, 48000];
+
+  List<String> _getRequiredTools() {
+    final tools = <String>{};
+    
+    switch (appMode()) {
+      case AppMode.convertToIco:
+        tools.add('imagemagick');
+      case AppMode.extractAudio:
+        tools.add('ffmpeg');
+      case AppMode.downloadVideo:
+        tools.add('yt-dlp');
+      case AppMode.downloadMedia:
+        tools.add('gallery-dl');
+      default:
+        break;
+    }
+    
+    return tools.toList();
+  }
+
+  Future<void> _performMiscOperation() async {
+    final items = selectedItems();
+    if (items.isEmpty || items.every((e) => !appMode().isFileCompatible(e))) {
+      return;
+    }
+    
+    progressNotifier.value = 0;
+    try {
+      switch (appMode()) {
+        case AppMode.convertToIco:
+          await cli.convertToIco(items.first);
+        case AppMode.extractAudio:
+          await cli.extractAudio(
+            items.toList(),
+            format: selectedFormat,
+            sampleRate: selectedSampleRate,
+            onProgress: (progress) {
+              progressNotifier.value = progress;
+            },
+          );
+        case AppMode.downloadVideo:
+          await cli.downloadVideo(
+            items.first,
+            onProgress: (progress) {
+              progressNotifier.value = progress;
+            },
+          );
+        case AppMode.downloadMedia:
+          await cli.downloadMedia(
+            items.first,
+            onProgress: (progress) {
+              progressNotifier.value = progress;
+            },
+          );
+        default:
+          logger.log('Unsupported app mode: ${appMode()}');
+      }
+    } catch (e) {
+      String operationName = switch (appMode()) {
+        AppMode.convertToIco => 'Icon conversion',
+        AppMode.extractAudio => 'Audio extraction',
+        AppMode.downloadVideo => 'Video download',
+        AppMode.downloadMedia => 'Media download',
+        _ => 'Operation'
+      };
+      errorMessages.value = ['$operationName failed: $e'];
+    }
+    progressNotifier.value = -1;
+  }
+
+  @override
+  void initState() {
+    // Listen for retry triggers
+    retryTrigger.addListener(() {
+      if (retryTrigger.value == 'misc') {
+        retryTrigger.value = null; // Reset trigger
+        _performMiscOperation();
+      }
+    });
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    progressNotifier.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -222,50 +311,13 @@ class _MiscSettingsState extends State<MiscSettings> {
                   ],
                 );
               }
-              return GlassButton(
+              return CliAwareButton(
+                requiredTools: _getRequiredTools(),
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                onTap: selectedItems().isEmpty ||
+                disabled: selectedItems().isEmpty ||
                         selectedItems()
-                            .every((e) => !appMode().isFileCompatible(e))
-                    ? null
-                    : () async {
-                        progressNotifier.value = 0;
-                        try {
-                          switch (appMode()) {
-                            case AppMode.convertToIco:
-                              await cli.convertToIco(selectedItems().first);
-                            case AppMode.extractAudio:
-                              await cli.extractAudio(
-                                selectedItems().toList(),
-                                format: selectedFormat,
-                                sampleRate: selectedSampleRate,
-                                onProgress: (progress) {
-                                  progressNotifier.value = progress;
-                                },
-                              );
-                            case AppMode.downloadVideo:
-                              await cli.downloadVideo(
-                                selectedItems().first,
-                                onProgress: (progress) {
-                                  progressNotifier.value = progress;
-                                },
-                              );
-                            case AppMode.downloadMedia:
-                              await cli.downloadMedia(
-                                selectedItems().first,
-                                onProgress: (progress) {
-                                  progressNotifier.value = progress;
-                                },
-                              );
-                            default:
-                              logger.log('Unsupported app mode: ${appMode()}');
-                          }
-                        } catch (e) {
-                          //TODO: add error
-                          progressNotifier.value = -1;
-                        }
-                        progressNotifier.value = -1;
-                      },
+                            .every((e) => !appMode().isFileCompatible(e)),
+                onTap: _performMiscOperation,
                 radius: 16,
                 child: Text(appMode().label!),
               );

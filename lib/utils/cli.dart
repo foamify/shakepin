@@ -7,6 +7,7 @@ import 'package:shakepin/app/sections/minify_section/minify_state.dart';
 import 'package:shakepin/state.dart';
 import 'package:shakepin/utils/drop_channel.dart';
 import 'package:shakepin/utils/logger.dart';
+import 'package:shakepin/services/settings_service.dart';
 
 part 'cli/archive.dart';
 part 'cli/extract_audio.dart';
@@ -35,6 +36,8 @@ String get shell {
 final cli = Cli._();
 
 class Cli {
+  static bool _autoDetectionCompleted = false;
+  
   Cli._() {
     init();
   }
@@ -49,7 +52,101 @@ class Cli {
   final _setup = _CliSetup();
   final _videoUtils = _CliVideoUtils();
 
-  void init() {}
+  Future<void> init() async {
+    // Auto-detect CLI tools on startup (only once)
+    if (!_autoDetectionCompleted) {
+      await _autoDetectCliTools();
+      _autoDetectionCompleted = true;
+    }
+  }
+
+  /// Auto-detect CLI tool paths and store them in settings
+  Future<void> _autoDetectCliTools() async {
+    if (!Platform.isMacOS) return; // Only for macOS for now
+    
+    final toolsToDetect = {
+      'ffmpegPath': 'ffmpeg',
+      'galleryDlPath': 'gallery-dl', 
+      'gifskiPath': 'gifski',
+      'ytDlpPath': 'yt-dlp',
+    };
+    
+    logger.log('[CLI] Auto-detecting CLI tool paths...');
+    
+    for (final entry in toolsToDetect.entries) {
+      final settingKey = entry.key;
+      final toolName = entry.value;
+      
+      try {
+        // Check if path is already set in settings
+        final existingPath = await _getSettingValue(settingKey);
+        if (existingPath != null && existingPath.isNotEmpty) {
+          logger.log('[CLI] $toolName: Using existing path: $existingPath');
+          continue;
+        }
+        
+        // Add a small delay to avoid process conflicts
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        // Use which command to find the tool
+        final result = await run('which', [toolName], noThrow: true);
+        if (result.exitCode == 0) {
+          final detectedPath = result.stdout.toString().trim();
+          if (detectedPath.isNotEmpty) {
+            logger.log('[CLI] $toolName: Auto-detected at $detectedPath');
+            await _setSettingValue(settingKey, detectedPath);
+          }
+        } else {
+          logger.log('[CLI] $toolName: Not found in PATH');
+        }
+      } catch (e) {
+        logger.log('[CLI] Error detecting $toolName: $e');
+      }
+    }
+    
+    logger.log('[CLI] CLI tool auto-detection completed');
+  }
+  
+  /// Get setting value from native settings
+  Future<String?> _getSettingValue(String key) async {
+    try {
+      return await SettingsService.getSetting<String>(key);
+    } catch (e) {
+      logger.log('[CLI] Error getting setting $key: $e');
+      return null;
+    }
+  }
+  
+  /// Set setting value in native settings
+  Future<void> _setSettingValue(String key, String value) async {
+    try {
+      await SettingsService.setSetting(key, value);
+    } catch (e) {
+      logger.log('[CLI] Error setting $key: $e');
+    }
+  }
+
+  /// Check if FFmpeg is available on the system
+  Future<bool> isFFmpegAvailable() async {
+    try {
+      final result = await run('which', ['ffmpeg'], noThrow: true);
+      return result.exitCode == 0;
+    } catch (e) {
+      logger.log('[Process.isFFmpegAvailable] Error: $e');
+      return false;
+    }
+  }
+
+  /// Check if FFprobe is available on the system
+  Future<bool> isFFprobeAvailable() async {
+    try {
+      final result = await run('which', ['ffprobe'], noThrow: true);
+      return result.exitCode == 0;
+    } catch (e) {
+      logger.log('[Process.isFFprobeAvailable] Error: $e');
+      return false;
+    }
+  }
 
   void dispose() {
     cancel();
@@ -336,8 +433,13 @@ class Cli {
       final result = await run(
         'ffprobe',
         args,
-        noThrow: true, // Add this to handle errors more gracefully
+        noThrow: true,
       );
+
+      if (result.exitCode != 0) {
+        logger.log('[Process.getMediaDuration] ffprobe failed with exit code: ${result.exitCode}');
+        return null;
+      }
 
       final duration = double.tryParse(result.stdout.toString().trim());
       if (duration != null) {
@@ -399,12 +501,16 @@ class Cli {
       _videoUtils.getVideoResolution(path);
 }
 
-void initCli() {
+Future<void> initCli() async {
   if (setupError() != null) {
     setupError.value = null;
     setupSuccess.value = null;
     setupStep.value = null;
   }
+  
+  // Initialize CLI and auto-detect tools first
+  await cli.init();
+  
   cli.setup(
     onProgress: (step) {
       logger.log('Setup progress: ${step.label} (${step.progress})');

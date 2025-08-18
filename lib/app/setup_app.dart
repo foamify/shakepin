@@ -20,6 +20,14 @@ class SetupApp extends StatelessWidget {
     }
   }
 
+  void _launchFFmpegGuide() async {
+    // Matches the guide URL used in cli_tool_helper.dart
+    final Uri url = Uri.parse('https://www.youtube.com/watch?v=kXzcR_HRgV8');
+    if (!await launchUrl(url)) {
+      debugPrint('Could not launch $url');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -185,11 +193,28 @@ class SetupApp extends StatelessWidget {
                 ]),
               SizedBox(
                 width: 200,
-                child: GlassButton(
-                  child: const Text('Try Again'),
-                  onTap: () {
-                    initCli();
-                  },
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: GlassButton(
+                        child: const Text('Try Again'),
+                        onTap: () {
+                          initCli();
+                        },
+                      ),
+                    ),
+                    if (setupError() == SetupStep.installingFfmpeg) ...[
+                      const SizedBox(height: 24),
+                      Expanded(
+                        child: GlassButton(
+                          secondary: true,
+                          onTap: _launchFFmpegGuide,
+                          child: const Text('Install FFmpeg Manually'),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               )
             ],
