@@ -3,6 +3,14 @@
     <channel>
         <title>ShakePin</title>
         <item>
+            <title>0.4.0</title>
+            <pubDate>Mon, 18 Aug 2025 18:34:32 +0700</pubDate>
+            <sparkle:version>0.4.0</sparkle:version>
+            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+            <enclosure url="ShakePin-v0.4.0.zip" length="31357147" type="application/octet-stream" sparkle:edSignature="gblNoA2kL7daVoX/4zEs8Y0nGWrYCTJDLQK8DEyjBiOi+lnNsGdsdbX3VdBkB+cAwhBHfRsf7SG3xTMVGXfQAQ=="/>
+        </item>
+        <item>
             <title>Version 0.3.6 - Crop Image and Video</title>
             <pubDate>Tue, 11 Mar 2025 21:48:10 +0700</pubDate>
             <sparkle:version>0.3.6</sparkle:version>
