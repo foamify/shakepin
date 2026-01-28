@@ -150,22 +150,36 @@ class _ArchiveSettingsState extends State<ArchiveSettings> {
                   ],
                 ),
               ],
-              // Temporary disable, not working yet
-              // Row(
-              //   children: [
-              //     const Text('Password: '),
-              //     const Spacer(),
-              //     SizedBox(
-              //       width: 140,
-              //       child: MacosTextField(
-              //         controller: passwordController,
-              //         placeholder: 'Optional password',
-              //         obscureText: true,
-              //         textAlign: TextAlign.end,
-              //       ),
-              //     ),
-              //   ],
-              // ),
+              Divider(color: MacosColors.systemGrayColor.withValues(alpha: .2)),
+              Row(
+                children: [
+                  const Text('Password'),
+                  const Spacer(),
+                  SizedBox(
+                    width: 140,
+                    child: MacosTextField(
+                      controller: passwordController,
+                      placeholder: 'Optional',
+                      obscureText: true,
+                      textAlign: TextAlign.end,
+                      onChanged: (value) {
+                        setState(() {}); // Rebuild to show/hide encryption notice
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              if (passwordController.text.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Text(
+                    'AES-256 if 7-Zip installed, otherwise PKZip',
+                    style: MacosTheme.of(context).typography.footnote
+                        .copyWith(
+                          color: MacosColors.systemGrayColor,
+                        ),
+                  ),
+                ),
 
               Divider(color: MacosColors.systemGrayColor.withValues(alpha: .2)),
               Row(

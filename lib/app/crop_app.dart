@@ -70,7 +70,7 @@ class _CropAppState extends State<CropApp> {
   Map<String, CropValues>? _initialCropData;
 
   // Add new state variables for multiple image support
-  late List<String> _imagesToCrop;
+  List<String> _imagesToCrop = [];
   int _currentIndex = 0;
 
   VideoPlayerController? _videoController;

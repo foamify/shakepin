@@ -43,29 +43,17 @@ class EncryptionOptions {
 
 class _CliArchive {
   Future<String> _getUniqueArchiveName(
-      String folder, ArchiveFormat format) async {
-    String baseName = 'archive';
-    String extension = format.extension;
-    const int maxBaseLength = 200;
+      String sourcePath, ArchiveFormat format) async {
+    // Use the source file/folder name as base, like image/video compression
+    final sourceName = path.basename(sourcePath);
+    final baseName = path.basenameWithoutExtension(sourcePath);
+    final extension = format.extension;
 
-    // Ensure base name isn't too long
-    if (baseName.length > maxBaseLength) {
-      baseName = baseName.substring(0, maxBaseLength);
-    }
-
-    String fullPath = path.join(folder, '$baseName$extension');
-    int counter = 1;
-
-    while (await File(fullPath).exists()) {
-      String newName = '$baseName (${counter++})';
-      if (newName.length > maxBaseLength) {
-        // Truncate the base name to make room for counter
-        newName = '${baseName.substring(0, maxBaseLength - 5)} ($counter)';
-      }
-      fullPath = path.join(folder, '$newName$extension');
-    }
-
-    return fullPath;
+    // Generate unique path in the same directory as the source
+    return cli._getUniqueFilePath(
+      path.join(path.dirname(sourcePath), '$baseName$extension'),
+      inputExtension: extension.substring(1), // Remove the dot
+    );
   }
 
   Future<String?> archiveFiles(
@@ -84,7 +72,10 @@ class _CliArchive {
       logger.log('A process is already running. Please cancel it first.');
       return null;
     }
-    final outputArchive = await _getUniqueArchiveName(outputFolder, format);
+    
+    // Use the first file's name as the base name for the archive
+    final firstPath = paths.first;
+    final outputArchive = await _getUniqueArchiveName(firstPath, format);
     final tempDir = await Directory(outputFolder).createTemp('archived');
 
     final validCompressionLevel =
@@ -205,19 +196,61 @@ class _CliArchive {
     int compressionLevel,
     Future<ProcessResult> Function(String, List<String>, {bool noThrow}) run,
   ) async {
-    // Use zip with password protection
-    await run(
-        'zip',
+    // Try to use 7zz for AES-256 encryption first (more secure)
+    // Fall back to native zip with PKZip 2.0 encryption if 7zz is not available
+    try {
+      final compressionMap = {
+        0: 0,  // Copy
+        1: 1,  // Fastest
+        3: 3,  // Fast
+        5: 5,  // Normal
+        7: 7,  // Maximum
+        9: 9,  // Ultra
+      };
+      final level7z = compressionMap[compressionLevel] ?? 5;
+      
+      await run(
+        '7zz',
         [
-          '-r',
-          '-P',
-          password,
-          '-$compressionLevel',
-          outputPath,
-          '.',
+          'a',                       // Add to archive
+          '-tzip',                   // Create ZIP format
+          '-mx=$level7z',           // Compression level
+          '-mem=AES256',            // AES-256 encryption
+          '-p$password',            // Password
+          outputPath,               // Output archive
+          sourcePath,               // Source path
         ],
-        noThrow: false);
-    return outputPath;
+        noThrow: false,
+      );
+      
+      return outputPath;
+    } catch (e) {
+      // Fall back to native zip with PKZip 2.0 encryption (weaker but always available)
+      logger.log('7zz not available, using native zip with PKZip encryption');
+      
+      // zip requires running from within the source directory, use a shell wrapper
+      final sourceDir = path.dirname(sourcePath);
+      final sourceName = path.basename(sourcePath);
+      final outputFileName = path.basename(outputPath);
+      
+      // Use sh -c to change directory before running zip
+      await run(
+        'sh',
+        [
+          '-c',
+          'cd "\$1" && zip -r -P "\$2" -\$3 "\$4" "\$5"',
+          'sh',
+          sourceDir,               // $1 - directory to change to
+          password,                // $2 - password
+          compressionLevel.toString(), // $3 - compression level
+          outputFileName,          // $4 - output file
+          sourceName,              // $5 - source directory name
+        ],
+        noThrow: false,
+      );
+      
+      return outputPath;
+    }
   }
 
   Future<String> _createEncryptedTarGz(

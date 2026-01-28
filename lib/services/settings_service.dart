@@ -16,15 +16,19 @@ class SettingsService {
     
     print('[SETTINGS] SettingsService.initialize() called');
     _channel.setMethodCallHandler((call) async {
-      print('[SETTINGS] _handleMethodCall called with method: ${call.method}');
-      if (call.method == 'settingChanged') {
+      print('[SETTINGS] _handleMethodCall called with method: "${call.method}"');
+      print('[SETTINGS] call.arguments: ${call.arguments}');
+      print('[SETTINGS] method == "settingChanged": ${call.method == "settingChanged"}');
+      print('[SETTINGS] method.trim() == "settingChanged": ${call.method.trim() == "settingChanged"}');
+      
+      if (call.method.trim() == 'settingChanged') {
         final args = call.arguments as Map<String, dynamic>;
         final key = args['key'] as String;
         final value = args['value'];
         print('[SETTINGS] Setting changed - key: $key, value: $value');
         _settingsController.add({key: value});
         print('[SETTINGS] Notified listeners');
-      } else if (call.method == 'openInstall') {
+      } else if (call.method.trim() == 'openInstall') {
         // Native macOS requested to open installation guide for a tool
         try {
           final tool = call.arguments as String;

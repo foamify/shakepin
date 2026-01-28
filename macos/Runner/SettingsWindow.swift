@@ -122,6 +122,12 @@ struct UnifiedSettingsView: View {
                     selectFile(for: "ffmpeg") { path in
                       ffmpegPath = path
                     }
+                  },
+                  onFind: {
+                    findTool(toolName: "ffmpeg") { detectedPath in
+                      ffmpegPath = detectedPath
+                      SettingsBridge.shared.notifySettingChanged(key: "ffmpegPath", value: detectedPath)
+                    }
                   }
                 )
 
@@ -137,6 +143,12 @@ struct UnifiedSettingsView: View {
                   onBrowse: {
                     selectFile(for: "gifski") { path in
                       gifskiPath = path
+                    }
+                  },
+                  onFind: {
+                    findTool(toolName: "gifski") { detectedPath in
+                      gifskiPath = detectedPath
+                      SettingsBridge.shared.notifySettingChanged(key: "gifskiPath", value: detectedPath)
                     }
                   }
                 )
@@ -154,6 +166,12 @@ struct UnifiedSettingsView: View {
                   onBrowse: {
                     selectFile(for: "magick") { path in
                       imagemagickPath = path
+                    }
+                  },
+                  onFind: {
+                    findTool(toolName: "magick") { detectedPath in
+                      imagemagickPath = detectedPath
+                      SettingsBridge.shared.notifySettingChanged(key: "imagemagickPath", value: detectedPath)
                     }
                   }
                 )
@@ -186,6 +204,12 @@ struct UnifiedSettingsView: View {
                     selectFile(for: "gallery-dl") { path in
                       galleryDlPath = path
                     }
+                  },
+                  onFind: {
+                    findTool(toolName: "gallery-dl") { detectedPath in
+                      galleryDlPath = detectedPath
+                      SettingsBridge.shared.notifySettingChanged(key: "galleryDlPath", value: detectedPath)
+                    }
                   }
                 )
 
@@ -201,6 +225,12 @@ struct UnifiedSettingsView: View {
                   onBrowse: {
                     selectFile(for: "yt-dlp") { path in
                       ytDlpPath = path
+                    }
+                  },
+                  onFind: {
+                    findTool(toolName: "yt-dlp") { detectedPath in
+                      ytDlpPath = detectedPath
+                      SettingsBridge.shared.notifySettingChanged(key: "ytDlpPath", value: detectedPath)
                     }
                   }
                 )
@@ -232,6 +262,12 @@ struct UnifiedSettingsView: View {
                   onBrowse: {
                     selectFile(for: "7z") { path in
                       sevenZipPath = path
+                    }
+                  },
+                  onFind: {
+                    findTool(toolName: "7zz") { detectedPath in
+                      sevenZipPath = detectedPath
+                      SettingsBridge.shared.notifySettingChanged(key: "sevenZipPath", value: detectedPath)
                     }
                   }
                 )
@@ -321,6 +357,43 @@ struct UnifiedSettingsView: View {
       if let url = panel.url {
         completion(url.path)
       }
+    }
+  }
+
+  private func findTool(toolName: String, completion: @escaping (String) -> Void) {
+    let process = Process()
+    process.launchPath = "/usr/bin/which"
+    process.arguments = [toolName]
+
+    let pipe = Pipe()
+    process.standardOutput = pipe
+
+    do {
+      try process.run()
+      process.waitUntilExit()
+
+      if process.terminationStatus == 0 {
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        if let detectedPath = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !detectedPath.isEmpty {
+          completion(detectedPath)
+          return
+        }
+      }
+
+      // Tool not found
+      let alert = NSAlert()
+      alert.messageText = "Tool Not Found"
+      alert.informativeText = "\(toolName) could not be found in your system PATH. Please install it or use the Browse button to locate it manually."
+      alert.alertStyle = .warning
+      alert.addButton(withTitle: "OK")
+      alert.runModal()
+    } catch {
+      let alert = NSAlert()
+      alert.messageText = "Error"
+      alert.informativeText = "Failed to search for \(toolName): \(error.localizedDescription)"
+      alert.alertStyle = .critical
+      alert.addButton(withTitle: "OK")
+      alert.runModal()
     }
   }
 
@@ -579,6 +652,7 @@ struct ToolPathRow: View {
   @Binding var path: String
   let onPathChange: (String) -> Void
   let onBrowse: () -> Void
+  let onFind: () -> Void
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -592,6 +666,12 @@ struct ToolPathRow: View {
           .foregroundColor(.primary)
 
         Spacer()
+
+        Button("Find") {
+          onFind()
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
 
         Button("Install") {
           // Request Flutter to open the installation guide for this tool
@@ -613,7 +693,7 @@ struct ToolPathRow: View {
         }
         .buttonStyle(.bordered)
         .controlSize(.small)
-        
+
         Button("Browse") {
           onBrowse()
         }

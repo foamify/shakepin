@@ -9,7 +9,7 @@ import 'package:shakepin/utils/logger.dart';
 
 sealed class AppSizes {
   static const panel = Size(66, 234);
-  static const archive = Size(240 + 48 + 12 + 16, 240 + 64 + 64);
+  static const archive = Size(240 + 48 + 12 + 16, 240 + 64 + 64 + 64);
   static const minify = Size(240 + 48 + 12 + 16, 468);
   static const about = Size(360, 360);
   static const license = Size(360, 450);

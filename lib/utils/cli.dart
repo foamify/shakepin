@@ -69,6 +69,8 @@ class Cli {
       'galleryDlPath': 'gallery-dl', 
       'gifskiPath': 'gifski',
       'ytDlpPath': 'yt-dlp',
+      'imagemagickPath': 'magick',
+      'sevenZipPath': '7zz',
     };
     
     logger.log('[CLI] Auto-detecting CLI tool paths...');
