@@ -46,5 +46,6 @@ app.*.map.json
 
 dist/
 
-.env.distribute.vscode/
+.env.distribute
+.vscode/
 CHANGES.txt
